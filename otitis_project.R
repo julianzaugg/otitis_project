@@ -75,7 +75,7 @@ dir.create(file.path("./Result_tables", "relative_abundance_tables"), showWarnin
 
 dir.create(file.path("./Result_tables/diversity_analysis/variable_summaries"),recursive = T)
 dir.create(file.path("./Result_tables/diversity_analysis/variable_summaries_within_community"),recursive = T)
-
+dir.create(file.path("./Result_tables", "DESeq_results"), showWarnings = FALSE)
 
 # dir.create(file.path("./Result_figures", "abundance_analysis_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "pca_plots"), showWarnings = FALSE)

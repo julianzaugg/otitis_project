@@ -410,87 +410,30 @@ write.csv(all_variables_by_community_kruskal_comparison, file = "Result_tables/d
 write.csv(all_variables_group_pairs_by_community_kruskal_comparison, file = "Result_tables/diversity_analysis/Groups_pairs_by_community_kruskal.csv", row.names = F, quote = F)
 
 # ----------------------------
-
 # Now Mann–Whitney U / Wilcox test
 
-
-# Community vs Community
-community_comparison <- data.frame("Group_1" = character(),
-                                     "Group_2" = character(),
-                                     "Shannon_p-value" = character(),
-                                     "Simpson_p-value" = character(),
-                                     "Chao1_p-value" = character())
-
-community_combinations <- combn(as.character(unique(full$Remote_Community)), 2)
-for (i in 1:ncol(community_combinations)) {
-  group_1 <- community_combinations[1,i]
-  group_2 <- community_combinations[2,i]
-  group_1_meta <- subset(full, Remote_Community == group_1)
-  group_2_meta <- subset(full, Remote_Community == group_2)
-  
-  # Test on the Shannon diversity
-  wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon)
-  # Test on the Simpson diversity
-  wilcox_simpson_test <- wilcox.test(group_1_meta$Simpson, group_2_meta$Simpson)
-  # Test on the Chao1 diversity
-  wilcox_chao1_test <- wilcox.test(group_1_meta$Chao1, group_2_meta$Chao1)
-  
-  community_comparison <- rbind(community_comparison, data.frame("Group_1" = group_1, 
-                                                                     "Group_2" = group_2, 
-                                                                     "Shannon_p-value" = wilcox_shannon_test$p.value,
-                                                                     "Simpson_p-value" = wilcox_simpson_test$p.value,
-                                                                     "Chao1_p-value" = wilcox_chao1_test$p.value
-                                                                     ))
-}
-write.csv(community_comparison, file = "Result_tables/diversity_analysis/community_wilcox.csv", row.names = F, quote = F)
+# Compare each group in within each variable 
+variable_comparison <- data.frame("Variable" = character(),
+                                  "Group_1" = character(),
+                                  "Group_2" = character(),
+                                  "N_group_1" = character(),
+                                  "N_group_2" = character(),
+                                  "Shannon_p-value" = character(),
+                                  "Simpson_p-value" = character(),
+                                  "Chao1_p-value" = character())
 
 
-
-# disease state vs disease state
-dx_groups_comparison <- data.frame("Group_1" = character(),
-                                     "Group_2" = character(),
-                                     "Shannon_p-value" = character(),
-                                     "Simpson_p-value" = character(),
-                                     "Chao1_p-value" = character())
-
-dx_groups_combinations <- combn(as.character(unique(full$DX_Groups)), 2)
-for (i in 1:ncol(dx_groups_combinations)) {
-  group_1 <- dx_groups_combinations[1,i]
-  group_2 <- dx_groups_combinations[2,i]
-  group_1_meta <- subset(full, DX_Groups == group_1)
-  group_2_meta <- subset(full, DX_Groups == group_2)
-  
-  # Test on the Shannon diversity
-  wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon)
-  # Test on the Simpson diversity
-  wilcox_simpson_test <- wilcox.test(group_1_meta$Simpson, group_2_meta$Simpson)
-  # Test on the Chao1 diversity
-  wilcox_chao1_test <- wilcox.test(group_1_meta$Chao1, group_2_meta$Chao1)
-  
-  dx_groups_comparison <- rbind(dx_groups_comparison, data.frame("Group_1" = group_1, 
-                                                                     "Group_2" = group_2, 
-                                                                     "Shannon_p-value" = wilcox_shannon_test$p.value,
-                                                                     "Simpson_p-value" = wilcox_simpson_test$p.value,
-                                                                     "Chao1_p-value" = wilcox_chao1_test$p.value
-  ))
-}
-write.csv(dx_groups_comparison, file = "Result_tables/diversity_analysis/dx_groups_wilcox.csv", row.names = F, quote = F)
-
-# DX groups vs dx groups within each sample type
-sample_type_dx_groups_comparison <- data.frame("Sample_Type" = character(),
-                                   "Group_1" = character(),
-                                   "Group_2" = character(),
-                                   "Shannon_p-value" = character(),
-                                   "Simpson_p-value" = character(),
-                                   "Chao1_p-value" = character())
-for (st in unique(full$Sample_Type)){
-  data_subset <- subset(full, Sample_Type == st)
-  dx_groups_combinations <- combn(as.character(unique(data_subset$DX_Groups)), 2)
-  for (i in 1:ncol(dx_groups_combinations)) {
-    group_1 <- dx_groups_combinations[1,i]
-    group_2 <- dx_groups_combinations[2,i]
-    group_1_meta <- subset(data_subset, DX_Groups == group_1)
-    group_2_meta <- subset(data_subset, DX_Groups == group_2)
+for (myvar in discrete_variables) {
+  group_combinations <- combn(as.character(unique(full[,myvar])), 2)
+  for (i in 1:ncol(group_combinations)) {
+    group_1 <- group_combinations[1,i]
+    group_2 <- group_combinations[2,i]
+    if (any(is.na(c(group_1, group_2)))) {next} 
+    group_1_meta <- subset(full, get(myvar) == group_1)
+    group_2_meta <- subset(full, get(myvar) == group_2)
+    
+    n_group_1 <- dim(group_1_meta)[1]
+    n_group_2 <- dim(group_2_meta)[1]
     
     # Test on the Shannon diversity
     wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon)
@@ -499,469 +442,88 @@ for (st in unique(full$Sample_Type)){
     # Test on the Chao1 diversity
     wilcox_chao1_test <- wilcox.test(group_1_meta$Chao1, group_2_meta$Chao1)
     
-    sample_type_dx_groups_comparison <- rbind(sample_type_dx_groups_comparison, data.frame("Sample_Type" = st,
+    
+    variable_comparison <- rbind(variable_comparison, data.frame(  "Variable" = myvar,
                                                                    "Group_1" = group_1, 
-                                                                   "Group_2" = group_2, 
+                                                                   "Group_2" = group_2,
+                                                                   "N_Group_1" = n_group_1,
+                                                                   "N_Group_2" = n_group_2,
                                                                    "Shannon_p-value" = wilcox_shannon_test$p.value,
                                                                    "Simpson_p-value" = wilcox_simpson_test$p.value,
                                                                    "Chao1_p-value" = wilcox_chao1_test$p.value
     ))
   }
 }
-write.csv(sample_type_dx_groups_comparison, file = "Result_tables/diversity_analysis/sample_type_dx_groups_wilcox.csv", row.names = F, quote = F)
+write.csv(variable_comparison, file = "Result_tables/diversity_analysis/variable_group_comparison_wilcox.csv", row.names = F, quote = F)
 
 
-# Variable
+# Compare each group in for each variable within each community
+variable_comparison <- data.frame("Community" = character(),
+                                  "Variable" = character(),
+                                  "Group_1" = character(),
+                                  "Group_2" = character(),
+                                  "N_group_1" = character(),
+                                  "N_group_2" = character(),
+                                  "Shannon_p-value" = character(),
+                                  "Simpson_p-value" = character(),
+                                  "Chao1_p-value" = character())
 
-a <- subset(full, Sample_Type == "DU")
-b <- subset(full, Sample_Type == "TI")
-a$Chao1
+for (community in unique(full$Remote_Community)){
+  for (myvar in discrete_variables) {
+    if (myvar == "Remote_Community") {next}
+    full_community <- subset(full, Remote_Community == community)
+    group_combinations <- combn(as.character(unique(full_community[,myvar])), 2)
+    for (i in 1:ncol(group_combinations)) {
+      group_1 <- group_combinations[1,i]
+      group_2 <- group_combinations[2,i]
+      if (any(is.na(c(group_1, group_2)))) {next} 
+      group_1_meta <- subset(full_community, get(myvar) == group_1)
+      group_2_meta <- subset(full_community, get(myvar) == group_2)
+      n_group_1 <- dim(group_1_meta)[1]
+      n_group_2 <- dim(group_2_meta)[1]
+      
+      # Test on the Shannon diversity
+      wilcox_shannon_test <- wilcox.test(group_1_meta$Shannon, group_2_meta$Shannon)
+      # Test on the Simpson diversity
+      wilcox_simpson_test <- wilcox.test(group_1_meta$Simpson, group_2_meta$Simpson)
+      # Test on the Chao1 diversity
+      wilcox_chao1_test <- wilcox.test(group_1_meta$Chao1, group_2_meta$Chao1)
+      
+      
+      variable_comparison <- rbind(variable_comparison, data.frame( "Community" = community,
+                                                                    "Variable" = myvar,
+                                                                    "Group_1" = group_1, 
+                                                                    "Group_2" = group_2, 
+                                                                    "N_Group_1" = n_group_1,
+                                                                    "N_Group_2" = n_group_2,
+                                                                    "Shannon_p-value" = wilcox_shannon_test$p.value,
+                                                                    "Simpson_p-value" = wilcox_simpson_test$p.value,
+                                                                    "Chao1_p-value" = wilcox_chao1_test$p.value
+      ))
+    }
+  }
+}
 
-wilcox.test(a$Chao1, b$Chao1)
-
-
-a <- subset(full, Sample_Type == "DU" & DX_Groups == "UC")
-b <- subset(full, Sample_Type == "DU" & DX_Groups == "CONTROL")
-
-temp <- wilcox.test(a$Chao1, b$Chao1)
-
-kruskal.test(Chao1~Sample_Type, data = full)
-kruskal.test(Shannon~Sample_Type, data = full)
-kruskal.test(Simpson~Sample_Type, data = full)
+write.csv(variable_comparison, file = "Result_tables/diversity_analysis/within_community_variable_group_comparison_wilcox.csv", row.names = F, quote = F)
 
 
 
-summary(aov(formula = Chao1~Sample_Type, data = full))
-summary(aov(formula = Chao1~DX_Groups, data = full))
-# ANOVA on 
-summary(aov(formula = Chao1~Sample_Type + DX_Groups + AGE + BMI + Gender, data = full))
+summary(aov(formula = Chao1~Remote_Community + Otitis_status + Nose, data = full))
 
 # lme requires a random effect variable to be specified. Simply make this the sample ID (Index or Sample_No, the latter is the patient ID)
 full$Index <- rownames(full)
 
-
 # Run linear mixed model for Chao1 index
-chao1full_model <- lme(fixed = Chao1 ~ DX_Groups + Sample_Type + Gender + AGE + BMI,
-                       data = full, random = ~ 1 | Index) 
+chao1full_model <- lme(fixed = Chao1 ~ Remote_Community,
+                       data = full, random = ~ 1 | Index)
 summary(chao1full_model)
 
 # Run linear model to test significance of variables across all variables
 # lm will apply an anova or t-test where appropriate
-lm_sample_type_chao <- lm(Chao1 ~ Sample_Type, data = full)
-lm_dx_groups_chao <- lm(Chao1 ~ DX_Groups, data = full)
-
-summary(aov(formula = Chao1~Sample_Type, data = full))
-summary(lm_sample_type_chao)
-summary(aov(formula = Chao1~DX_Groups, data = full))
-summary(lm_dx_groups_chao)
-
-lm_sample_type_simpson <- lm(Simpson ~ Sample_Type, data = full)
-lm_dx_groups_simpson <- lm(Simpson ~ DX_Groups, data = full)
-
-
-
-summary(lm_sample_type_simpson)
-summary(lm_dx_groups_simpson)
-
+summary(lm(Chao1 ~ Remote_Community, data = full))
+summary(lm(Chao1 ~ Season, data = full))
+summary(lm(Chao1 ~ Nose, data = full))
 
 # --------------------------------------------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------------------------------------------
-# --------------------------------------------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-# 
-# # For each discrete variable, calculate the Shannon diversity index mean, max, min, median and stdev
-# # and write to file
-# for (var in discrete_variables) {
-#   # metadata.df[c(var, "Shannon_diversity")]
-#   diversity_summary <- metadata.df %>% 
-#     group_by_(var) %>%
-#     summarise(Shannon_Mean=mean(Shannon_diversity), 
-#               Shannon_Max=max(Shannon_diversity), 
-#               Shannon_Min=min(Shannon_diversity), 
-#               Shannon_Median=median(Shannon_diversity), 
-#               Shannon_Std=sd(Shannon_diversity),
-#               N_samples=n()) %>% 
-#     as.data.frame()
-#   outfilename <- paste0("Result_tables/diversity_analysis/variable_summaries/", var, "_diversity_summary.csv")
-#   write.csv(x = diversity_summary, outfilename, row.names = F,quote = F)
-# }
-# 
-# # For each discrete variable, within each sample type (location), 
-# # calculate the diversity index mean, max,min,median and stdev and write to file
-# for (var in discrete_variables) {
-#   if (var  == "Sample_Type") {next}
-#   diversity_summary <- metadata.df %>%
-#     group_by_("Sample_Type", var) %>%
-#     summarise(Shannon_Mean=mean(Shannon_diversity),
-#               Shannon_Max=max(Shannon_diversity),
-#               Shannon_Min=min(Shannon_diversity),
-#               Shannon_Median=median(Shannon_diversity),
-#               Shannon_Std=sd(Shannon_diversity),
-#               N_samples=n()) %>% 
-#     as.data.frame()
-#   outfilename <- paste0("Result_tables/diversity_analysis/variable_summaries_within_sample_type/", var, "_diversity_summary_within_sample_type.csv")
-#   write.csv(x = diversity_summary, outfilename, row.names = F,quote = F)
-# }
-# 
-# # --------------------------------------------------------------------------------
-# ## Calculate the significance values with kruskal wallis
-# 
-# # Each group vs group
-# all_variable_groups_kruskal_comparison <- NULL
-# for (variable in discrete_variables){
-#   group_combinations <- combn(unique(metadata.df[[variable]]), 2)
-#   for (i in 1:ncol(group_combinations)){
-#     group_1 <- as.character(group_combinations[1,i])
-#     group_2 <- as.character(group_combinations[2,i])
-#     if (any(is.na(c(group_1, group_2)))){
-#       next
-#     }
-#     metadata_subset.df <- subset(metadata.df, get(variable) %in% c(group_1, group_2))
-#     kw_shannon_test <- kruskal.test(Shannon_diversity~get(variable), data = metadata_subset.df)
-#     all_variable_groups_kruskal_comparison <- rbind(all_variable_groups_kruskal_comparison, 
-#                                                     data.frame(variable, 
-#                                                                group_1, 
-#                                                                group_2, 
-#                                                                "shannon", 
-#                                                                round(kw_shannon_test$statistic,5),
-#                                                                round(kw_shannon_test$p.value,5)
-#                                                     ))
-#   }
-# }
-# names(all_variable_groups_kruskal_comparison) <- c("Grouping_variable","Group1", "Group2", "Diversity_index", "chi-squared", "p-value")
-# all_variable_groups_kruskal_comparison <- all_variable_groups_kruskal_comparison[order(all_variable_groups_kruskal_comparison$`p-value`),]
-# rownames(all_variable_groups_kruskal_comparison) <- NULL
-# write.csv(all_variable_groups_kruskal_comparison, file = "Result_tables/diversity_analysis/all_variable_groups_kruskal.csv", row.names = F, quote = F)
-# 
-# # --------------------------------------------------------------------------------
-# 
-# # Each sample_type+group vs sample_type+group
-# all_variable_groups_by_sample_type_kruskal_comparison <- NULL
-# 
-# # For each Sample_Type
-# for (st in unique(metadata.df$Sample_Type)){
-#   # For each discrete variable
-#   for (variable in discrete_variables) {
-#     if (variable  == "Sample_Type") {next}
-#     metadata_subset.df <- subset(metadata.df, Sample_Type == st) # Subset the metadata to only entries in the sample type
-#     if (length(unique(metadata_subset.df[[variable]])) == 1) {next} # If only one unique group left, skip
-#     group_combinations <- combn(unique(metadata_subset.df[[variable]]), 2) # Determine the group combinations
-#     for (i in 1:ncol(group_combinations)){ 
-#       group_1 <- as.character(group_combinations[1,i])
-#       group_2 <- as.character(group_combinations[2,i])
-#       if (any(is.na(c(group_1, group_2)))){ # If either group is NA, skip
-#         next
-#       }
-#       # Subset the metadata to entries for the two groups
-#       metadata_subset_by_group.df <- subset(metadata_subset.df, 
-#                                    (get(variable) %in% c(group_1, group_2)))
-#       # Perform the Kruskal wallace test on the Shannon diversity
-#       kw_shannon_test <- kruskal.test(Shannon_diversity~get(variable), data = metadata_subset_by_group.df)
-#       # Store the Sample_Type, variable, groups, chi-squared value and p-value
-#       all_variable_groups_by_sample_type_kruskal_comparison <- rbind(all_variable_groups_by_sample_type_kruskal_comparison, 
-#                                                       data.frame(st,
-#                                                                  variable,
-#                                                                  group_1, 
-#                                                                  group_2, 
-#                                                                  "shannon", 
-#                                                                  round(kw_shannon_test$statistic,5),
-#                                                                  round(kw_shannon_test$p.value,5)
-#                                                       ))
-#     }
-#   }
-# }
-# # all_variable_groups_by_sample_type_kruskal_comparison
-# names(all_variable_groups_by_sample_type_kruskal_comparison) <- c("Sample_Type","Grouping_variable","Group1", "Group2", "Diversity_index", "chi-squared", "p-value")
-# all_variable_groups_by_sample_type_kruskal_comparison <- all_variable_groups_by_sample_type_kruskal_comparison[order(all_variable_groups_by_sample_type_kruskal_comparison$`p-value`),]
-# rownames(all_variable_groups_by_sample_type_kruskal_comparison) <- NULL
-# write.csv(all_variable_groups_by_sample_type_kruskal_comparison, file = "Result_tables/diversity_analysis/all_variable_groups_by_sample_type_kruskal.csv", row.names = F, quote = F)
-# 
-# 
-# # temp <- metadata.df
-# # temp <- subset(temp, Sample_Type == "G")
-# # temp$Wheat_related_symptoms_and_group
-# # group_1 <- "FGID_No"
-# # group_2 <- "Control_no"
-# # temp$Wheat_related_symptoms_and_group %in% c(group_1, group_2)
-# # temp <- subset(temp, Wheat_related_symptoms_and_group %in% c(group_1, group_2))
-# # kruskal.test(Shannon_diversity~Wheat_related_symptoms_and_group, data = temp)
-# 
-# # --------------------------------------------------------------------------------
-# 
-# # Dunn test group vs group
-# multiple_groups_dunn_test <- NULL
-# for (variable in discrete_variables){
-#   # print(paste0(variable, " : ", n_groups))
-#   metadata_subset.df <- metadata.df[!is.na(metadata.df[[variable]]),]
-#   n_groups = length(unique(metadata_subset.df[,variable]))
-#   # if (any(is.na(metadata_subset.df[,variable]))){
-#   #   next
-#   # }
-#   if (n_groups > 2){
-#     
-#     results <- dunnTest(Shannon_diversity~get(variable), data = metadata_subset.df, method = "bh",alpha = 0.05)
-#     results_groups_sep <- separate(results$res,Comparison, into = c("Group1", "Group2"), sep = " - ")
-#     multiple_groups_dunn_test <- rbind(multiple_groups_dunn_test, data.frame("Variable" = variable, results_groups_sep, "Index" = "Shannon", "N_groups" = n_groups))
-#   }
-# }
-# multiple_groups_dunn_test <- multiple_groups_dunn_test[order(multiple_groups_dunn_test$Index, multiple_groups_dunn_test$P.adj),]
-# # multiple_groups_dunn_test
-# write.csv(multiple_groups_dunn_test, file = "Result_tables/diversity_analysis/all_variable_groups_dunn.csv", row.names = F, quote = F)
-# 
-# 
-# # --------------------------------------------------------------------------------
-# 
-# # Each sample_type+group vs sample_type_group
-# multiple_groups_by_sample_type_dunn_test <- NULL
-# for (st in unique(metadata_subset.df$Sample_Type)){
-#     for (variable in discrete_variables){
-#       if (variable  == "Sample_Type") {next}
-#       metadata_subset.df <- metadata.df[!is.na(metadata.df[[variable]]),]
-#       metadata_subset.df <- subset(metadata_subset.df, Sample_Type == st)
-#       n_groups = length(unique(metadata_subset.df[,variable]))
-#       # if (any(is.na(metadata_subset.df[,variable]))){
-#       #   next
-#       # }
-#       if (n_groups > 2){
-#         results <- dunnTest(Shannon_diversity~get(variable), data = metadata_subset.df, method = "bh",alpha = 0.05)
-#         results_groups_sep <- separate(results$res,Comparison, into = c("Group1", "Group2"), sep = " - ")
-#         multiple_groups_by_sample_type_dunn_test <- rbind(multiple_groups_by_sample_type_dunn_test, data.frame("Sample_Type" = st, "Variable" = variable, results_groups_sep, "Index" = "Shannon", "N_groups" = n_groups))
-#         }
-#       }
-#     }
-# multiple_groups_by_sample_type_dunn_test <- multiple_groups_by_sample_type_dunn_test[order(multiple_groups_by_sample_type_dunn_test$Index, multiple_groups_by_sample_type_dunn_test$P.adj),]
-# # multiple_groups_by_sample_type_dunn_test
-# write.csv(multiple_groups_by_sample_type_dunn_test, file = "Result_tables/diversity_analysis/all_variable_groups_by_sample_type_dunn.csv", row.names = F, quote = F)
-# # --------------------------------------------------------------------------------
-# 
-# # Now generate box plots
-# # Want to show the diversity for each sample within each group
-# 
-# # Ensure each variable is factorised
-# metadata.df[discrete_variables] <- lapply(metadata.df[discrete_variables], factor)
-# 
-# # generate_diversity_boxplot(mymetadata = metadata.df,
-#                            # variable = "DX_Groups",
-#                            # fill_pallete = my_colour_pallete_15)
-# 
-# for (var in discrete_variables){
-#   myplot <- generate_diversity_boxplot(mymetadata = metadata.df,
-#                              variable = var,
-#                              fill_pallete = my_colour_pallete_15)
-#   out_filename <- paste0("Result_figures/diversity_analysis/", var,"_diversity_boxplot.pdf")
-#   ggsave(filename = out_filename, plot = myplot, width = 15, height = 10, units = "cm")
-# }
-# 
-# for (var in discrete_variables){
-#   myplot <- generate_diversity_boxplot(mymetadata = metadata.df,
-#                                        variable = var,
-#                                        fill_pallete = my_colour_pallete_15) + facet_wrap(~Sample_Type)
-#   out_filename <- paste0("Result_figures/diversity_analysis/by_sample_type/", var,"_diversity_boxplot_by_sampletype.pdf")
-#   ggsave(filename = out_filename, plot = myplot, width = 25, height = 15, units = "cm")
-# }
-# 
-# 
-# # generate_diversity_boxplot(mymetadata = subset(metadata.df, Sample_Type == "DNS"),
-# #                           variable = "Smoking",
-# #                           fill_pallete = my_colour_pallete_15) + facet_wrap(~Sample_Type)
-# # 
-# # 
-# # metadata.df$Sample_Type_wheat <- factor(with(metadata.df, paste0(Sample_Type, "_", Wheat_related_symptoms_and_group)))
-# # generate_diversity_boxplot(mymetadata = metadata.df,
-# #                            variable = "Wheat_related_symptoms_and_group",
-# #                            fill_pallete = my_colour_pallete_10_distinct) + facet_wrap(~Sample_Type)
-# # 
-# # generate_diversity_boxplot(mymetadata = metadata.df,
-# #                            variable = "Positive_for_Methane",
-# #                            fill_pallete = my_colour_pallete_10_distinct) + facet_wrap(~Sample_Type)
-# 
-# # -------------------------------------------------------------------------------
-# 
-# discrete_variables <- c("DX_Groups","Sample_Type", "Wheat_related_symptoms_and_group","Gender","Smoking", "Acid_Eructation", "Dysphagia", "Fullness", "Early_Satiety",
-#                         "Postprandial_Pain", "Epigastric_Pain", "Retrosternal_Discomfort", "Pain_defecation", 
-#                         "Difficulty_Defecation", "Constipation", "Loose_stool", "Incontinence", "Urgency_defecation",
-#                         "Diarrhea", "Loss_apetite", "Abd_cramps", "Sickeness", "Nausea", "Vomiting", "Bloating", 
-#                         "Gas_flatulence", "Belching", "Headache", "Fatigue", "Back_Pain", "Depression", "Sleep", "Anxiety", "H_pylori_gastritis",
-#                         "Positive_for_H2","Positive_for_Methane","Final_Diagnosis_H2_or_CH4","PPI_Medications")
-# 
-# continuous_variables <- c("AGE","DU_bacterial_load","TI_bacterial_load","DNS_bacterial_load","Eos_count",
-#                           "Intraepithelial_Lymphocytes_counts","Hydrogen_.H2._Baseline","H2_Peak","Peak_Time_H2",
-#                           "Methane_.CH4._Baeline","Methane_Peak","Peak_Time_Methane","NCV","NC_total_score",
-#                           "NC_ab_pain","NC_fullness","NC_nausea","weight","height","BMI","SAGIS__Diarr_Tot",
-#                           "SAGIS_Consti_Tot","SAGIS_Total")
-# 
-# # Calculate the correlation scores per variable
-# correlation_scores_per_variable <- data.frame()
-# for (var in continuous_variables){
-#   metadata_subset.df <- metadata.df[!is.na(metadata.df[,var]),]
-#   values <- as.numeric(metadata_subset.df[,var])
-#   n_samples <- length(values)
-#   if (n_samples <= 10){next}
-#   pearson_score <- cor(values, metadata_subset.df$Shannon_diversity, method = "pearson")
-#   spearman_score <- cor(values, metadata_subset.df$Shannon_diversity, method = "spearman")
-#   correlation_scores_per_variable <- rbind(correlation_scores_per_variable, data.frame(Variable = var, 
-#                                                                                        pearson = pearson_score,
-#                                                                                        spearman = spearman_score,
-#                                                                                        Number_of_samples = n_samples))
-# }
-# correlation_scores_per_variable <- correlation_scores_per_variable[rev(order(abs(correlation_scores_per_variable$pearson))),]
-# write.csv(correlation_scores_per_variable, file = "Result_tables/diversity_analysis/Correlation_scores/correlation_scores_continuous_variable.csv", row.names = F, quote = F)
-# 
-# # Calculate the correlation scores per variable for samples in the same sampletype
-# correlation_scores_per_variable_per_sample_type <- data.frame()
-# for (st in unique(metadata.df$Sample_Type)){
-#   for (var in continuous_variables){
-#     metadata_subset.df <- metadata.df[!is.na(metadata.df[,var]),]
-#     metadata_subset.df <- subset(metadata_subset.df, Sample_Type == st)
-#     values <- as.numeric(metadata_subset.df[,var])
-#     n_samples <- length(values)
-#     if (n_samples <= 10){next}
-#     pearson_score <- cor(values, metadata_subset.df$Shannon_diversity, method = "pearson")
-#     spearman_score <- cor(values, metadata_subset.df$Shannon_diversity, method = "spearman")
-#     correlation_scores_per_variable_per_sample_type <- rbind(correlation_scores_per_variable_per_sample_type, data.frame(Variable = var, 
-#                                                                                          pearson = pearson_score,
-#                                                                                          spearman = spearman_score,
-#                                                                                          Number_of_samples = n_samples,
-#                                                                                          Sample_Type = st))
-#   }
-# }
-# correlation_scores_per_variable_per_sample_type <- correlation_scores_per_variable_per_sample_type[rev(order(abs(correlation_scores_per_variable_per_sample_type$pearson))),]
-# write.csv(correlation_scores_per_variable_per_sample_type, file = "Result_tables/diversity_analysis/Correlation_scores/correlation_scores_continuous_variable_per_sampletype.csv", row.names = F, quote = F)
-# 
-# 
-# mydataframe <- data.frame()
-# for (dis_var in discrete_variables){ # For each discrete variable
-#   for (dis_group in unique(metadata.df[, dis_var])){ # For each group in the discrete variable
-#     if (is.na(dis_group)) {next} # If the group is NA, next
-#     # metadata_dis_subset.df <- subset(metadata.df, get(dis_var) == dis_group) # Get only entries for this group
-#       for (var in continuous_variables){
-#         metadata_subset.df <- metadata.df[!is.na(metadata.df[,var]),] # get rows where the continuous value is not NA
-#         metadata_subset.df <- subset(metadata_subset.df, get(dis_var) == dis_group) # Get rows that match the sample type and discrete state
-#         values <- as.numeric(metadata_subset.df[,var])
-#         n_samples <- length(values)
-#         if (n_samples <= 10){next}
-#         pearson_score <- cor(values, metadata_subset.df$Shannon_diversity, method = "pearson")
-#         spearman_score <- cor(values, metadata_subset.df$Shannon_diversity, method = "spearman")
-#         if (is.na(pearson_score) &  is.na(spearman_score)) {next}
-#         mydataframe <- rbind(mydataframe, data.frame(Variable = var, 
-#                                                      pearson = pearson_score,
-#                                                      spearman = spearman_score,
-#                                                      Number_of_samples = n_samples,
-#                                                      Discrete_variable = dis_var,
-#                                                      Discrete_group = dis_group))
-# }
-#     }
-#   }
-# mydataframe <- mydataframe[rev(order(abs(mydataframe$pearson))),]
-# write.csv(mydataframe, file = "Result_tables/diversity_analysis/Correlation_scores/correlation_scores_continuous_variable_per_discrete_variable_group.csv", row.names = F, quote = F)
-# 
-# 
-# 
-# # Calculate the correlation scores per continuous variable for samples in the same sampletype and discrete state group
-# correlation_scores_per_variable_per_sample_type_per_discrete_var <- data.frame()
-# for (dis_var in discrete_variables){ # For each discrete variable
-#   for (dis_group in unique(metadata.df[, dis_var])){ # For each group in the discrete variable
-#     if (is.na(dis_group)) {next} # If the group is NA, next
-#     # metadata_dis_subset.df <- subset(metadata.df, get(dis_var) == dis_group) # Get only entries for this group
-#     for (st in unique(metadata.df$Sample_Type)){
-#       for (var in continuous_variables){
-#         metadata_subset.df <- metadata.df[!is.na(metadata.df[,var]),] # get rows where the continuous value is not NA
-#         metadata_subset.df <- subset(metadata_subset.df, (Sample_Type == st) & get(dis_var) == dis_group) # Get rows that match the sample type and discrete state
-#         values <- as.numeric(metadata_subset.df[,var])
-#         n_samples <- length(values)
-#         if (n_samples <= 10){next}
-#         pearson_score <- cor(values, metadata_subset.df$Shannon_diversity, method = "pearson")
-#         spearman_score <- cor(values, metadata_subset.df$Shannon_diversity, method = "spearman")
-#         if (is.na(pearson_score) &  is.na(spearman_score)) {next}
-#         correlation_scores_per_variable_per_sample_type_per_discrete_var <- rbind(correlation_scores_per_variable_per_sample_type_per_discrete_var, data.frame(Variable = var, 
-#                                                                                                                              pearson = pearson_score,
-#                                                                                                                              spearman = spearman_score,
-#                                                                                                                              Number_of_samples = n_samples,
-#                                                                                                                              Sample_Type = st,
-#                                                                                                                              Discrete_variable = dis_var,
-#                                                                                                                              Discrete_group = dis_group))
-#       }
-#     }
-#   }
-# }
-# correlation_scores_per_variable_per_sample_type_per_discrete_var <- correlation_scores_per_variable_per_sample_type_per_discrete_var[rev(order(abs(correlation_scores_per_variable_per_sample_type_per_discrete_var$pearson))),]
-# write.csv(correlation_scores_per_variable_per_sample_type_per_discrete_var, file = "Result_tables/diversity_analysis/Correlation_scores/correlation_scores_continuous_variable_per_sampletype_per_discrete_variable_group.csv", row.names = F, quote = F)
-# 
-# 
-# 
-# 
-# 
-# metadata.df[!is.na(metadata.df[,"SAGIS_Consti_Tot"]),][,"SAGIS_Consti_Tot"]
-# 
-# ggplot(metadata.df, aes(x = Methane_.CH4._Baeline, y = Shannon_diversity, color = DX_Groups)) +
-#   geom_point() +
-#   facet_wrap(~DX_Groups) +
-#   common_theme
-# 
-# 
-# 
-# generate_diversity_scatter_plot <- function(mymetadata, 
-#                                             continuous_variable, #x axis
-#                                             facet_variable = NULL,
-#                                             fill_pallete = my_colour_pallete_206_distinct,
-#                                             # axis_text_y = 9,
-#                                             point_alpha = 0.6, point_stroke = .3,
-#                                             fill_variable = NULL # variable to colour by
-#                                             ){
-#   internal_metadata <- mymetadata
-#   internal_metadata <- internal_metadata[!is.na(internal_metadata[[variable]]),]
-#   internal_metadata[variable] <- as.numeric(internal_metadata[[variable]])
-#   
-#   xlimits <- c(min(internal_metadata[continuous_variable],na.rm = T), max(internal_metadata[continuous_variable],na.rm = T)*1.05)
-#   ylimits <- c(min(internal_metadata["Shannon_diversity"],na.rm = T), max(internal_metadata["Shannon_diversity"],na.rm = T)*1.05)
-#   myplot <- ggplot(internal_metadata, aes(x = as.numeric(get(continuous_variable)), y= Shannon_diversity))
-#   
-#   if (!is.null(fill_variable)){
-#     myplot <- myplot + 
-#       geom_point(shape = 1, color = "black", alpha = point_alpha, stroke = point_stroke) +
-#       geom_point(shape = 16, aes(colour = get(fill_variable)), alpha = point_alpha, stroke = 0) +
-#       geom_smooth(se = F, method = "lm", na.rm = T, aes(color = get(fill_variable)), linetype = "dashed", size = .3) +
-#       scale_colour_manual(values = fill_pallete, name = fill_variable)
-#       
-#   } else{
-#     myplot <- myplot + 
-#       geom_point(shape = 21, fill = "grey30", color = "black", stroke = point_stroke, alpha = point_alpha) +
-#       geom_smooth(se = F, method = "lm", na.rm = T, color = "grey20", linetype = "dashed", size = .3)
-#   }
-#   myplot <- myplot +
-#     scale_y_continuous(limits = ylimits) +
-#     scale_x_continuous(limits = xlimits) +
-#     ylab("Shannon_diversity") +
-#     xlab(continuous_variable) +
-#     common_theme 
-#   if (!is.null(facet_variable)){
-#     myplot <- myplot + facet_wrap(~get(facet_variable), scales = "free_x")
-#   }
-#   return(myplot)
-#   
-# }
-# 
-# generate_diversity_scatter_plot(metadata.df, 
-#                                 continuous_variable = "Methane_.CH4._Baeline", 
-#                                 fill_variable = "DX_Groups",
-#                                 facet_variable = "Sample_Type",
-#                                 fill_pallete = my_colour_pallete_20)
-# 
-# 
-# generate_diversity_scatter_plot(metadata.df, 
-#                                 continuous_variable = "DU_bacterial_load", 
-#                                 fill_variable = NULL,#"DX_Groups",
-#                                 facet_variable = NULL,#"Sample_Type",
-#                                 fill_pallete = my_colour_pallete_10_distinct)
-
