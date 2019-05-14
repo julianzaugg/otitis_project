@@ -170,8 +170,9 @@ otu_clr_filtered.m[which(otu_clr_filtered.m < 0)] <- 0
 
 generate_pca <- function(pca_object, mymetadata, variable_to_plot, color_pallete, limits = NULL, filename = NULL, add_legend = F, add_spider = F, add_ellipse = F,
                          point_alpha = 1, plot_width = 10, plot_height=10, point_size = 0.8, point_line_thickness = 1,
+                         label_sites = F, label_species = F,
                          legend_x = NULL, legend_y = NULL, legend_x_offset = 0, legend_y_offset = 0,
-                         plot_spiders = NULL, plot_ellipses = NULL,legend_cols = 2, legend_title = NULL,
+                         plot_spiders = NULL, plot_ellipses = NULL,plot_hulls = NULL, legend_cols = 2, legend_title = NULL,
                          label_ellipse = F, ellipse_label_size = 0.5, ellipse_border_width = 1,variable_colours_available = F, 
                          plot_title = NULL, use_shapes = F){
   
@@ -298,7 +299,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, color_pallete
   
   # Plot ellipses that are filled
   plot_ellipses_func <- function () {
-    for (member in variable_values){
+    for (member in variable_values) {
       if (nrow(metadata_ordered.df[metadata_ordered.df[[variable_to_plot]] == member,]) > 2){ # if too few samples, skip plotting ellipse
         ordiellipse(pca_site_scores,
                     groups = metadata_ordered.df[[variable_to_plot]],
@@ -316,6 +317,32 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, color_pallete
       }
     }
   }
+  
+  # Plot hulls that are filled
+  plot_hulls_func <- function () {
+    for (member in variable_values){
+      if (nrow(metadata_ordered.df[metadata_ordered.df[[variable_to_plot]] == member,]) > 2){ # if too few samples, skip plotting ellipse}
+        ordihull(pca_site_scores,
+                 groups = metadata_ordered.df[[variable_to_plot]],
+                 lwd = ellipse_border_width,
+                 # border = variable_colours[member][[1]],
+                 border = alpha(variable_colours[member][[1]],point_alpha),
+                 # col = variable_colours[member][[1]],
+                 col = alpha(variable_colours[member][[1]],point_alpha),
+                 show.groups = member,
+                 alpha = .05,
+                 draw = "polygon",
+                 label = F,
+                 cex = .5)
+      }
+    }
+  }
+  if (hasArg(plot_hulls)){
+    if (plot_hulls == T){
+      plot_hulls_func()    
+    }
+  }
+  
   plot_ellipses_labels_func <- function(label_ellipse = F){
     # Repeat to have labels clearly on top of all ellipses
     for (member in variable_values){
@@ -372,11 +399,23 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, color_pallete
   #        pch = 3,
   # )
   
-  # text(x = pca_site_scores[,1],
-  #      y = pca_site_scores[,2],
-  #      labels = rownames(pca_site_scores),
-  #      cex = .5,
-  #      pos = 2)
+  if (label_sites == T){
+    text(x = pca_site_scores[,1],
+         y = pca_site_scores[,2],
+         labels = rownames(pca_site_scores),
+         cex = .5,
+         pos = 2)
+  }
+  if (label_species == T){
+    text(x = pca_specie_scores[,1],
+         y = pca_specie_scores[,2],
+         labels = rownames(pca_specie_scores),
+         cex = .5,
+         pos = 2)
+    # arrows(x = pca_specie_scores[,1],
+    #        y = pca_specie_scores[,2])
+  }
+
   if (is.null(legend_x) || is.null(legend_y)){
     legend_x <- x_min + legend_x_offset
     legend_y <- y_max + legend_y_offset
@@ -416,34 +455,130 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, color_pallete
   }
 }
 
-discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season","Nose")
+discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season","Nose","Otitis_status_OM_6mo")
 
 # ------------------------
 pca_full_data <- rda(t(otu_rare_clr_filtered.m), data = metadata.df) # ~1 makes it unconstrained
+
+# pca.scores <- scores(pca_full_data, choices=c(1,2,3),scaling = "symmetric")
+# # Get component x,y coordinates
+# pca_site_scores <- scores(pca_full_data, display = "sites")
+# pca_specie_scores <- scores(pca_full_data, display = "species")
+# pca_percentages <- (pca_full_data$CA$eig/sum(pca_full_data$CA$eig)) * 100
+# 
+# plot(pca_full_data,
+#      type='n')
+# grid(NULL,NULL, lty = 2, col = "grey80")
+# points(pca.scores$sites)
+# points(pca.scores$species, col = 'red',cex = .5, pch = "x")
+# arrows(0,0,pca_specie_scores[,1],pca_specie_scores[,2],length =.5)
+# 
+# 
+# pca.scores <- scores(pca_full_data)
+# allOTUs <- pca.scores$species
+# left_pca.v <- names(sort(pca.scores$species[,'PC2']))[1:3]
+# right_pca.v <- names(sort(pca.scores$species[,'PC2'], decreasing = T))[1:3]
+# left_rda.v <- names(sort(pca.scores$species[,'PC1']))[1:3]
+# right_rda.v <- names(sort(pca.scores$species[,'PC1'], decreasing = T))[1:3]
+# top_vars.v <- unique(c(left_pca.v, right_pca.v, left_rda.v, right_rda.v))
+# # otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% top_vars.v,]$taxonomy_species
+# # pca_full_data$CA$v <- pca_full_data$CA$v[top_vars.v,]
+# top_OTUs <- pca_full_data$CA$v[top_vars.v,]
+# 
+# lda.arrows <- function(x, myscale = 1, tex = 0.75, choices = c(1,2), ...){
+#   ## adds `biplot` arrows to an lda using the discriminant function values
+#   heads <- coef(x)
+#   arrows(x0 = 0, y0 = 0, 
+#          x1 = myscale * heads[,choices[1]], 
+#          y1 = myscale * heads[,choices[2]], ...)
+#   text(myscale * heads[,choices], labels = row.names(heads), 
+#        cex = tex)
+# }
+# pca_full_data$CA
+# 
+# arrows(0,0,top_OTUs[,1],top_OTUs[,2], length = .5,angle =30,col = 'red')
+# text(pca_full_data, display="bp", scaling=1)
+# biplot(pca_full_data,)
+# 
+# plot(c(0:10),type="n")
+# 
+# arrows(1,0,2,1,length=0.2)
+# arrows(1,1,2,2,length=0.1,angle=40,lwd=3)
+# 
+# 
+# text(x = pca_specie_scores[,1],
+#      y = pca_specie_scores[,2],
+#      labels = rownames(pca_specie_scores),
+#      cex = .5,
+#      pos = 2)
+# arrows(x = pca_specie_scores[,1],
+#        y = pca_specie_scores[,2])
+# arrows
+
+# data.frame(pca_full_data$CA$v)
+#biplot(pca_full_data)
+# pca_full_data <- capscale(t(otu_rare.m)~1,distance="bray", data = metadata.df)
+# --------------------------------------------------------------------------------------------------------
+# https://stats.stackexchange.com/questions/276645/arrows-of-underlying-variables-in-pca-biplot-in-r
+# X <- t(otu_rare_clr_filtered.m)
+# 
+# CEN = scale(X, center = T, scale = T) # Centering and scaling the data
+# PCA = prcomp(CEN)
+# 
+# # EIGENVECTORS:
+# (evecs.ei = eigen(cor(CEN))$vectors)       # Using eigen() method
+# (evecs.svd = svd(CEN)$v)                   # PCA with SVD...
+# (evecs = prcomp(CEN)$rotation)             # Confirming with prcomp()
+# 
+# # EIGENVALUES:
+# (evals.ei = eigen(cor(CEN))$values)        # Using the eigen() method
+# (evals.svd = svd(CEN)$d^2/(nrow(X) - 1))   # and SVD: sing.values^2/n - 1
+# (evals = prcomp(CEN)$sdev^2)               # with prcomp() (needs squaring)
+# 
+# # SCORES:
+# scr.svd = svd(CEN)$u %*% diag(svd(CEN)$d)  # with SVD
+# scr = prcomp(CEN)$x                        # with prcomp()
+# scr.mm = CEN %*% prcomp(CEN)$rotation      # "Manually" [data] [eigvecs]
+# 
+# # LOADINGS:
+# 
+# loaded = evecs %*% diag(prcomp(CEN)$sdev)  # [E-vectors] [sqrt(E-values)]
+# 
+# arrows(0, 0,
+#        cor(X[,1], scr[,1]) * 0.8 * sqrt(nrow(X) - 1), 
+#        cor(X[,1], scr[,2]) * 0.8 * sqrt(nrow(X) - 1), 
+#        lwd = 1, angle = 30, length = 0.1, col = 4)
+# arrows(0, 0,
+#        cor(X[,1], scr[,1]) * 0.8 * sqrt(nrow(X) - 1), 
+#        cor(X[,1], scr[,2]) * 0.8 * sqrt(nrow(X) - 1), 
+#        lwd = 1, angle = 30, length = 0.1, col = 4)
+# --------------------------------------------------------------------------------------------------------
 generate_pca(pca_full_data, mymetadata = metadata.df,
              plot_height = 5, plot_width =5,
-             legend_x = -6, legend_y = 4,
+             legend_x = -5, legend_y = 5,
              point_size = .5, point_line_thickness = .3,point_alpha =.8,
-             legend_title = "",
+             legend_title = "Remote Community",
+             label_species = F,
              plot_title = "Remote Community",
-             limits = c(-5,4,-5,4),
+             # limits = c(-7,7,-8,7),
              plot_spiders = F,
-             plot_ellipses = T,
+             plot_ellipses = F,
+             plot_hulls = F,
              use_shapes = T,
              ellipse_border_width = .5,
              label_ellipse = F, ellipse_label_size = .5,
              color_pallete = my_colour_pallete_10_distinct,
-             variable_to_plot = "Remote_Community", legend_cols = 1,
-             variable_colours_available = F)
+             variable_to_plot = "Nose", legend_cols = 1,
+             variable_colours_available = T)
 
 for (myvar in discrete_variables){
   generate_pca(pca_full_data, mymetadata = metadata.df,
                plot_height = 5, plot_width =5,
-               legend_x = -6, legend_y = 4,
+               legend_x = -7, legend_y = 6,
                point_size = .5, point_line_thickness = .3,point_alpha =.8,
                legend_title = myvar,
                plot_title = "",
-               limits = c(-5,5,-5,5),
+               limits = c(-7,7,-8,7),
                plot_spiders = T,
                plot_ellipses = F,
                use_shapes = T,
@@ -451,7 +586,7 @@ for (myvar in discrete_variables){
                label_ellipse = F, ellipse_label_size = .5,
                color_pallete = my_colour_pallete_10_distinct,
                variable_to_plot = myvar, legend_cols = 1,
-               variable_colours_available = F,
+               variable_colours_available = T,
                filename = paste0("Result_figures/pca_plots/",myvar, "_pca.pdf"))
 }
 
@@ -472,11 +607,11 @@ for (myvar in discrete_variables){
   if (myvar == "Remote_Community") {next}
   generate_pca(pca_community_0, mymetadata = community_0_meta.df,
                plot_height = 5, plot_width =5,
-               legend_x = -6, legend_y = 4,
+               legend_x = -7, legend_y = 6,
                point_size = .5, point_line_thickness = .3,point_alpha =.8,
                legend_title = myvar,
                plot_title = "",
-               # limits = c(-5,4,-5,4),
+               limits = c(-7,7,-8,7),
                plot_spiders = T,
                plot_ellipses = F,
                use_shapes = T,
@@ -484,7 +619,7 @@ for (myvar in discrete_variables){
                label_ellipse = F, ellipse_label_size = .5,
                color_pallete = my_colour_pallete_10_distinct,
                variable_to_plot = myvar, legend_cols = 1,
-               variable_colours_available = F,
+               variable_colours_available = T,
                filename = paste0("Result_figures/pca_plots/community_0__",myvar, "_pca.pdf"))
 }
 
@@ -493,11 +628,11 @@ for (myvar in discrete_variables){
   if (myvar == "Remote_Community") {next}
   generate_pca(pca_community_1, mymetadata = community_1_meta.df,
                plot_height = 5, plot_width =5,
-               legend_x = -6, legend_y = 4,
+               legend_x = -7, legend_y = 6,
                point_size = .5, point_line_thickness = .3,point_alpha =.8,
                legend_title = myvar,
                plot_title = "",
-               # limits = c(-5,4,-5,4),
+               limits = c(-7,7,-8,7),
                plot_spiders = T,
                plot_ellipses = F,
                use_shapes = T,
@@ -505,7 +640,7 @@ for (myvar in discrete_variables){
                label_ellipse = F, ellipse_label_size = .5,
                color_pallete = my_colour_pallete_10_distinct,
                variable_to_plot = myvar, legend_cols = 1,
-               variable_colours_available = F,
+               variable_colours_available = T,
                filename = paste0("Result_figures/pca_plots/community_1__",myvar, "_pca.pdf"))
 }
 
@@ -515,213 +650,6 @@ for (myvar in discrete_variables){
 # [1] "Sequence_file_ID"       "Sequence_file_ID_clean" "Sample_ID"              "Remote_Community"      
 # [5] "Otitis_status"          "Gold_Star"              "OM_6mo"                 "Type_OM"               
 # [9] "Season"                 "Nose"                   "Index"                  "Sample_retained"   
-
-
-
-# DX_Groups, Wheat_related_symptoms_and_group, AGE, Gender, DU_bacterial_load, TI_bacterial_load, DNS_bacterial_load, 
-# H_pylori_gastritis, Eos_count, Intraepithelial_Lymphocytes_counts, Hydrogen_.H2._Baseline, H2_Peak, Peak_Time_H2, 
-# Methane_.CH4._Baeline, Methane_Peak, Peak_Time_Methane, Positive_for_H2, Positive_for_Methane, Final_Diagnosis_H2_or_CH4, 
-# Smoking, PPI_Medications, NCV, NC_total_score, NC_ab_pain, NC_fullness, NC_nausea, weight, height, BMI, Acid_Eructation, 
-# Dysphagia, Fullness, Early_Satiety, Postprandial_Pain, Epigastric_Pain, Retrosternal_Discomfort, Pain_defecation, 
-# Diffuclty_Defecation, Constipation, Loose_stool, Incontinence, Urgency_defecation, Diarrhea, Loss_apetite, Abd_cramps, 
-# Sickeness, Nausea, Vomiting, Bloating, Gas_flatulence, Belching, SAGIS__Diarr_Tot, SAGIS_Consti_Tot, SAGIS_Total, 
-# Headache, Fatigue, Back_Pain, Depression, Sleep, Anxiety"
-
-
-# out_name <- paste0("Result_figures/pcoa_dbrda_plots/Age_pca.pdf")
-# generate_pca(m.pca, mymetadata = metadata.df,
-#              plot_height = 5, plot_width =5,
-#              legend_x = -5, legend_y = 2,
-#              point_size = 1, point_line_thickness = .2,point_alpha =.7,
-#              limits = c(-4,4,-6,2),
-#              plot_spiders = F,
-#              plot_ellipses = F,
-#              label_ellipse = F, ellipse_label_size = .3,
-#              color_pallete = my_colour_pallete_10_distinct,
-#              variable_to_plot = "Age_binned", legend_cols = 1,
-#              filename = out_name)
-
-
-# ---------------------------------------------------------------------------------
-# Calculate PCA for each sample site for sample just from Control, UC and CD
-# These results are for the first, high-level paper
-# Levels: DNS DU G GNS O R RC TI
-for (st in unique(metadata.df$Sample_Type)){
-  temp_metadata <- subset(metadata.df, Sample_Type == st & DX_Groups %in% c("CONTROL", "UC", "CD"))
-  temp_data <- otu_rare_clr_filtered.m[,rownames(temp_metadata)]
-  if (dim(temp_metadata)[1] == 0 || length(unique(temp_metadata$DX_Groups)) < 2){next}
-  temp_pca <- rda(t(temp_data), data = temp_metadata) # ~1 makes it unconstrained
-  leg_x_off <- -1
-  if (st == "DU") {leg_x_off = leg_x_off - 2}
-  if (st == "RC") {leg_x_off = leg_x_off - 1}
-  if (st == "R") {leg_x_off = leg_x_off - 2}
-  generate_pca(temp_pca, mymetadata = temp_metadata,
-               use_shapes = T,
-               plot_height = 5, plot_width =5,
-               # legend_x = -5, legend_y = 2,
-               legend_x_offset = leg_x_off,
-               point_size = .5, point_line_thickness = .3,point_alpha =.8,
-               legend_title = "Disease state",
-               plot_title = paste0("Sample type : ", st),
-               # limits = c(-4,4,-7,2.5),
-               plot_spiders = F,
-               plot_ellipses = T,
-               label_ellipse = F, ellipse_label_size = .5,
-               ellipse_border_width = .5,
-               color_pallete = my_colour_pallete_206_distinct,
-               variable_to_plot = "DX_Groups", legend_cols = 1,
-               variable_colours_available = T,
-               filename = paste0("Result_figures/pcoa_dbrda_plots/paper_UC_CD_CONTROL/Sample_Type_", st, "__control_CD_UC_pca.pdf"))
-}
-# temp_metadata <- subset(metadata.df, Sample_Type == "TI" & DX_Groups %in% c("UC", "CD"))
-temp_metadata <- subset(metadata.df, DX_Groups %in% c("CONTROL", "UC", "CD"))
-temp_data <- otu_rare_clr_filtered.m[,rownames(temp_metadata)]
-temp <- rda(t(temp_data), data = temp_metadata) # ~1 makes it unconstrained
-generate_pca(temp, mymetadata = temp_metadata,
-             plot_height = 5, plot_width =5,
-             legend_x = -6, legend_y = 4,
-             point_size = .5, point_line_thickness = .3,point_alpha =.8,
-             legend_title = "Disease state",
-             plot_title = "All sample types",
-             limits = c(-5,4,-5,4),
-             plot_spiders = F,
-             plot_ellipses = T,
-             use_shapes = T,
-             ellipse_border_width = .5,
-             label_ellipse = F, ellipse_label_size = .5,
-             color_pallete = my_colour_pallete_206_distinct,
-             variable_to_plot = "DX_Groups", legend_cols = 1,
-             variable_colours_available = T,
-             filename = paste0("Result_figures/pcoa_dbrda_plots/paper_UC_CD_CONTROL/all_sample_types__DX_Groups_control_CD_UC.pdf"))
-
-generate_pca(temp, mymetadata = temp_metadata,
-             plot_height = 5, plot_width =5,
-             legend_x = -6, legend_y = 4,
-             point_size = .5, point_line_thickness = .3,point_alpha =.8,
-             legend_title = "Sample type",
-             plot_title = "All sample types",
-             limits = c(-5,4,-5,4),
-             use_shapes = T,
-             plot_spiders = F,
-             plot_ellipses = T,
-             ellipse_border_width = .5,
-             label_ellipse = F, ellipse_label_size = .5,
-             color_pallete = my_colour_pallete_206_distinct,
-             variable_to_plot = "Sample_Type", legend_cols = 1,
-             variable_colours_available = T,
-             filename = paste0("Result_figures/pcoa_dbrda_plots/paper_UC_CD_CONTROL/all_sample_types__Sample_Type_control_CD_UC.pdf"))
-
-# ---------------------------------------------------------------------------------
-
-
-
-# pca analysis (same as PCA but option of distance; unconstrained ordination)
-m.pca <- rda(t(otu_rare_clr_filtered.m), data = metadata.df) # ~1 makes it unconstrained
-# temp <- cca(t(otu_rare_clr_filtered.m), data = metadata.df)
-# scores(temp,choices=c(1,2,3))
-# pca_percentages <- (temp$CA$eig/sum(temp$CA$eig)) * 100
-
-
-  out_name <- paste0("Result_figures/pcoa_dbrda_plots/Sample_Type_and_DX_Groups_pca.pdf")
-metadata.df$Sample_Type_DX_Groups <- factor(with(metadata.df, paste0(Sample_Type, "_", DX_Groups)))
-generate_pca(m.pca, mymetadata = metadata.df,
-             plot_height = 8, plot_width =8,
-             legend_x = -5, legend_y = 2,
-             point_size = 1, point_line_thickness = .4,point_alpha =.7,
-             limits = c(-4,4,-7,2.5),
-             plot_spiders = F,
-             plot_ellipses = T,
-             label_ellipse = T, ellipse_label_size = .3,
-             color_pallete = my_colour_pallete_206_distinct,
-             variable_to_plot = "Sample_Type_DX_Groups", legend_cols = 1,
-             filename = out_name)
-
-
-
-
-# pca.scores <- scores(m.pca, choices=c(1,2,3))
-# # Get component x,y coordinates
-# pca_site_scores <- scores(m.pca, display = "sites")
-# pca_specie_scores <- scores(m.pca, display = "species")
-# pca_percentages <- (m.pca$CA$eig/sum(m.pca$CA$eig)) * 100
-# 
-# # Remove NA entries from the metadata and from the 
-# internal_metadata <- metadata.df[!is.na(metadata.df[["DX_Groups"]]),]
-# pca_site_scores <- pca_site_scores[rownames(pca_site_scores) %in% rownames(internal_metadata),]
-
-
-
-variables <- c("DX_Groups", "Wheat_related_symptoms_and_group","Gender","Smoking", "Acid_Eructation", "Dysphagia", "Fullness", "Early_Satiety", 
-               "Postprandial_Pain", "Epigastric_Pain", "Retrosternal_Discomfort", "Pain_defecation", 
-               "Difficulty_Defecation", "Constipation", "Loose_stool", "Incontinence", "Urgency_defecation",
-               "Diarrhea", "Loss_apetite", "Abd_cramps", "Sickeness", "Nausea", "Vomiting", "Bloating", 
-               "Gas_flatulence", "Belching", "Headache", "Fatigue", "Back_Pain", "Depression", "Sleep", "Anxiety", "H_pylori_gastritis",
-               "Positive_for_H2","Positive_for_Methane","Final_Diagnosis_H2_or_CH4","PPI_Medications", "Sample_Type","SAGIS__Diarr_Tot","SAGIS_Consti_Tot")
-
-continuous_binned_variables <- grep("_binned", names(metadata.df), value = T)
-variables <- c(variables, continuous_binned_variables)
-
-for (var in variables){
-  print("--------")
-  print(paste0(var, ":"))
-  print(summary(factor(metadata.df[[var]])))
-}
-# summary(metadata.df$DX_Groups)
-
-for (myvar in variables){
-  out_name <- paste0("Result_figures/pcoa_dbrda_plots/", myvar,"_pca.pdf")
-  if (myvar == "Wheat_related_symptoms_and_group"){
-    mylegendtitle <- "Wheat symptoms & group"
-  } 
-  else{
-    mylegendtitle <- myvar
-  }
-  if (length(unique(metadata.df[,myvar])) > 10){
-    mypal <- my_colour_pallete_15
-  } else{
-    mypal <- my_colour_pallete_10_distinct
-  }
-  generate_pca(m.pca, mymetadata = metadata.df,
-               plot_height = 5, plot_width = 5,
-               legend_x = -5, legend_y = 2, legend_cols = 1, legend_title = mylegendtitle,
-               limits = c(-4,4,-6,2),
-               point_size = .4, point_line_thickness = .05,point_alpha =.8,
-               plot_spiders = F,
-               plot_ellipses = F,
-               #color_pallete = my_colour_pallete_10_distinct,
-               color_pallete = mypal,
-               variable_to_plot = myvar, 
-               filename = out_name)
-}
-
-pdf("Result_figures/pcoa_dbrda_plots/Gut_study_combined_pca.pdf", height = 90, width = 13)
-par(mfrow=c(20,3))
-for (myvar in variables){
-  if (myvar == "Wheat_related_symptoms_and_group"){
-    mylegendtitle <- "Wheat symptoms & group"
-  } 
-  else{
-    mylegendtitle <- myvar
-  }
-  if (length(unique(metadata.df[,myvar])) > 10){
-    mypal <- my_colour_pallete_15
-  } else{
-    mypal <- my_colour_pallete_10_distinct
-  }
-  generate_pca(m.pca, mymetadata = metadata.df,
-               plot_height = 3, plot_width = 3,
-               limits = c(-4,4,-6,2),
-               legend_x = -4.5, legend_y = 2, legend_cols = 1,legend_title = mylegendtitle,
-               point_size = .6, point_line_thickness = .1, point_alpha =.8,
-               plot_spiders = F,
-               plot_ellipses = F,
-               #color_pallete = my_colour_pallete_10_distinct,
-               color_pallete = mypal,
-               variable_to_plot = myvar)
-}
-dev.off()
-
-
 
 
 
@@ -766,9 +694,19 @@ run_permanova <- function(my_community_data, my_metadata, my_variables){
 # %in% = nesting. e.g. b %in% a
 # /    = nesting with main effect term. e.g. a + b %in% a.
 
+adonis(t(otu_rare_clr_filtered.m)~Otitis_status,data = metadata.df, permu=999,method="euclidean")
 
-metadata_permanova.df <- subset(metadata.df, DX_Groups %in% c("CONTROL", "UC", "CD"))
-metadata_permanova.df <- metadata.df[,c("DX_Groups", "Sample_Type", "AGE", "BMI", "Gender")]
+metadata_permanova.df <- subset(metadata.df, Remote_Community == 0)
+otu_rare_clr_filtered_permanova.m <- otu_rare_clr_filtered.m[,rownames(metadata_permanova.df)]
+adonis(t(otu_rare_clr_filtered_permanova.m)~Otitis_status,data = metadata_permanova.df, permu=999,method="euclidean")
+
+metadata_permanova.df <- subset(metadata.df, Remote_Community == 1)
+otu_rare_clr_filtered_permanova.m <- otu_rare_clr_filtered.m[,rownames(metadata_permanova.df)]
+adonis(t(otu_rare_clr_filtered_permanova.m)~Otitis_status,data = metadata_permanova.df, permu=999,method="euclidean")
+
+
+
+
 dim(metadata_permanova.df)
 metadata_permanova.df <- metadata_permanova.df[complete.cases(metadata_permanova.df),]
 dim(metadata_permanova.df)

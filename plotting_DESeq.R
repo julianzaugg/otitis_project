@@ -123,13 +123,97 @@ plot_genus_deseq <- function(deseq_result_table, facet_plot = T, limit_to = NULL
 # Load the deseq data. Assume that there is a Group_1 and Group_2 column
 
 # --------------------------------------------------------------------------------
-# paper 1 
-# Plot the sample site 
+
+# Define the discrete variables
+discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season","Nose","Otitis_status_OM_6mo", "Remote_Community_Otitis_status")
+
+otu_groups <- read.csv("Result_tables/DESeq_results/OTU_variable_groups.csv", header = T)
+otu_groups <- otu_groups[abs(otu_groups$log2FoldChange) > 1,]
+
+for (myvar in discrete_variables){
+  data_subset <- subset(otu_groups, Variable == myvar)
+  myplot <- 
+    plot_genus_deseq(data_subset,facet_plot = T,
+                     limit_to = ".", 
+                     title = myvar, 
+                     pallete = my_colour_pallete_12_soft,
+                     include_grid = T) 
+  
+  if(length(unique(with(data_subset, paste0(Group_1,"_", Group_2)))) == 3){
+    ggsave(filename = paste0("Result_figures/DESeq_plots/",myvar, ".pdf"),
+           plot = myplot,
+           width = 10,
+           height = 12,
+           units = "cm")   
+  } else if(length(unique(with(data_subset, paste0(Group_1,"_", Group_2)))) > 3){
+    ggsave(filename = paste0("Result_figures/DESeq_plots/",myvar, ".pdf"),
+           plot = myplot,
+           width = 10,
+           height = 22,
+           units = "cm")   
+    
+  } else{
+    ggsave(filename = paste0("Result_figures/DESeq_plots/",myvar, ".pdf"),
+           plot = myplot,
+           width = 12,
+           height = 8,
+           units = "cm")    
+  }
+  
+}
+
+
+
 otu_groups <- read.csv("Result_tables/DESeq_results/OTU_variable_groups_within_community.csv", header = T)
 otu_groups <- otu_groups[abs(otu_groups$log2FoldChange) > 1,]
 
-myplot <- plot_genus_deseq(otu_groups,facet_plot = F,
-                           limit_to = ".", title = "", pallete = my_colour_pallete_12_soft,include_grid = T)
+
+for (community in unique(otu_groups$Remote_Community)){
+  
+  for (myvar in discrete_variables){
+    data_subset <- subset(otu_groups, Variable == myvar & Remote_Community == community)
+    if (myvar == "Remote_Community"){next}
+    print(myvar)
+    myplot <- 
+      plot_genus_deseq(data_subset,facet_plot = T,
+                       limit_to = ".", 
+                       title = paste0("community ", community,"; ", myvar), 
+                       pallete = my_colour_pallete_12_soft,
+                       include_grid = T) 
+    
+    if(length(unique(with(data_subset, paste0(Group_1,"_", Group_2)))) == 3){
+      ggsave(filename = paste0("Result_figures/DESeq_plots/community_",community, "__", myvar, ".pdf"),
+             plot = myplot,
+             width = 10,
+             height = 12,
+             units = "cm")   
+    } else if(length(unique(with(data_subset, paste0(Group_1,"_", Group_2)))) > 3){
+      ggsave(filename = paste0("Result_figures/DESeq_plots/community_",community, "__", myvar, ".pdf"),
+             plot = myplot,
+             width = 10,
+             height = 22,
+             units = "cm")   
+      
+    } else{
+      ggsave(filename = paste0("Result_figures/DESeq_plots/community_",community, "__", myvar, ".pdf"),
+             plot = myplot,
+             width = 12,
+             height = 8,
+             units = "cm")    
+    }
+    
+  }
+  
+  
+}
+
+
+
+
+myplot
+
+
+
 
 for (st in unique(otu_dx_groups$Sample_Type)){
   temp <- subset(otu_dx_groups, Sample_Type == st)

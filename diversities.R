@@ -70,6 +70,27 @@ psotu2veg <- function(physeq) {
   return(as(OTU, "matrix"))
 }
 
+
+
+# Function that calculates the geometric mean with some error-protection bits. 
+# DESeq2 does not appear to work (will throw an error) if every OTU (or genus or genome etc.) 
+# contains at least one count of zero in every row of the count data.
+# Specifically, the function "dds<-DESeq(dds, betaPrior = FALSE)" will fail
+# One way to address this is to use the function below as input to DESeq2 to transform the data.
+# Calculate the geometric means prior to estimating the size factors
+gm_mean = function(x, na.rm=TRUE){
+  # The geometric mean, with some error-protection bits.
+  exp(sum(log(x[x > 0 & !is.na(x)]), na.rm=na.rm) / length(x))
+}
+
+# Center log ratio transform
+clr = function(x, base=2){
+  x <- log((x / gm_mean(x)), base)
+  x[!is.finite(x) | is.na(x)] <- 0.0
+  return(x)
+}
+
+
 # move an OTU table from vegan to phyloseq  
 # otu_table(PhyloseqObject) <- otu_table(veganOTUobject, taxa_are_rows=TRUE)  
 # move sample data from vegan to phyloseq
@@ -87,7 +108,7 @@ generate_diversity_boxplot <- function(mymetadata, variable, metric, fill_pallet
     variable_colours <- setNames(fill_pallete[1:length(variable_values)], variable_values)  
   }
   
-  myplot <- ggplot(internal_metadata, aes(x = get(variable),
+  myplot <- ggplot(internal_metadata, aes(x = factor(get(variable)),
                                           y = get(metric), 
                                           fill = factor(get(variable)))) +
     stat_boxplot(geom = "errorbar", 
@@ -146,11 +167,14 @@ otu_rare.m <- as.matrix(read.csv("Result_tables/count_tables/OTU_counts_rarefied
 # in the main script, remove them from the metadata.df here
 metadata.df <- metadata.df[rownames(metadata.df) %in%colnames(otu_rare.m),]
 
+
+
 # Remove samples that are not in the metadata.
 otu_rare.m <- otu_rare.m[,colnames(otu_rare.m) %in% rownames(metadata.df)]
 
 # Define the discrete variables
-discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season","Nose")
+discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season","Nose", 
+"Otitis_status_OM_6mo","Remote_Community_Otitis_status","OM_6mo_Type_OM","Remote_Community_Season")
 
 # create phyloseq object
 otu_rare_phyloseq <- otu_table(otu_rare.m, taxa_are_rows=TRUE)
@@ -168,8 +192,8 @@ full=cbind(metadata.df, otu_rare_chao1.df)
 # ------------------------------------------
 # Generate plots
 # For each Discrete variable
-
 for (myvar in discrete_variables){
+  full_subset[,myvar] <- factor(full_subset[,myvar])
   myplot <- generate_diversity_boxplot(full, variable = myvar,fill_pallete = my_colour_pallete_10_distinct,metric = "Chao1",variable_colours_available = F) + 
     guides(fill = F, color = F) + 
     ggtitle("Chao1") +
@@ -190,7 +214,6 @@ for (myvar in discrete_variables){
   ggsave(filename = paste0("Result_figures/diversity_analysis/",myvar,"_Simpson.pdf"),myplot, width = 10, height = 8,units = "cm")
 }
 
-full_subset <- subset(full, Remote_Community == 0)
 
 # For each variable in each community
 for (community in unique(metadata.df$Remote_Community)){
@@ -219,8 +242,23 @@ for (community in unique(metadata.df$Remote_Community)){
   }  
 }
 
+# full_subset_Otitis_status_OM_6mo <- full[complete.cases(full[,c("Otitis_status", "OM_6mo")]),]
+# full_subset_Otitis_status_OM_6mo$Otitis_status_OM_6mo <- with(full_subset, paste0(Otitis_status, "_", OM_6mo))
+# 
+# myplot <- 
+#   generate_diversity_boxplot(full_subset_Otitis_status_OM_6mo, 
+#                              variable = "Otitis_status_OM_6mo",
+#                              fill_pallete = my_colour_pallete_10_distinct,
+#                              metric = "Chao1",
+#                              variable_colours_available = F) +
+#   guides(fill = F, color = F) +
+#   ggtitle("Chao1") +
+#   scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
+# ggsave(filename = paste0("Result_figures/diversity_analysis/Otitis_status_OM_6mo__Chao1.pdf"),myplot, width = 10, height = 8,units = "cm")
+# 
 
 # ------------------------------------------
+
 
 # Generate the diversity summary tables for each variable
 # For each discrete variable, calculate the diversity index mean, max, min, median and stdev
@@ -285,6 +323,57 @@ for (var in discrete_variables) {
   outfilename <- paste0("Result_tables/diversity_analysis/variable_summaries_within_community/", var, "_diversity_summary_within_community.csv")
   write.csv(x = diversity_summary, outfilename, row.names = F,quote = F)
 }
+
+# ------------------------------------------------------------------------------------------------------------------------------
+# Calculate the beta-diversity for each variable 
+# Centre-log transform the counts first and use a euclidean distance. This should be equivalent or superior to 
+# a bray curtis transform/distance used on counts. 
+# Normally we would use un-rarefied data, however since our data is ntot truly rarified, this should be ok.
+# As far as I can tell in the literature, the euclidean distance between CLR values is an appropriate beta diversity measure
+beta_diversity_significances <- data.frame("Variable" = character(),
+                                           "P_value" = numeric(),
+                                           "R_value" = numeric()
+)
+for (myvar in discrete_variables){
+  metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
+  otu_rare_subset.m <- otu_rare.m[,rownames(metadata_subset.df)]
+  # print(myvar)
+  temp <- with(metadata_subset.df, anosim(t(clr(otu_rare_subset.m)),get(myvar), distance = "euclidean",permutations = 999))
+  beta_diversity_significances <- rbind(beta_diversity_significances, data.frame("Variable" = myvar,
+                                                                                 "P_value" = temp$signif,
+                                                                                 "R_value" = temp$statistic))
+}
+
+write.csv(beta_diversity_significances, file = "Result_tables/diversity_analysis/variable_beta_diversity_significance.csv", row.names = F, quote = F)
+
+# Calculate the beta-diversity for each variable within each community 
+beta_diversity_significances <- data.frame("Remote_Community" = character(),
+                                           "Variable" = character(),
+                                           "P_value" = numeric(),
+                                           "R_value" = numeric()
+)
+for (community in unique(metadata.df$Remote_Community)){
+  for (myvar in discrete_variables){
+    if (myvar == "Remote_Community") {next}
+    metadata_subset.df <- subset(metadata.df, Remote_Community == community)
+    metadata_subset.df <- metadata_subset.df[!is.na(metadata_subset.df[,myvar]),]
+    otu_rare_subset.m <- otu_rare.m[,rownames(metadata_subset.df)]
+    # print(all(colnames(otu_rare_subset.m) == rownames(metadata_subset.df)))
+    # print(myvar)
+    temp <- with(metadata_subset.df, anosim(t(clr(otu_rare_subset.m)),get(myvar), distance = "euclidean",permutations = 999))
+    beta_diversity_significances <- rbind(beta_diversity_significances, data.frame("Remote_Community" = community,
+                                                                                   "Variable" = myvar,
+                                                                                   "P_value" = temp$signif,
+                                                                                   "R_value" = temp$statistic))
+  }
+}
+write.csv(beta_diversity_significances, file = "Result_tables/diversity_analysis/within_community_variable_beta_diversity_significance.csv", row.names = F, quote = F)
+
+# with(metadata.df, anosim(t(otu_rare.m),Remote_Community,distance = "bray",permutations = 10000))
+# with(metadata.df, anosim(bray.m,Remote_Community,permutations = 10000))
+# p.adjust(p, method = p.adjust.methods, n = length(p))
+#betad <- betadiver(t(otu_rare.m), "z")
+# ------------------------------------------------------------------------------------------------------------------------------
 
 
 # Now that we have calculated the diversities for each sample, we can test if diversity distributions are significantly different between groups:
@@ -508,7 +597,7 @@ write.csv(variable_comparison, file = "Result_tables/diversity_analysis/within_c
 
 
 
-summary(aov(formula = Chao1~Remote_Community + Otitis_status + Nose, data = full))
+summary(aov(formula = Chao1~Remote_Community +  Nose, data = full))
 
 # lme requires a random effect variable to be specified. Simply make this the sample ID (Index or Sample_No, the latter is the patient ID)
 full$Index <- rownames(full)
