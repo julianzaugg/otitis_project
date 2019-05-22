@@ -109,6 +109,10 @@ relabel_low_abundance_taxa <- function(mydata, taxa_summary, my_top_n = 10){
   return(internal_data)
 }
 
+
+# ------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
+
 class_data_processed.df <- class_data.df
 
 # Count the number of samples for each sample site and filter (though probably not necessary as GNS/DNS have been filtered)
@@ -119,271 +123,6 @@ class_data_processed.df <- class_data.df
 # 
 # class_data_processed.df <- class_data_processed.df[class_data_processed.df$Remote_Community %in% as.character(samples_each_type[samples_each_community$Count > 2,"Remote_Community"]),]
 
-  
-# ------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------
-#                 Create pie charts
-
-# --------------------
-# top 10 genus by mean relative abundances. Values are normalised for pie chart.
-# genus_data.df <- species_data.df
-# names(genus_data.df)[names(genus_data.df) == "taxonomy_species"] <- "taxonomy_genus"
-
-# Generate taxonomy summary (to get mean for each genus)
-genus_taxa_summary.df <- generate_taxa_summary(genus_data.df,
-                                               taxa_column = "taxonomy_genus",
-                                               abundance_column = "Relative_abundance_rarified")
-# Relabel each genus not in top 10 to 'Other'
-genus_data_processed.df <- relabel_low_abundance_taxa(genus_data.df, genus_taxa_summary.df, my_top_n =10)
-
-# Put the re-labelled data back through the summary function. This will calculate the mean abundance for the Other taxa!
-genus_data_processed_summary.df <- generate_taxa_summary(genus_data_processed.df,
-                      taxa_column = "taxonomy_genus",
-                      abundance_column = "Relative_abundance_rarified")
-
-# Normalise the mean abundance
-genus_data_processed_summary.df$normalised_mean_abundance <- genus_data_processed_summary.df$Mean_abundance / sum(genus_data_processed_summary.df$Mean_abundance)
-
-# Create pie label
-genus_data_processed_summary.df$pie_label <- lapply(genus_data_processed_summary.df$normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
-
-# Order by normalised_mean_abundance
-genus_data_processed_summary.df <- genus_data_processed_summary.df[rev(order(genus_data_processed_summary.df$normalised_mean_abundance)),]
-
-# Create the taxa label
-genus_data_processed_summary.df$taxa_label <- gsub(".*(f__.*)", "\\1",genus_data_processed_summary.df$taxonomy_genus)
-
-# Factor taxonomy_genus and label to correct level ordering
-genus_data_processed_summary.df$taxonomy_genus <- factor(genus_data_processed_summary.df$taxonomy_genus, levels = unique(as.character(genus_data_processed_summary.df$taxonomy_genus)))
-genus_data_processed_summary.df$taxa_label <- factor(genus_data_processed_summary.df$taxa_label, levels = unique(as.character(genus_data_processed_summary.df$taxa_label)))
-
-
-# Assign the y location for the labels
-genus_data_processed_summary.df <- 
-  genus_data_processed_summary.df %>%
-  arrange(desc(taxonomy_genus)) %>%
-  mutate(lab.ypos = cumsum(normalised_mean_abundance) - .5*normalised_mean_abundance)
-
-# Fix the ordering so that Other is first level
-# genus_data_processed_summary.df$taxonomy_genus <- relevel(factor(genus_data_processed_summary.df$taxonomy_genus), "Other")
-
-# Assign colours for taxa
-taxa_colours.l <- setNames(c("grey", my_colour_pallete_12_soft), genus_data_processed_summary.df$taxa_label)
-
-pie_chart <- ggplot(genus_data_processed_summary.df,aes(x ="", y= normalised_mean_abundance, fill = taxa_label)) + 
-  geom_bar(width = 1, stat = "identity", color = "white",size = .2) +
-  coord_polar("y", start=0) +
-  scale_fill_manual(values = taxa_colours.l, name = "Genus") +
-  ggtitle("(Normalised) mean relative abundances across all samples") +
-  # geom_text(aes(y = lab.ypos, label = pie_label), color = "white") +
-  theme(axis.text = element_blank(),
-        axis.line = element_blank(),
-        axis.title = element_blank(),
-        legend.text = element_text(size = 8),
-        axis.ticks = element_blank(),
-        plot.title = element_text(hjust = 0.5, size =8),
-        plot.subtitle = element_text(size = 8, hjust = .5))
-
-
-ggsave(pie_chart, filename = "Result_figures/abundance_analysis_plots/pie_chart_top_genera.pdf", height = 10, width =20, units = "cm")
-
-
-# --------------------
-
-# top 10 genus by mean relative abundances for each community. Values are normalised for pie chart.
-# Generate taxonomy summary (to get mean for each genus)
-genus_taxa_summary_community_0.df <- generate_taxa_summary(subset(genus_data.df, Remote_Community == 0),taxa_column = "taxonomy_genus", abundance_column = "Relative_abundance_rarified")
-genus_taxa_summary_community_1.df <- generate_taxa_summary(subset(genus_data.df, Remote_Community == 1),taxa_column = "taxonomy_genus", abundance_column = "Relative_abundance_rarified")
-
-# Relabel each genus not in top 10 to 'Other'
-genus_data_processed_community_0.df <- relabel_low_abundance_taxa(subset(genus_data.df, Remote_Community == 0), genus_taxa_summary_community_0.df, my_top_n =10)
-genus_data_processed_community_1.df <- relabel_low_abundance_taxa(subset(genus_data.df, Remote_Community == 1), genus_taxa_summary_community_1.df, my_top_n =10)
-
-# Put the re-labelled data back through the summary function. This will calculate the mean abundance for the Other taxa!
-genus_data_processed_community_0_summary.df <- generate_taxa_summary(genus_data_processed_community_0.df,taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarified")
-genus_data_processed_community_1_summary.df <- generate_taxa_summary(genus_data_processed_community_1.df,taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarified")
-
-# Assign community
-genus_data_processed_community_0_summary.df$Remote_Community <- "0"
-genus_data_processed_community_1_summary.df$Remote_Community <- "1"
-
-# Normalise the mean abundance
-genus_data_processed_community_0_summary.df$normalised_mean_abundance <- genus_data_processed_community_0_summary.df$Mean_abundance / sum(genus_data_processed_community_0_summary.df$Mean_abundance)
-genus_data_processed_community_1_summary.df$normalised_mean_abundance <- genus_data_processed_community_1_summary.df$Mean_abundance / sum(genus_data_processed_community_1_summary.df$Mean_abundance)
-
-# Create pie label
-genus_data_processed_community_0_summary.df$pie_label <- lapply(genus_data_processed_community_0_summary.df$normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
-genus_data_processed_community_1_summary.df$pie_label <- lapply(genus_data_processed_community_1_summary.df$normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
-
-# Order by normalised_mean_abundance
-genus_data_processed_community_0_summary.df <- genus_data_processed_community_0_summary.df[rev(order(genus_data_processed_community_0_summary.df$normalised_mean_abundance)),]
-genus_data_processed_community_1_summary.df <- genus_data_processed_community_1_summary.df[rev(order(genus_data_processed_community_1_summary.df$normalised_mean_abundance)),]
-
-# Create the taxa label
-genus_data_processed_community_0_summary.df$taxa_label <- gsub(".*(f__.*)", "\\1",genus_data_processed_community_0_summary.df$taxonomy_genus)
-genus_data_processed_community_1_summary.df$taxa_label <- gsub(".*(f__.*)", "\\1",genus_data_processed_community_1_summary.df$taxonomy_genus)
-
-# Factor taxonomy_genus and label to correct level ordering
-genus_data_processed_community_0_summary.df$taxonomy_genus <- factor(genus_data_processed_community_0_summary.df$taxonomy_genus, levels = unique(as.character(genus_data_processed_community_0_summary.df$taxonomy_genus)))
-genus_data_processed_community_1_summary.df$taxonomy_genus <- factor(genus_data_processed_community_1_summary.df$taxonomy_genus, levels = unique(as.character(genus_data_processed_community_1_summary.df$taxonomy_genus)))
-genus_data_processed_community_0_summary.df$taxa_label <- factor(genus_data_processed_community_0_summary.df$taxa_label, levels = unique(as.character(genus_data_processed_community_0_summary.df$taxa_label)))
-genus_data_processed_community_1_summary.df$taxa_label <- factor(genus_data_processed_community_1_summary.df$taxa_label, levels = unique(as.character(genus_data_processed_community_1_summary.df$taxa_label)))
-
-# Assign the y location for the labels
-genus_data_processed_community_0_summary.df <-
-  genus_data_processed_community_0_summary.df %>%
-  arrange(desc(taxonomy_genus)) %>%
-  mutate(lab.ypos = cumsum(normalised_mean_abundance) - .5*normalised_mean_abundance)
-
-genus_data_processed_community_1_summary.df <-
-  genus_data_processed_community_1_summary.df %>%
-  arrange(desc(taxonomy_genus)) %>%
-  mutate(lab.ypos = cumsum(normalised_mean_abundance) - .5*normalised_mean_abundance)
-
-
-# Assign colours for taxa
-# taxa_colours_community_0.l <- setNames(c("grey", my_colour_pallete_12_soft), unique(genus_data_processed_community_0_summary.df$taxonomy_genus))
-# taxa_colours_community_1.l <- setNames(c("grey", my_colour_pallete_12_soft), unique(genus_data_processed_community_1_summary.df$taxonomy_genus)) 
-taxa_colours.l <- setNames(c("grey", my_colour_pallete_12_soft),unique(c(as.character(genus_data_processed_community_0_summary.df$taxa_label), as.character(genus_data_processed_community_1_summary.df$taxa_label))))
-
-
-pie_chart_community_0 <- ggplot(genus_data_processed_community_0_summary.df,aes(x ="", y= normalised_mean_abundance, fill = taxa_label)) + 
-  geom_bar(width = 1, stat = "identity", color = "white",size = .2) +
-  coord_polar("y", start=0) +
-  scale_fill_manual(values = taxa_colours.l, name = "Genus") +
-  labs(title="Community 0",
-       subtitle="(Normalised) mean relative abundances across all samples") +
-  # geom_text(aes(y = lab.ypos, label = pie_label), color = "white") +
-  theme(axis.text = element_blank(),
-        axis.line = element_blank(),
-        axis.title = element_blank(),
-        legend.text = element_text(size = 8),
-        axis.ticks = element_blank(),
-        plot.title = element_text(hjust = 0.5),
-        plot.subtitle = element_text(size = 8, hjust = .5))
-pie_chart_community_0
-ggsave(pie_chart_community_0, filename = "Result_figures/abundance_analysis_plots/pie_chart_top_genera_community_0.pdf", height = 10, width =20, units = "cm")
-
-
-pie_chart_community_1 <- ggplot(genus_data_processed_community_1_summary.df,aes(x ="", y= normalised_mean_abundance, fill = taxa_label)) + 
-  geom_bar(width = 1, stat = "identity", color = "white",size = .2) +
-  coord_polar("y", start=0) +
-  scale_fill_manual(values = taxa_colours.l, name = "Genus") +
-  labs(title="Community 1",
-       subtitle="(Normalised) mean relative abundances across all samples") +
-  # geom_text(aes(y = lab.ypos, label = pie_label), color = "white") +
-  theme(axis.text = element_blank(),
-        axis.line = element_blank(),
-        axis.title = element_blank(),
-        legend.text = element_text(size = 8),
-        axis.ticks = element_blank(),
-        plot.title = element_text(hjust = 0.5),
-        plot.subtitle = element_text(size = 8, hjust = 0.5))
-pie_chart_community_1
-ggsave(pie_chart_community_1, filename = "Result_figures/abundance_analysis_plots/pie_chart_top_genera_community_1.pdf", height = 10, width =20, units = "cm")
-
-
-# ------------------
-
-# top 10 genus by mean relative abundances for each community. Values are normalised for pie chart.
-# Generate taxonomy summary (to get mean for each genus)
-genus_taxa_summary_gold_star_0.df <- generate_taxa_summary(subset(genus_data.df, Gold_Star == 0),taxa_column = "taxonomy_genus", abundance_column = "Relative_abundance_rarified")
-genus_taxa_summary_gold_star_1.df <- generate_taxa_summary(subset(genus_data.df, Gold_Star == 1),taxa_column = "taxonomy_genus", abundance_column = "Relative_abundance_rarified")
-
-# Relabel each genus not in top 10 to 'Other'
-genus_data_processed_gold_star_0.df <- relabel_low_abundance_taxa(subset(genus_data.df, Gold_Star == 0), genus_taxa_summary_gold_star_0.df, my_top_n =10)
-genus_data_processed_gold_star_1.df <- relabel_low_abundance_taxa(subset(genus_data.df, Gold_Star == 1), genus_taxa_summary_gold_star_1.df, my_top_n =10)
-
-# Put the re-labelled data back through the summary function. This will calculate the mean abundance for the Other taxa!
-genus_data_processed_gold_star_0_summary.df <- generate_taxa_summary(genus_data_processed_gold_star_0.df,taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarified")
-genus_data_processed_gold_star_1_summary.df <- generate_taxa_summary(genus_data_processed_gold_star_1.df,taxa_column = "taxonomy_genus",abundance_column = "Relative_abundance_rarified")
-
-# Assign community
-genus_data_processed_gold_star_0_summary.df$Gold_Star <- "0"
-genus_data_processed_gold_star_1_summary.df$Gold_Star <- "1"
-
-# Normalise the mean abundance
-genus_data_processed_gold_star_0_summary.df$normalised_mean_abundance <- genus_data_processed_gold_star_0_summary.df$Mean_abundance / sum(genus_data_processed_gold_star_0_summary.df$Mean_abundance)
-genus_data_processed_gold_star_1_summary.df$normalised_mean_abundance <- genus_data_processed_gold_star_1_summary.df$Mean_abundance / sum(genus_data_processed_gold_star_1_summary.df$Mean_abundance)
-
-# Create pie label
-genus_data_processed_gold_star_0_summary.df$pie_label <- lapply(genus_data_processed_gold_star_0_summary.df$normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
-genus_data_processed_gold_star_1_summary.df$pie_label <- lapply(genus_data_processed_gold_star_1_summary.df$normalised_mean_abundance, function(x) ifelse(x >= 0.01, paste0(round(x*100), "%"), "<1%"))
-
-# Order by normalised_mean_abundance
-genus_data_processed_gold_star_0_summary.df <- genus_data_processed_gold_star_0_summary.df[rev(order(genus_data_processed_gold_star_0_summary.df$normalised_mean_abundance)),]
-genus_data_processed_gold_star_1_summary.df <- genus_data_processed_gold_star_1_summary.df[rev(order(genus_data_processed_gold_star_1_summary.df$normalised_mean_abundance)),]
-
-# Create the taxa label
-genus_data_processed_gold_star_0_summary.df$taxa_label <- gsub(".*(f__.*)", "\\1",genus_data_processed_gold_star_0_summary.df$taxonomy_genus)
-genus_data_processed_gold_star_1_summary.df$taxa_label <- gsub(".*(f__.*)", "\\1",genus_data_processed_gold_star_1_summary.df$taxonomy_genus)
-
-# Factor taxonomy_genus and label to correct level ordering
-genus_data_processed_gold_star_0_summary.df$taxonomy_genus <- factor(genus_data_processed_gold_star_0_summary.df$taxonomy_genus, levels = unique(as.character(genus_data_processed_gold_star_0_summary.df$taxonomy_genus)))
-genus_data_processed_gold_star_1_summary.df$taxonomy_genus <- factor(genus_data_processed_gold_star_1_summary.df$taxonomy_genus, levels = unique(as.character(genus_data_processed_gold_star_1_summary.df$taxonomy_genus)))
-genus_data_processed_gold_star_0_summary.df$taxa_label <- factor(genus_data_processed_gold_star_0_summary.df$taxa_label, levels = unique(as.character(genus_data_processed_gold_star_0_summary.df$taxa_label)))
-genus_data_processed_gold_star_1_summary.df$taxa_label <- factor(genus_data_processed_gold_star_1_summary.df$taxa_label, levels = unique(as.character(genus_data_processed_gold_star_1_summary.df$taxa_label)))
-
-# Assign the y location for the labels
-genus_data_processed_gold_star_0_summary.df <-
-  genus_data_processed_gold_star_0_summary.df %>%
-  arrange(desc(taxonomy_genus)) %>%
-  mutate(lab.ypos = cumsum(normalised_mean_abundance) - .5*normalised_mean_abundance)
-
-genus_data_processed_gold_star_1_summary.df <-
-  genus_data_processed_gold_star_1_summary.df %>%
-  arrange(desc(taxonomy_genus)) %>%
-  mutate(lab.ypos = cumsum(normalised_mean_abundance) - .5*normalised_mean_abundance)
-
-
-# Assign colours for taxa
-taxa_colours.l <- setNames(c("grey", my_colour_pallete_12_soft),unique(c(as.character(genus_data_processed_gold_star_0_summary.df$taxa_label), as.character(genus_data_processed_gold_star_1_summary.df$taxa_label))))
-
-
-pie_chart_gold_star_0 <- ggplot(genus_data_processed_gold_star_0_summary.df,aes(x ="", y= normalised_mean_abundance, fill = taxa_label)) + 
-  geom_bar(width = 1, stat = "identity", color = "white",size = .2) +
-  coord_polar("y", start=0) +
-  scale_fill_manual(values = taxa_colours.l, name = "Genus") +
-  labs(title="Community 0",
-       subtitle="(Normalised) mean relative abundances across all samples") +
-  # geom_text(aes(y = lab.ypos, label = pie_label), color = "white") +
-  theme(axis.text = element_blank(),
-        axis.line = element_blank(),
-        axis.title = element_blank(),
-        legend.text = element_text(size = 8),
-        axis.ticks = element_blank(),
-        plot.title = element_text(hjust = 0.5),
-        plot.subtitle = element_text(size = 8, hjust = .5))
-pie_chart_gold_star_0
-ggsave(pie_chart_gold_star_0, filename = "Result_figures/abundance_analysis_plots/pie_chart_top_genera_gold_star_0.pdf", height = 10, width =20, units = "cm")
-
-
-pie_chart_gold_star_1 <- ggplot(genus_data_processed_gold_star_1_summary.df,aes(x ="", y= normalised_mean_abundance, fill = taxa_label)) + 
-  geom_bar(width = 1, stat = "identity", color = "white",size = .2) +
-  coord_polar("y", start=0) +
-  scale_fill_manual(values = taxa_colours.l, name = "Genus") +
-  labs(title="Community 1",
-       subtitle="(Normalised) mean relative abundances across all samples") +
-  # geom_text(aes(y = lab.ypos, label = pie_label), color = "white") +
-  theme(axis.text = element_blank(),
-        axis.line = element_blank(),
-        axis.title = element_blank(),
-        legend.text = element_text(size = 8),
-        axis.ticks = element_blank(),
-        plot.title = element_text(hjust = 0.5),
-        plot.subtitle = element_text(size = 8, hjust = 0.5))
-pie_chart_gold_star_1
-ggsave(pie_chart_gold_star_1, filename = "Result_figures/abundance_analysis_plots/pie_chart_top_genera_gold_star_1.pdf", height = 10, width =20, units = "cm")
-
-
-
-
-
-
-
-
-# ------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------
 class_taxa_summary.df <- generate_taxa_summary(class_data_processed.df,
                                                taxa_column = "taxonomy_class",
                                                abundance_column = "Relative_abundance_rarified")
@@ -422,7 +161,7 @@ create_stacked_bar_charts <- function(mydata, facet_variable, annotate_variable)
         function(x) variable_shapes[x][[1]]
       )
     )
-
+    
     myplot <- ggplot(data_subset, aes(x = Sample, y = Relative_abundance_rarified, fill = taxonomy_class)) +
       geom_bar(stat = "identity") +
       scale_fill_manual(values = taxa_colours.l, name = "Taxonomy", guide = F) +
@@ -454,10 +193,10 @@ create_stacked_bar_charts <- function(mydata, facet_variable, annotate_variable)
   colour_list <- unique(mydata[,c(annotate_variable,paste0(annotate_variable,"_colour"))])
   colour_list <- setNames(as.character(colour_list[,2]), as.character(colour_list[,1]))
   
-  all_sample_plot_for_colour <- ggplot(mydata, aes(x = Sample, y = Relative_abundance_rarified, fill = annotate_variable)) +
-    geom_point(aes(shape = annotate_variable), color = "black", stroke = .1) +
-    scale_shape_manual(values = c(25,24,23), name = "") +
-    scale_fill_manual(values = colour_list, name = "")
+  all_sample_plot_for_colour <- ggplot(mydata, aes(x = Sample, y = Relative_abundance_rarified, fill = get(annotate_variable))) +
+    geom_point(aes(shape = get(annotate_variable)), color = "black", stroke = .1) +
+    scale_shape_manual(values = c(25,24,23), name = annotate_variable) +
+    scale_fill_manual(values = colour_list, name = annotate_variable)
   
   # Extract the legend
   my_legend_taxa <- cowplot::get_legend(all_sample_plot + theme(legend.position = "right", 
@@ -466,10 +205,10 @@ create_stacked_bar_charts <- function(mydata, facet_variable, annotate_variable)
                                                                 legend.justification = "center",
                                                                 plot.margin = unit(c(0, 0, 0, 0), "cm")))
   my_legend_colour <- cowplot::get_legend(all_sample_plot_for_colour + theme(legend.position = "right", 
-                                                                                    legend.text = element_text(size = 9),
-                                                                                    legend.title = element_text(size =10, face = "bold"),
-                                                                                    legend.justification = "center",
-                                                                                    plot.margin = unit(c(0, 0, 0, 0), "cm")))
+                                                                             legend.text = element_text(size = 9),
+                                                                             legend.title = element_text(size =10, face = "bold"),
+                                                                             legend.justification = "center",
+                                                                             plot.margin = unit(c(0, 0, 0, 0), "cm")))
   my_legend <- plot_grid(my_legend_taxa, my_legend_colour, ncol = 1,nrow = 4) 
   
   
@@ -478,7 +217,9 @@ create_stacked_bar_charts <- function(mydata, facet_variable, annotate_variable)
   grid_plot <- plot_grid(grid_plot, my_legend, rel_widths = c(1,.4), ncol = 2)
   return(grid_plot)
 }
+
 my_grid_plot <- create_stacked_bar_charts(mydata = class_data_processed.df, facet_variable = "Remote_Community", annotate_variable = "Otitis_status")
+
 my_grid_plot <- create_stacked_bar_charts(mydata = class_data_processed.df, facet_variable = "Nose", annotate_variable = "Otitis_status")
 ggsave(my_grid_plot, filename = "Result_figures/abundance_analysis_plots/stacked_bar_charts.pdf", height = 30, width =80, units = "cm")
 

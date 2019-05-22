@@ -179,9 +179,9 @@ discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo",
 # create phyloseq object
 otu_rare_phyloseq <- otu_table(otu_rare.m, taxa_are_rows=TRUE)
 
-# Estimate Chao1 richness
+# Estimate Chao1, Simson and Shannon diversities
 otu_rare_chao1.df <- estimate_richness(otu_rare_phyloseq, measures = c("Chao1", "Simpson","Shannon"))
-otu_rare_chao1.df <- otu_rare_chao1.df[rownames(UC_CONTROL_CD_samples_metadata.df),]
+otu_rare_chao1.df <- otu_rare_chao1.df[rownames(metadata.df),]
 
 # Combine the metadata and the diversity metrics into a single dataframe
 full=cbind(metadata.df, otu_rare_chao1.df)

@@ -54,7 +54,7 @@ setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_project/")
 
 
 plot_genus_deseq <- function(deseq_result_table, facet_plot = T, limit_to = NULL, title = NULL, pallete = my_colour_pallete_30_distinct,
-                             include_grid = F){
+                             include_grid = F,point_size =1 ){
   internal_table <- deseq_result_table
   # Separate into different taxa levels
   internal_table <- tidyr::separate(internal_table,col = "Taxonomy", into = c("Domain", "Phylum", "Class", "Order","Family", "Genus"), sep = ";")
@@ -87,10 +87,10 @@ plot_genus_deseq <- function(deseq_result_table, facet_plot = T, limit_to = NULL
   }
   myplot <- myplot + 
     geom_hline(yintercept = 0, linetype = "dashed", size =.3, colour = "grey") +
-    geom_point(aes(fill = Class), shape = 21,stroke = .1,size = 1, color = "black", alpha= .8) +
+    geom_point(aes(fill = Class), shape = 21,stroke = .1,size = point_size, color = "black", alpha= .8) +
     # geom_point(aes(fill = Class, color = Sample_Type), shape = 21,stroke = .1,size = 2, alpha= .8) +
     scale_fill_manual(values = pallete) +
-    theme(axis.text.x = element_text(angle = 90,size = 4,vjust = .5),
+    theme(axis.text.x = element_text(angle = 90,size = 6,vjust = .5),
           axis.text.y = element_text(size = 6),
           axis.title = element_text(size = 6),
           plot.title = element_text(size = 8),
@@ -125,10 +125,108 @@ plot_genus_deseq <- function(deseq_result_table, facet_plot = T, limit_to = NULL
 # --------------------------------------------------------------------------------
 
 # Define the discrete variables
-discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season","Nose","Otitis_status_OM_6mo", "Remote_Community_Otitis_status")
+discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season",
+                        "Nose","Otitis_status_OM_6mo", "Remote_Community_Otitis_status", "OM_6mo_Type_OM","Remote_Community_Season")
 
 otu_groups <- read.csv("Result_tables/DESeq_results/OTU_variable_groups.csv", header = T)
 otu_groups <- otu_groups[abs(otu_groups$log2FoldChange) > 1,]
+
+# Otitis_status
+data_subset <- subset(otu_groups, Variable == "Otitis_status")
+myplot <- plot_genus_deseq(data_subset,facet_plot = T,limit_to = ".", title = "Otitis_status", 
+                   pallete = my_colour_pallete_12_soft,include_grid = T,point_size = 2)
+myplot
+ggsave(filename = paste0("Result_figures/DESeq_plots/Otitis_status.pdf"),plot = myplot, width = 8, height = 8, units = "cm")   
+
+# OM_6mo
+data_subset <- subset(otu_groups, Variable == "OM_6mo")
+myplot <- plot_genus_deseq(data_subset,facet_plot = T,limit_to = ".", title = "OM_6mo", 
+                           pallete = my_colour_pallete_12_soft,include_grid = T,point_size = 2)
+myplot
+ggsave(filename = paste0("Result_figures/DESeq_plots/OM_6mo.pdf"),plot = myplot, width = 8, height = 8, units = "cm")   
+
+# Otitis_status_OM_6mo
+data_subset <- subset(otu_groups, Variable == "Otitis_status_OM_6mo")
+myplot <- plot_genus_deseq(data_subset,facet_plot = T,limit_to = ".", title = "Otitis_status_OM_6mo", 
+                           pallete = my_colour_pallete_12_soft,include_grid = T,point_size = 2)
+myplot
+ggsave(filename = paste0("Result_figures/DESeq_plots/Otitis_status_OM_6mo.pdf"),plot = myplot, width = 8, height = 16, units = "cm")   
+
+# Remote_Community
+data_subset <- subset(otu_groups, Variable == "Remote_Community")
+myplot <- plot_genus_deseq(data_subset,facet_plot = T,limit_to = ".", title = "Remote_Community", 
+                           pallete = my_colour_pallete_12_soft,include_grid = T,point_size = 2)
+myplot
+ggsave(filename = paste0("Result_figures/DESeq_plots/Remote_Community.pdf"),plot = myplot, width = 9, height = 8, units = "cm")   
+
+# Remote_Community_Otitis_status
+data_subset <- subset(otu_groups, Variable == "Remote_Community_Otitis_status")
+myplot <- plot_genus_deseq(data_subset,facet_plot = T,limit_to = ".", title = "Remote_Community_Otitis_status", 
+                           pallete = my_colour_pallete_12_soft,include_grid = T,point_size = 2)
+myplot
+ggsave(filename = paste0("Result_figures/DESeq_plots/Remote_Community_Otitis_status.pdf"),plot = myplot, width = 9, height = 18, units = "cm")   
+
+# Gold_star
+data_subset <- subset(otu_groups, Variable == "Gold_Star")
+myplot <- plot_genus_deseq(data_subset,facet_plot = T,limit_to = ".", title = "Gold_Star", 
+                           pallete = my_colour_pallete_12_soft,include_grid = T,point_size = 2)
+myplot
+ggsave(filename = paste0("Result_figures/DESeq_plots/Gold_Star.pdf"),plot = myplot, width = 9, height = 8, units = "cm")   
+
+
+# Type_OM
+data_subset <- subset(otu_groups, Variable == "Type_OM")
+myplot <- plot_genus_deseq(data_subset,facet_plot = T,limit_to = "(0|1|2)_vs_(0|1|2)", title = "Type_OM", 
+                           pallete = my_colour_pallete_12_soft,include_grid = T,point_size = 2)
+myplot
+ggsave(filename = paste0("Result_figures/DESeq_plots/Type_OM.pdf"),plot = myplot, width = 9, height = 12, units = "cm")   
+
+
+# OM_6mo_Type_OM
+data_subset <- subset(otu_groups, Variable == "OM_6mo_Type_OM")
+myplot <- plot_genus_deseq(data_subset,facet_plot = T,limit_to = "1_(0|2)_vs_1_(0|2)", title = "OM_6mo_Type_OM", 
+                           pallete = my_colour_pallete_12_soft,include_grid = T,point_size = 2)
+myplot
+ggsave(filename = paste0("Result_figures/DESeq_plots/OM_6mo_Type_OM.pdf"),plot = myplot, width = 9, height = 8, units = "cm")   
+
+# Season 
+data_subset <- subset(otu_groups, Variable == "Season")
+myplot <- plot_genus_deseq(data_subset,facet_plot = T,limit_to = ".", title = "Season", 
+                           pallete = my_colour_pallete_12_soft,include_grid = T,point_size = 2)
+myplot
+ggsave(filename = paste0("Result_figures/DESeq_plots/Season.pdf"),plot = myplot, width = 9, height = 14, units = "cm")   
+
+# Remote_Community_Season
+data_subset <- subset(otu_groups, Variable == "Remote_Community_Season")
+myplot <- plot_genus_deseq(data_subset,facet_plot = T,limit_to = ".", title = "Remote_Community_Season", 
+                           pallete = my_colour_pallete_12_soft,include_grid = T,point_size = 2)
+myplot
+ggsave(filename = paste0("Result_figures/DESeq_plots/Remote_Community_Season.pdf"),plot = myplot, width = 9, height = 30, units = "cm")   
+
+# Nose
+data_subset <- subset(otu_groups, Variable == "Nose")
+myplot <- plot_genus_deseq(data_subset,facet_plot = T,limit_to = ".", title = "Nose", 
+                           pallete = my_colour_pallete_12_soft,include_grid = T,point_size = 2)
+myplot
+ggsave(filename = paste0("Result_figures/DESeq_plots/Nose.pdf"),plot = myplot, width = 9, height = 22, units = "cm")   
+
+
+
+
+
+data_subset <- subset(otu_groups, Variable == "OM_6mo_Type_OM")
+myplot <- 
+  plot_genus_deseq(data_subset,facet_plot = T,
+                   limit_to = ".", 
+                   title = "OM_6mo_Type_OM", 
+                   pallete = my_colour_pallete_12_soft,
+                   include_grid = T) 
+myplot
+
+
+
+
+
 
 for (myvar in discrete_variables){
   data_subset <- subset(otu_groups, Variable == myvar)
@@ -172,7 +270,7 @@ for (community in unique(otu_groups$Remote_Community)){
   
   for (myvar in discrete_variables){
     data_subset <- subset(otu_groups, Variable == myvar & Remote_Community == community)
-    if (myvar == "Remote_Community"){next}
+    if (grepl("Remote_Community", myvar)){next}
     print(myvar)
     myplot <- 
       plot_genus_deseq(data_subset,facet_plot = T,
@@ -194,20 +292,15 @@ for (community in unique(otu_groups$Remote_Community)){
              height = 22,
              units = "cm")   
       
-    } else{
+    } else{ # 1
       ggsave(filename = paste0("Result_figures/DESeq_plots/community_",community, "__", myvar, ".pdf"),
              plot = myplot,
-             width = 12,
-             height = 8,
+             width = 8,
+             height = 6,
              units = "cm")    
     }
-    
   }
-  
-  
 }
-
-
 
 
 myplot

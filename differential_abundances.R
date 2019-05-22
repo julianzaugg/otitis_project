@@ -181,7 +181,7 @@ for (myvar in discrete_variables){
     resMFSource$N_Group_2 <- n_group_2
     resMFSource$Taxonomy <- assign_taxonomy_to_otu(resMFSource, otu_taxonomy_map.df)
     resMFSource <- matrix2df(resMFSource, "OTU")
-    resMFSource <- filter_and_sort_dds_results(resMFSource)
+    resMFSource <- filter_and_sort_dds_results(resMFSource, 0.01)
     combined_results_ordered.df <- rbind(combined_results_ordered.df, resMFSource)
   }
 }
@@ -229,7 +229,7 @@ for (community in unique(metadata.df$Remote_Community)){
       resMFSource$N_Group_2 <- n_group_2
       resMFSource$Taxonomy <- assign_taxonomy_to_otu(resMFSource, otu_taxonomy_map.df)
       resMFSource <- matrix2df(resMFSource, "OTU")
-      resMFSource <- filter_and_sort_dds_results(resMFSource)
+      resMFSource <- filter_and_sort_dds_results(resMFSource, 0.01)
       combined_results_ordered.df <- rbind(combined_results_ordered.df, resMFSource)
     }
   }

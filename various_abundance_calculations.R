@@ -205,7 +205,7 @@ generate_summary <- function(mydata, group_by_columns){
   return(group_summary)
 }
 
-# Calculate the read count total for each site for UC, CD and CONTROL samples
+# Calculate the read count total
 community_summary.df <- generate_summary(phylum_data.df, group_by_columns = c("Remote_Community"))
 
 # Save 
