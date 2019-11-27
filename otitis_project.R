@@ -26,8 +26,19 @@ library(RColorBrewer)
 library(vegan)
 library(reshape2)
 library(gplots)
-library(heatmap3)
+#library(heatmap3)
+library(phyloseq)
+library(seqinr) # For writing fasta files
 
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+  # install.packages("BiocManager")
+
+# BiocManager::install("decontam")
+library(decontam)
+
+# install.packages("devtools") #Installs devtools (if not already installed)
+# devtools::install_github("donaldtmcknight/microDecon") #Installs microDecon
+library(microDecon)
 
 
 ####################################
@@ -44,8 +55,6 @@ my_colour_palette_15 <- c("#77b642","#7166d9","#cfa240","#b351bb","#4fac7f","#d4
 my_colour_palette_10_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486900","#c655a0","#00d1b6","#ff4431","#aeb85c","#7e7fc8")
 # my_colour_palette_soft_8 <- c("#8b90bc","#76cc5d","#a85bd2","#d2c351","#cd5f88","#89cab7","#d06842","#858658")
 my_colour_palette_soft_8 <- c("#8b90bc","#76cc5d","#9558b7","#d2c351","#cd5f88","#89cab7","#d06842","#858658")
-
-
 
 ####################################
 
@@ -71,12 +80,10 @@ common_theme <- theme(
   plot.title = element_text(size = 8))
 
 
-
-
 ################################################################################################
 # Set the working directory
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_project/")
-
+source("Code/helper_functions.R")
 
 
 ###############################################################
@@ -84,7 +91,6 @@ setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_project/")
 dir.create(file.path(".", "Result_figures"), showWarnings = FALSE)
 dir.create(file.path(".", "Result_tables"), showWarnings = FALSE)
 dir.create(file.path(".", "Result_objects"), showWarnings = FALSE)
-
 
 dir.create(file.path("./Result_tables", "other"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "count_tables"), showWarnings = FALSE)
@@ -110,7 +116,11 @@ dir.create(file.path("./Result_figures", "DESeq_plots"), showWarnings = FALSE)
 metadata.df <- read.table("data/metadata.tsv", header = T, sep = "\t")
 
 # Change metadata name for clean sample id to index
-metadata.df$Index <- with(metadata.df, paste0(Sequence_file_ID_clean, "_J001"))
+# metadata.df$Index <- with(metadata.df, paste0(Sequence_file_ID_clean, "_J001"))
+metadata.df$Index <- metadata.df$Sequence_file_ID_clean
+
+# Make the index the rowname
+rownames(metadata.df) <- metadata.df$Index
 
 # ------------------------
 # Create customised variable combinations
@@ -137,15 +147,17 @@ metadata.df$Remote_Community_Season <- factor(metadata.df$Remote_Community_Seaso
 # Load and process the OTU table
 project_otu_table.df <- read.csv("data/features_statistics.csv")
 
-
 # Fix name of first column
 names(project_otu_table.df)[1] <- "OTU.ID"
 
 # Remove J001 from sample names
-# names(project_otu_table.df) <- gsub("_J001", "", names(project_otu_table.df))
+names(project_otu_table.df) <- gsub("_J001", "", names(project_otu_table.df))
 
 # Get the sample ids from the OTU table
 sample_ids <- names(project_otu_table.df)[!names(project_otu_table.df) %in% c("OTU.ID","Frequency", "Taxon", "Confidence", "RepSeq") ]
+
+# Get the negative sample IDs
+neg_sample_ids <- grep("Neg",sample_ids, value= T)
 
 
 # Results from the ACE amplicon pipeline `should' contain at least one observation/count in every row, however just to be sure
@@ -220,7 +232,6 @@ project_otu_table.df <- project_otu_table.df[grepl("D_0__Bacteria", project_otu_
 
 # ------------------------------------------------
 
-
 # Remove old Taxon column
 project_otu_table.df$Taxon <- NULL
 project_otu_table_unfiltered.df$Taxon <- NULL
@@ -253,7 +264,6 @@ write.table(project_otu_table_unfiltered.df, file = "Result_tables/other/project
 # ---------------------------------------------------------------------------------------------------------------
 # Now we can generate the tables that we will need for different analyses at both the OTU and various taxa levels
 
-
 # -----------------------------
 # -----------OTU LEVEL---------
 # Dataframe containing the counts for each OTU, for each sample
@@ -275,10 +285,43 @@ otu_unfiltered.m <- as.matrix(otu_unfiltered.m)
 
 # Create relative abundance matrix from counts matrix
 otu_rel.m <- t(t(otu.m)/ colSums(otu.m))
+otu_unfiltered_rel.m <- t(t(otu_unfiltered.m) / colSums(otu_unfiltered.m))
 
 # Change nans to 0. Occurs when a sample has no hits at this point.
 otu_rel.m[is.nan(otu_rel.m)] <- 0
-# ------------------------------------------------------------------------------
+otu_unfiltered_rel.m[is.nan(otu_unfiltered_rel.m)] <- 0
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
+# One simple approach to removing contaminants, or 'noise', is to simply remove low abundance features or
+# remove features that are present / more prevalent in the negative controls.
+# Alternatively (or in addition), packages like microdecon and decontam can be used to identity putative contamaninants
+# We are going to try multiple approaches.
+
+# 1. Use Decontam to identify contaminants
+decontam_contaminants.df <- isContaminant(t(otu.m), 
+                                          method = "prevalence", 
+                                          neg = rownames(t(otu.m)) %in% neg_sample_ids, 
+                                          threshold = 0.1)
+# 2. Use microdecon
+# OTU Neg1 ....Sample 1....taxa (optional)
+microdecon_data.df <- m2df(otu.m[,colnames(otu.m) %in% neg_sample_ids], name_of_taxonomy_col = "OTU.ID")
+microdecon_data.df <- cbind(microdecon_data.df, otu.m[,!colnames(otu.m) %in% neg_sample_ids])
+rownames(decon_data.df) <- NULL
+microdecon_data.df$taxonomy_species <- subset(otu_taxonomy_map, OTU.ID %in% microdecon_data.df$OTU.ID)$taxonomy_species
+microdecon_contaminants.df <- decon(decon_data.df, numb.blanks = length(neg_sample_ids),numb.ind = length(sample_ids) - length(neg_sample_ids),taxa = T,)
+
+# 3. Identify features that are present in negative controls (extreme approach) 
+neg_present_features <- rownames(otu.m[rowSums(otu.m) > 0,])
+
+# 4. Identify features that are more prevalent in negative controls. This is not that useful for this study 
+# as we only have a small number of negative samples.
+otu_negative_sample_prevalences <- apply(otu.m[,neg_sample_ids], 1, function(x) {length(which(x > 0))}) /length(neg_sample_ids)
+neg_prevalent_features <- rownames(melt(otu_negative_sample_prevalences[otu_negative_sample_prevalences > 0]))
+
+# --------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
 # Filter those OTUs that are low abundance in all samples
 
 # Generally, low abundance OTUs are removed.
@@ -453,7 +496,125 @@ metadata.df[metadata.df$Index %in% samples_retained,]$Sample_retained <- "yes"
 write.table(metadata.df, file = "Result_tables/other/processed_metadata.csv", sep = ",", quote = F, row.names = F)
 write.table(metadata.df[metadata.df$Index %in% samples_lost,], file = "Result_tables/other/metadata_samples_removed.csv", sep = ",", quote = F, row.names = F)
 
+# ------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------
+#           Reads stats
 
+# Rarefied counts                 = otu_rare_count.m 
+# Rarefied relative abundances    = otu_rare_rel.m
+# Relative abundances             = otu_rel.m
+# Counts                          = otu.m
+# Unfiltered counts               = otu_unfiltered.m
+# Unfiltered relative abundances  = otu_unfiltered_rel.m
+
+# Only focus on those samples that have passed QC.
+samples_passing_QC <- colnames(otu.m)
+stats.df <- data.frame(Sample = samples_passing_QC)
+
+stats.df$Remote_Community <- metadata.df[samples_passing_QC,"Remote_Community"]
+stats.df$Otitis_status <- metadata.df[samples_passing_QC,"Otitis_status"]
+stats.df$Gold_Star <- metadata.df[samples_passing_QC,"Gold_Star"]
+stats.df$OM_6mo <- metadata.df[samples_passing_QC,"OM_6mo"]
+stats.df$Type_OM <- metadata.df[samples_passing_QC,"Type_OM"]
+stats.df$Season <- metadata.df[samples_passing_QC,"Season"]
+stats.df$Nose <- metadata.df[samples_passing_QC,"Nose"]
+
+stats.df[,"Original_read_counts"] <- colSums(otu_unfiltered.m[,samples_passing_QC])
+stats.df[,"Filtered_read_counts"] <- colSums(otu.m[,samples_passing_QC])
+stats.df[,"Filtered_rarefied_read_counts"] <- colSums(otu_rare_count.m[,samples_passing_QC])
+
+# Reads removed from filtering
+stats.df[,"Reads_removed_filtered"] <- stats.df[,"Original_read_counts"] - stats.df[,"Filtered_read_counts"]
+stats.df[,"Proportion_reads_removed_filtered"] <- stats.df[,"Reads_removed_filtered"] / stats.df[,"Original_read_counts"]
+
+# Reads removed from filtering and rarefaction
+stats.df[,"Reads_removed_filtered_rarefied"] <- stats.df[,"Original_read_counts"] - stats.df[,"Filtered_rarefied_read_counts"]
+stats.df[,"Proportion_reads_removed_filtered_rarefied"] <- stats.df[,"Reads_removed_filtered_rarefied"] / stats.df[,"Original_read_counts"]
+
+# ---------------------------------------------
+# Read counts and proportions original, unprocessed data. Summing each domain + unassigned should equal one
+
+# Proportion of reads that are mammal (generally human)
+stats.df[,"Mammal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Mammal", project_otu_table_unfiltered.df$taxonomy_species),samples_passing_QC])
+stats.df[,"Mammal_proportion_original"] <- stats.df[,"Mammal_read_count_original"] / stats.df[,"Original_read_counts"]
+
+# Proportion of reads that are fungal
+stats.df[,"Fungal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Fungi", project_otu_table_unfiltered.df$taxonomy_species),samples_passing_QC])
+stats.df[,"Fungal_proportion_original"] <- stats.df[,"Fungal_read_count_original"] / stats.df[,"Original_read_counts"]
+
+# Proportion of reads that are fungal
+stats.df[,"Bacterial_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Bacteria", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+stats.df[,"Bacterial_proportion_original"] <- stats.df[,"Bacterial_read_count_original"] / stats.df[,"Original_read_counts"]
+
+# Proportion of reads that are Archaea
+stats.df[,"Archaeal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Archaea", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+stats.df[,"Archaeal_proportion_original"] <- stats.df[,"Archaeal_read_count_original"] / stats.df[,"Original_read_counts"]
+
+# Proportion of reads that are Eukaryota
+stats.df[,"Eukaryal_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("d__Eukaryota", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+stats.df[,"Eukaryal_proportion_original"] <- stats.df[,"Eukaryal_read_count_original"] / stats.df[,"Original_read_counts"]
+
+# Proportion of reads that are Unassigned a taxonomy
+stats.df[,"Unassigned_read_count_original"] <- colSums(project_otu_table_unfiltered.df[grepl("Unassigned", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+stats.df[,"Unassigned_proportion_original"] <- stats.df[,"Unassigned_read_count_original"] / stats.df[,"Original_read_counts"]
+
+# stats.df[,"Other_read_count_original"] <- colSums(project_otu_table_unfiltered.df[!grepl("d__Bacteria|d__Archaea|d__Eukaryota|Unassigned", project_otu_table_unfiltered.df$Domain),samples_passing_QC])
+# stats.df[,"Other_proportion_original"] <- stats.df[,"Other_read_count_original"] / stats.df[,"Original_read_counts"]
+
+# min(stats.df[,"Unassigned_proportion_original"] + stats.df[,"Archaeal_proportion_original"] + stats.df[,"Bacterial_proportion_original"]  + stats.df[,"Eukaryal_proportion_original"])
+
+# -------------------------------------
+# Read counts and proportions filtered data
+temp <- otu_taxonomy_map[otu_taxonomy_map$OTU.ID %in% rownames(otu.m),]
+bacterial_otus_filtered <- temp[temp$Domain == "d__Bacteria",]$OTU.ID
+fungal_otus_filtered <- temp[grepl("Fungi", temp$taxonomy_species),]$OTU.ID
+
+# Proportion of reads in the filtered data that are bacterial
+stats.df[,"Bacterial_read_count_filtered"] <- colSums(otu.m[which(rownames(otu.m) %in% bacterial_otus_filtered),samples_passing_QC])
+stats.df[,"Bacterial_proportion_filtered"] <- stats.df[,"Bacterial_read_count_filtered"] / stats.df[,"Filtered_read_counts"]
+
+# Proportion of reads in the filtered data that are Fungal
+stats.df[,"Fungal_read_count_filtered"] <- colSums(otu.m[which(rownames(otu.m) %in% fungal_otus_filtered),samples_passing_QC])
+stats.df[,"Fungal_proportion_filtered"] <- stats.df[,"Fungal_read_count_filtered"] / stats.df[,"Filtered_read_counts"]
+
+# -------------------------------------
+# Read counts and proportions filtered + rarefied data
+temp <- otu_taxonomy_map[otu_taxonomy_map$OTU.ID %in% rownames(otu_rare_count.m),]
+bacterial_otus_filtered_rarefied <- temp[temp$Domain == "d__Bacteria",]$OTU.ID
+fungal_otus_filtered_rarefied <- temp[grepl("Fungi", temp$taxonomy_species),]$OTU.ID
+
+# Proportion of reads in the filtered data that are bacterial
+stats.df[,"Bacterial_read_count_filtered_rarefied"] <- colSums(otu_rare_count.m[which(rownames(otu_rare_count.m) %in% bacterial_otus_filtered_rarefied),samples_passing_QC])
+stats.df[,"Bacterial_proportion_filtered_rarefied"] <- stats.df[,"Bacterial_read_count_filtered_rarefied"] / stats.df[,"Filtered_rarefied_read_counts"]
+
+# Proportion of reads in the filtered data that are Fungal
+stats.df[,"Fungal_read_count_filtered_rarefied"] <- colSums(otu_rare_count.m[which(rownames(otu_rare_count.m) %in% fungal_otus_filtered_rarefied),samples_passing_QC])
+stats.df[,"Fungal_proportion_filtered_rarefied"] <- stats.df[,"Fungal_read_count_filtered_rarefied"] / stats.df[,"Filtered_rarefied_read_counts"]
+
+# stats.df[,"Fungal_read_count_filtered"] <- colSums(project_otu_table.df[grepl("Fungi", project_otu_table.df$taxonomy_species),samples_passing_QC])
+# stats.df[,"Fungal_proportion_filtered"] <- stats.df[,"Fungal_read_count_filtered"] / stats.df[,"Filtered_read_counts"]
+# stats.df[,"Bacterial_read_count_filtered"] <- colSums(project_otu_table.df[grepl("d__Bacteria", project_otu_table.df$Domain),samples_passing_QC])
+# stats.df[,"Bacterial_proportion_filtered"] <- stats.df[,"Bacterial_read_count_filtered"] / stats.df[,"Filtered_read_counts"]
+
+
+stats.df[,"Features_total"] <- length(which(rowSums(otu_unfiltered.m[,samples_passing_QC]) > 0 ))
+stats.df[,"Features_original"] <- apply(otu_unfiltered.m[,samples_passing_QC], 2, function(x) { length(which(x > 0)) } )
+
+stats.df[,"Features_filtered"] <- apply(otu.m[,samples_passing_QC], 2, function(x) { length(which(x > 0)) } )
+stats.df[,"Features_filtered_rarefied"] <- apply(otu_rare_count.m[,samples_passing_QC], 2, function(x) { length(which(x > 0)) } )
+
+stats.df[,"Features_removed_filtered"] <- stats.df[,"Features_original"] - stats.df[,"Features_filtered"] 
+stats.df[,"Features_removed_filtered_rarefied"] <- stats.df[,"Features_original"] - stats.df[,"Features_filtered_rarefied"] 
+
+stats.df[,"Proportion_features_removed_filtered"] <- stats.df[,"Features_removed_filtered"] / stats.df[,"Features_original"]
+stats.df[,"Proportion_features_removed_filtered_rarefied"] <- stats.df[,"Features_removed_filtered_rarefied"] / stats.df[,"Features_original"]
+
+write.csv(stats.df, "Result_tables/other/QC_summary.csv", row.names = F, quote = F)
+
+
+# ------------------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------------------
 
 # Above we processed the frequencies for each OTU to calculate the relative abundances.
