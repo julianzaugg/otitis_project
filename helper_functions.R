@@ -84,33 +84,35 @@ m2df <- function(mymatrix, name_of_taxonomy_col = "taxonomy"){
   return(mydf)
 }
 
+# Make row names of a dataframe the value of a defined column (default 1st) and then remove the column
+clean_dataframe <- function(mydf, rowname_col = 1){
+  my_clean.df <- mydf
+  rownames(my_clean.df) <- my_clean.df[,rowname_col]
+  my_clean.df[,1] <- NULL
+  return(my_clean.df)
+}
+
 # Calculate the (min, max, mean, median, stdev, #samples) abundances of each taxa at each taxa level
 generate_taxa_summary <- function(mydata, taxa_column, group_by_columns = NULL){
   # if (is.null(group_by_columns)){
   #   select_columns <- c(taxa_column, "Read_count", "Relative_abundance")
   # } else{
-  select_columns <- c(taxa_column, group_by_columns, "Sample", "study_accession", "Read_count", "Relative_abundance")
+  select_columns <- c(taxa_column, group_by_columns, "Sample", "Read_count", "Relative_abundance")
   total_samples <- length(unique(mydata$Sample))
-  total_projects <- length(unique(mydata$study_accession))
   
   taxa_group_summary <- 
     mydata %>% 
     dplyr::select_(.dots = select_columns) %>%
     dplyr::group_by_(.dots = c(taxa_column, group_by_columns)) %>%
-    dplyr::mutate(N_samples = n_distinct(Sample), N_projects = n_distinct(study_accession)) %>% # number of unique samples/index
+    dplyr::mutate(N_samples = n_distinct(Sample)) %>% # number of unique samples/index
     dplyr::group_by_(.dots = c(group_by_columns)) %>%
-    dplyr::mutate(N_total_samples_in_group = n_distinct(Sample),
-                  N_total_projects_in_group = n_distinct(study_accession))  %>%
+    dplyr::mutate(N_total_samples_in_group = n_distinct(Sample))  %>%
     dplyr::group_by_(.dots = c(group_by_columns, taxa_column)) %>%
-    dplyr::select(-Sample, -study_accession) %>%
+    dplyr::select(-Sample) %>%
     dplyr::summarise(N_samples = max(N_samples),
                      N_total_samples_in_group = max(N_total_samples_in_group),
-                     N_projects = max(N_projects),
-                     N_total_projects_in_group = max(N_total_projects_in_group),
                      Percent_group_samples = round((max(N_samples) / max(N_total_samples_in_group))*100, 2),
                      Percent_total_samples = round((max(N_samples) / total_samples)*100, 2),
-                     Percent_group_projects = round((max(N_projects) / max(N_total_projects_in_group))*100, 2),
-                     Percent_total_projects = round((max(N_projects) / total_projects)*100, 2),
                      
                      Mean_read_count = round(mean(Read_count), 2),
                      Median_read_count = median(Read_count),
@@ -246,6 +248,8 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
   # Order the site scores by the order of the rows in the metadata
   # print(dim(pca_site_scores))
   # print(dim(metadata_ordered.df))
+  # print(head(pca_site_scores))
+  # print(head(pca_site_scores))
   pca_site_scores <- pca_site_scores[rownames(metadata_ordered.df),]
   
   all_sample_colours <- as.character(

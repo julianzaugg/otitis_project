@@ -48,25 +48,6 @@ my_colour_palette_10_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486
 my_colour_palette_10_soft <- c("#9E788F","#4C5B61","#678D58","#AD5233","#A0A083","#4D456A","#588578","#D0AC4C","#2A7BA0","#931621")
 ####################################
 # Function
-log_matrix <- function(mymat){
-  out <- log(mymat, 10)
-  out[is.infinite(out)] <- 0
-  return(out)
-}
-
-
-gm_mean = function(x, na.rm=TRUE){
-  # The geometric mean, with some error-protection bits.
-  exp(sum(log(x[x > 0 & !is.na(x)]), na.rm=na.rm) / length(x))
-}
-
-# Center log ratio transform
-clr = function(x, base=2){
-  x <- log((x / gm_mean(x)), base)
-  x[!is.finite(x) | is.na(x)] <- 0.0
-  return(x)
-}
-
 
 filter_heatmap_matrix <- function(myheatmap, row_max = 0, prevalence = 0){
   internal_heatmap <- myheatmap
@@ -82,268 +63,298 @@ filter_heatmap_matrix <- function(myheatmap, row_max = 0, prevalence = 0){
 ####################################
 
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_project/")
+source("Code/helper_functions.R")
+
 
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
+metadata_decontaminated.df <- read.csv("Result_tables/other/processed_metadata_decontaminated.csv", sep =",", header = T)
 
 # Set the Index to be the rowname
 rownames(metadata.df) <- metadata.df$Index
+rownames(metadata_decontaminated.df) <- metadata_decontaminated.df$Index
 
-# Load count matrices and covert to log space
-otu_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/OTU_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_genus_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Genus_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_family_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Family_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_order_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Order_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_class_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Class_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_phylum_rare_log.m <- log_matrix(as.matrix(read.table(file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-
-# Load count matrices and apply CLR transformation
-otu_rare_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/OTU_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_species_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Specie_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_genus_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Genus_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_family_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Family_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_order_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Order_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_class_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Class_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
-otu_rare_phylum_clr.m <- clr(as.matrix(read.table(file = "Result_tables/count_tables/Phylum_counts_rarefied.csv", sep = ",", header = T, row.names = 1)))
+# Factorise discrete columns
+# metadata.df$Gold_Star
 
 # Load relative abundance matrices
-otu_genus_rare_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Genus_relative_abundances_rarefied.csv", sep = ",", header = T, row.names = 1))
+otu_genus_rel_decontaminated.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Genus_relative_abundances_decontaminated.csv", sep = ",", header = T, row.names = 1))
+otu_family_rel_decontaminated.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Family_relative_abundances_decontaminated.csv", sep = ",", header = T, row.names = 1))
+otu_class_rel_decontaminated.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Class_relative_abundances_decontaminated.csv", sep = ",", header = T, row.names = 1))
+otu_phylum_rel_decontaminated.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Phylum_relative_abundances_decontaminated.csv", sep = ",", header = T, row.names = 1))
 
-# Cleanup column (sample) names - log matrices
-colnames(otu_rare_log.m) <- gsub("_J.*", "", colnames(otu_rare_log.m))
-colnames(otu_genus_rare_log.m) <- gsub("_J.*", "", colnames(otu_genus_rare_log.m))
-colnames(otu_family_rare_log.m) <- gsub("_J.*", "", colnames(otu_family_rare_log.m))
-colnames(otu_order_rare_log.m) <- gsub("_J.*", "", colnames(otu_order_rare_log.m))
-colnames(otu_class_rare_log.m) <- gsub("_J.*", "", colnames(otu_class_rare_log.m))
-colnames(otu_phylum_rare_log.m) <- gsub("_J.*", "", colnames(otu_phylum_rare_log.m))
-
-# Cleanup column (sample) names - CLR matrices
-colnames(otu_rare_clr.m) <- gsub("_J.*", "", colnames(otu_rare_clr.m))
-colnames(otu_rare_species_clr.m) <- gsub("_J.*", "", colnames(otu_rare_species_clr.m))
-colnames(otu_rare_genus_clr.m) <- gsub("_J.*", "", colnames(otu_rare_genus_clr.m))
-colnames(otu_rare_family_clr.m) <- gsub("_J.*", "", colnames(otu_rare_family_clr.m))
-colnames(otu_rare_order_clr.m) <- gsub("_J.*", "", colnames(otu_rare_order_clr.m))
-colnames(otu_rare_class_clr.m) <- gsub("_J.*", "", colnames(otu_rare_class_clr.m))
-colnames(otu_rare_phylum_clr.m) <- gsub("_J.*", "", colnames(otu_rare_phylum_clr.m))
-
-# Cleanup column (sample) names - Relative abundance matrices
-colnames(otu_genus_rare_rel.m) <- gsub("_J.*", "", colnames(otu_genus_rare_rel.m))
-
-# and correct metadata
-rownames(metadata.df) <- gsub("_J.*", "", rownames(metadata.df))
-metadata.df$Index <- gsub("_J.*", "", metadata.df$Index)
+otu_genus_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Genus_relative_abundances.csv", sep = ",", header = T, row.names = 1))
+otu_family_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Family_relative_abundances.csv", sep = ",", header = T, row.names = 1))
+otu_class_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Class_relative_abundances.csv", sep = ",", header = T, row.names = 1))
+otu_phylum_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Phylum_relative_abundances.csv", sep = ",", header = T, row.names = 1))
 
 
-# Since we likely removed samples from the count matrix
-# in the main script, remove them from the metadata.df here
-samples_removed <- metadata.df$Index[!metadata.df$Index %in% colnames(otu_genus_rare_log.m)]
-metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
 
 # Remove samples that are not in the metadata.
-otu_rare_log.m <- otu_rare_log.m[,colnames(otu_rare_log.m) %in% metadata.df$Index]
-otu_genus_rare_log.m <- otu_genus_rare_log.m[,colnames(otu_genus_rare_log.m) %in% metadata.df$Index]
-otu_family_rare_log.m <- otu_family_rare_log.m[,colnames(otu_family_rare_log.m) %in% metadata.df$Index]
-otu_order_rare_log.m <- otu_order_rare_log.m[,colnames(otu_order_rare_log.m) %in% metadata.df$Index]
-otu_class_rare_log.m <- otu_class_rare_log.m[,colnames(otu_class_rare_log.m) %in% metadata.df$Index]
-otu_phylum_rare_log.m <- otu_phylum_rare_log.m[,colnames(otu_phylum_rare_log.m) %in% metadata.df$Index]
+# otu_genus_rare_rel.m <- otu_genus_rel_decontaminated.m[,colnames(otu_genus_rel_decontaminated.m) %in% metadata.df$Index,drop=F]
 
-# Remove samples that are not in the metadata.
-otu_rare_clr.m <- otu_rare_clr.m[,colnames(otu_rare_clr.m) %in% metadata.df$Index]
-otu_rare_species_clr.m <- otu_rare_species_clr.m[,colnames(otu_rare_species_clr.m) %in% metadata.df$Index]
-otu_rare_genus_clr.m <- otu_rare_genus_clr.m[,colnames(otu_rare_genus_clr.m) %in% metadata.df$Index]
-otu_rare_family_clr.m <- otu_rare_family_clr.m[,colnames(otu_rare_family_clr.m) %in% metadata.df$Index]
-otu_rare_order_clr.m <- otu_rare_order_clr.m[,colnames(otu_rare_order_clr.m) %in% metadata.df$Index]
-otu_rare_class_clr.m <- otu_rare_class_clr.m[,colnames(otu_rare_class_clr.m) %in% metadata.df$Index]
-otu_rare_phylum_clr.m <- otu_rare_phylum_clr.m[,colnames(otu_rare_phylum_clr.m) %in% metadata.df$Index]
-
-# Remove samples that are not in the metadata.
-otu_genus_rare_rel.m <- otu_genus_rare_rel.m[,colnames(otu_genus_rare_rel.m) %in% metadata.df$Index,drop=F]
-
-
-# If there are negative values in the CLR matrices, assign them a value of zero
-otu_rare_clr.m[which(otu_rare_clr.m < 0)] <- 0
-otu_rare_species_clr.m[which(otu_rare_species_clr.m < 0)] <- 0
-otu_rare_genus_clr.m[which(otu_rare_genus_clr.m < 0)] <- 0
-otu_rare_family_clr.m[which(otu_rare_family_clr.m < 0)] <- 0
-otu_rare_order_clr.m[which(otu_rare_order_clr.m < 0)] <- 0
-otu_rare_class_clr.m[which(otu_rare_class_clr.m < 0)] <- 0
-otu_rare_phylum_clr.m[which(otu_rare_phylum_clr.m < 0)] <- 0
 
 
 # ------------------------------------------------------------------------------------
 
-# Function to create heatmap
-make_heatmap <- function(myheatmap_matrix,
-                         mymetadata,
-                         filename,
-                         my_row_labels = NULL,
-                         height = 10,
-                         width = 10,
-                         heatmap_height = 10,
-                         heatmap_width = 10,
-                         plot_height =10,
-                         plot_width =10,
-                         variables = NULL, # Annotations
-                         cluster_columns = T,
-                         cluster_rows = T,
-                         my_breaks = NULL,
-                         my_palette = NULL,
-                         palette_choice = NULL,
-                         legend_title = NULL,
-                         ...
-){
-  
-  # Assign internal objects
-  internal_heatmap_matrix.m <- myheatmap_matrix
-  internal_metadata.df <- mymetadata
-  
-  # Order/filter the heatmap matrix to order/entries of metadata
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,rownames(internal_metadata.df)]
-  
-  # Order the heatmap matrix by the variables
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,do.call(order, internal_metadata.df[variables])]
-  
-  # Order the metadata by the variables
-  internal_metadata.df <- internal_metadata.df[do.call(order, internal_metadata.df[variables]),]
-  
-  # Create metadata just containing the variables
-  metadata_just_variables <- internal_metadata.df[,variables, drop = F]
-  
-  # Check that rownames match colnames
-  if (!all(rownames(internal_metadata.df) == colnames(internal_heatmap_matrix.m))){
-    stop("Row names in metadata do not match column names in matrix")
-  }
-  
-  # Create annotations
-  
-  colour_lists <- list()
-  for (myvar in variables){
-    var_colour_name <- paste0(myvar, "_colour")
-    # Assumes there is a colour column for each variable in the metadata
-    # If there is no colour column, create one and assign from palette
-    internal_colour_palette_10_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486900","#c655a0","#00d1b6","#ff4431","#aeb85c","#7e7fc8")
-    if (!var_colour_name %in% names(internal_metadata.df)){
-      myvar_values <- factor(as.character(sort(unique(internal_metadata.df[,myvar]))))
-      myvar_colours <- setNames(internal_colour_palette_10_distinct[1:length(myvar_values)], myvar_values)
-      all_variable_colours <- as.character(lapply(as.character(internal_metadata.df[,myvar]), function(x) myvar_colours[x]))
-      internal_metadata.df[,paste0(myvar,"_colour")] <- all_variable_colours
-    }
-    
-    metadata_subset <- unique(internal_metadata.df[,c(myvar, var_colour_name)])
-    # Order by the variable column
-    metadata_subset <- metadata_subset[order(metadata_subset[,myvar]),]
-    # Factorise the variable column
-    metadata_subset[,myvar] <- factor(metadata_subset[,myvar])
-    metadata_subset <- metadata_subset[!is.na(metadata_subset[,myvar]),]
-    named_colour_list <- setNames(as.character(metadata_subset[, var_colour_name]), as.character(metadata_subset[,myvar]))
-    colour_lists[[myvar]] <- named_colour_list
-  }
-  
-  ha <- HeatmapAnnotation(df = metadata_just_variables,
-                          which = "column",
-                          col = colour_lists,
-                          gp = gpar(col = "black",lwd =.2),
-                          gap = unit(.1,"cm"))
-  
-  if (is.null(my_palette)){
-    if (is.null(palette_choice)) {palette_choice <- "blue"}
-    if (!palette_choice %in% c("blue", "purple","red")) { palette_choice <- "blue"}
-    if (palette_choice == "blue"){
-      my_palette <- colorRampPalette(c("white", "#ffffcc","#cce1b8", "#91cabc", "#61b4c1","#335fa5","#28387a", "#071447"))
-    } 
-    else if (palette_choice == "purple"){
-      my_palette <- colorRampPalette(c("white", "#f9cdac","#f3aca2", "#ee8b97", "#e96a8d","#db5087","#b8428c", "#973490", "#742796","#5e1f88", "#4d1a70", "#3d1459","#2d0f41"))
-    } else if (palette_choice == "red"){
-      my_palette <- colorRampPalette(c("white", "#fded86","#fde86e", "#f9d063", "#f5b857","#f0a04b","#eb8a40", "#e77235","#e35b2c", "#c74e29","#9d4429","#753c2c","#4c3430"))
-    } 
-  } else{
-    my_palette
-  }
-  
-  if (!is.null(my_breaks)){
-    internal_breaks <- my_breaks
-    col_fun <- circlize::colorRamp2(breaks = internal_breaks, colors = my_palette(length(internal_breaks)))
-    
-  } else{
-    internal_breaks <- seq(min(internal_heatmap_matrix.m), max(internal_heatmap_matrix.m), length.out = 6)
-    col_fun <- circlize::colorRamp2(breaks = internal_breaks, colors = my_palette(length(internal_breaks)))
-  }
-  
-  my_row_labels.v = rownames(internal_heatmap_matrix.m)
-  if (!is.null(my_row_labels)){
-    my_row_labels.v <- as.character(lapply(my_row_labels.v, function(x) as.character(row_labels.df[row_labels.df[,1] == x,][,2])))
-  }
-  # Order the heatmap rows by the row labels names
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[order(my_row_labels.v),]
-  my_row_labels.v <- my_row_labels.v[order(my_row_labels.v)]
-  
-  hm <- Heatmap(matrix = internal_heatmap_matrix.m,
-                
-                top_annotation = ha,
-                
-                # Colours
-                col = col_fun,
-                na_col = "grey",
-                
-                # Sizing
-                show_heatmap_legend = F,
-                row_names_max_width = unit(35,"cm"),
-                row_labels = my_row_labels.v,
-                # row_names_side = "left",
-                # height = unit(height,"cm"),
-                # width = unit(width,"cm"),
-                # heatmap_height = unit(heatmap_height,"cm"),
-                # heatmap_width = unit(heatmap_width,"cm"),
-                # heatmap_width = unit(15,"cm"),
-                
-                # Titles
-                column_title = "Sample",
-                column_title_side = "bottom",
-                row_title = "Taxa",
-                row_title_side = "left",
-                
-                # Clustering
-                cluster_columns = cluster_columns,
-                cluster_rows = cluster_rows,
-                clustering_method_columns = "average",
-                clustering_method_rows = "average",
-                show_column_dend = F, 
-                show_row_dend = F,
-                
-                # Borders
-                border = F,
-                rect_gp = gpar(col = "white", lwd = 1),
-                
-                # Text appearance
-                row_names_gp = gpar(fontsize = 6),
-                column_names_gp = gpar(fontsize = 6),
-                ...
-  )
-  
-  # Legend appearance
-  
-  hm_legend <- Legend(col_fun = col_fun,
-                      at = internal_breaks,
-                      title_position = "leftcenter-rot",
-                      # grid_width= unit(.1, "cm"),
-                      # title = "Relative abundance (%)",
-                      title = legend_title,
-                      direction = "vertical",
-                      # title_position = "topcenter",
-                      border = "black",
-                      # legend_width = unit(7,"cm"),
-  )
-  
-  pdf(filename,height=plot_height,width=plot_width)
-  draw(hm, annotation_legend_list = c(hm_legend))
-  
-  dev.off()
-  
-}
-
 # Define the discrete variables
 discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season","Nose",
                         "Otitis_status_OM_6mo","Remote_Community_Otitis_status","OM_6mo_Type_OM","Remote_Community_Season")
+
+
+## FULL HEATMAPS
+
+# Phylum
+make_heatmap(otu_phylum_rel_decontaminated.m*100, 
+             mymetadata = metadata_decontaminated.df,
+             filename = paste0("Result_figures/heatmaps/phylum_relative_abundance_heatmap_decontaminated.pdf"),
+             variables = discrete_variables,
+             column_title = "",
+             row_title = "Phylum",
+             plot_height = 4,
+             plot_width = 20,
+             cluster_columns = F,
+             cluster_rows = T,
+             column_title_size = 10,
+             row_title_size = 10,
+             annotation_name_size = 6,
+             my_annotation_palette = my_colour_palette_15,
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             discrete_legend = T,
+             
+             legend_title = "Relative abundance %",
+             palette_choice = 'purple',
+             row_dend_width = unit(3, "cm"),
+             simple_anno_size = unit(.25, "cm")
+)
+
+make_heatmap(otu_phylum_rel.m*100, 
+             mymetadata = metadata.df,
+             filename = paste0("Result_figures/heatmaps/phylum_relative_abundance_heatmap.pdf"),
+             variables = discrete_variables,
+             column_title = "",
+             row_title = "Phylum",
+             plot_height = 4,
+             plot_width = 20,
+             cluster_columns = F,
+             cluster_rows = T,
+             column_title_size = 10,
+             row_title_size = 10,
+             annotation_name_size = 6,
+             my_annotation_palette = my_colour_palette_15,
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             discrete_legend = T,
+             
+             legend_title = "Relative abundance %",
+             palette_choice = 'purple',
+             row_dend_width = unit(3, "cm"),
+             simple_anno_size = unit(.25, "cm")
+)
+
+# Class
+make_heatmap(otu_class_rel_decontaminated.m*100, 
+             mymetadata = metadata_decontaminated.df,
+             filename = paste0("Result_figures/heatmaps/class_relative_abundance_heatmap_decontaminated.pdf"),
+             variables = discrete_variables,
+             column_title = "",
+             row_title = "Class",
+             plot_height = 6,
+             plot_width = 20,
+             cluster_columns = F,
+             cluster_rows = T,
+             column_title_size = 10,
+             row_title_size = 10,
+             annotation_name_size = 6,
+             my_annotation_palette = my_colour_palette_15,
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             discrete_legend = T,
+             
+             legend_title = "Relative abundance %",
+             palette_choice = 'purple',
+             row_dend_width = unit(3, "cm"),
+             simple_anno_size = unit(.25, "cm")
+)
+
+make_heatmap(otu_class_rel.m*100, 
+             mymetadata = metadata.df,
+             filename = paste0("Result_figures/heatmaps/class_relative_abundance_heatmap.pdf"),
+             variables = discrete_variables,
+             column_title = "",
+             row_title = "Phylum",
+             plot_height = 6,
+             plot_width = 20,
+             cluster_columns = F,
+             cluster_rows = T,
+             column_title_size = 10,
+             row_title_size = 10,
+             annotation_name_size = 6,
+             my_annotation_palette = my_colour_palette_15,
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             discrete_legend = T,
+             
+             legend_title = "Relative abundance %",
+             palette_choice = 'purple',
+             row_dend_width = unit(3, "cm"),
+             simple_anno_size = unit(.25, "cm")
+)
+
+# Family
+make_heatmap(otu_family_rel_decontaminated.m*100, 
+             mymetadata = metadata_decontaminated.df,
+             filename = paste0("Result_figures/heatmaps/family_relative_abundance_heatmap_decontaminated.pdf"),
+             variables = discrete_variables,
+             column_title = "",
+             row_title = "Family",
+             plot_height = 16,
+             plot_width = 20,
+             cluster_columns = F,
+             cluster_rows = T,
+             column_title_size = 10,
+             row_title_size = 10,
+             annotation_name_size = 6,
+             my_annotation_palette = my_colour_palette_15,
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             discrete_legend = T,
+             
+             legend_title = "Relative abundance %",
+             palette_choice = 'purple',
+             row_dend_width = unit(3, "cm"),
+             simple_anno_size = unit(.25, "cm")
+)
+
+make_heatmap(otu_family_rel.m*100, 
+             mymetadata = metadata.df,
+             filename = paste0("Result_figures/heatmaps/family_relative_abundance_heatmap.pdf"),
+             variables = discrete_variables,
+             column_title = "",
+             row_title = "Phylum",
+             plot_height = 16,
+             plot_width = 20,
+             cluster_columns = F,
+             cluster_rows = T,
+             column_title_size = 10,
+             row_title_size = 10,
+             annotation_name_size = 6,
+             my_annotation_palette = my_colour_palette_15,
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             discrete_legend = T,
+             
+             legend_title = "Relative abundance %",
+             palette_choice = 'purple',
+             row_dend_width = unit(3, "cm"),
+             simple_anno_size = unit(.25, "cm")
+)
+
+
+# ------------------------------------------------------------------------
+# ------------------------------------------------------------------------
+# CLASS LEVEL
+class_data_decontaminated.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Class_counts_abundances_and_metadata_decontaminated.csv",header = T)
+
+# Generate taxonomy summary for commodity and study
+class_taxa_summary_decontaminated.df <- generate_taxa_summary(mydata = class_data_decontaminated.df,
+                                                              taxa_column = "taxonomy_class",
+                                                              group_by_columns = c("Remote_Community"))
+
+# class_data_decontaminated.df %>%group_by(Sample, taxonomy_class) %>% summarise(Relative_abundance)
+
+# Get top taxa by mean abundance
+class_taxa_summary_filtered_decontaminated.df <- filter_summary_to_top_n(taxa_summary = class_taxa_summary_decontaminated.df, 
+                                                          grouping_variables = c("Remote_Community"),
+                                                          abundance_column = "Mean_relative_abundance",
+                                                          my_top_n = 10000)
+
+# Generate matrix for heatmap
+heatmap.m <- class_taxa_summary_decontaminated.df[c("Remote_Community", "taxonomy_class","Mean_relative_abundance")]
+heatmap.m <- heatmap.m[heatmap.m$taxonomy_class %in% class_taxa_summary_filtered_decontaminated.df$taxonomy_class,]
+heatmap.m <- heatmap.m %>% spread(Remote_Community, Mean_relative_abundance,fill = 0)
+heatmap.m <- df2matrix(heatmap.m)
+
+heatmap_metadata.df <- unique(metadata_decontaminated.df[,c("Remote_Community", "Remote_Community_colour")])
+rownames(heatmap_metadata.df) <- heatmap_metadata.df$Remote_Community
+
+make_heatmap(heatmap.m*100, 
+             mymetadata = heatmap_metadata.df,
+             filename = paste0("Result_figures/heatmaps/Remote_community_class_top_10_mean_relative_abundance_heatmap.pdf"),
+             variables = c("Remote_Community"),
+             column_title = "Remote community",
+             row_title = "Class",
+             plot_height = 7,
+             plot_width = 5,
+             cluster_columns = F,
+             cluster_rows = T,
+             column_title_size = 10,
+             row_title_size = 10,
+             annotation_name_size = 6,
+             my_annotation_palette = my_colour_palette_15,
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             discrete_legend = T,
+             legend_title = "Mean relative abundance %",
+             palette_choice = 'purple',
+             row_dend_width = unit(3, "cm"),
+             simple_anno_size = unit(.25, "cm")
+)
+
+# GENUS LEVEL
+genus_data_decontaminated.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata_decontaminated.csv",header = T)
+
+# Generate taxonomy summary for commodity and study
+genus_taxa_summary_decontaminated.df <- generate_taxa_summary(mydata = genus_data_decontaminated.df,
+                                                              taxa_column = "taxonomy_genus",
+                                                              group_by_columns = c("Remote_Community_Otitis_status"))
+
+# genus_data_decontaminated.df %>%group_by(Sample, taxonomy_genus) %>% summarise(Relative_abundance)
+
+# Get top taxa by mean abundance
+genus_taxa_summary_filtered_decontaminated.df <- filter_summary_to_top_n(taxa_summary = genus_taxa_summary_decontaminated.df, 
+                                                                         grouping_variables = c("Remote_Community_Otitis_status"),
+                                                                         abundance_column = "Mean_relative_abundance",
+                                                                         my_top_n = 20)
+
+# Generate matrix for heatmap
+heatmap.m <- genus_taxa_summary_decontaminated.df[c("Remote_Community_Otitis_status", "taxonomy_genus","Mean_relative_abundance")]
+heatmap.m <- heatmap.m[heatmap.m$taxonomy_genus %in% genus_taxa_summary_filtered_decontaminated.df$taxonomy_genus,]
+heatmap.m <- heatmap.m %>% spread(Remote_Community_Otitis_status, Mean_relative_abundance,fill = 0)
+heatmap.m <- df2matrix(heatmap.m)
+
+heatmap_metadata.df <- unique(metadata_decontaminated.df[,c("Remote_Community_Otitis_status", "Remote_Community_Otitis_status_colour")])
+rownames(heatmap_metadata.df) <- heatmap_metadata.df$Remote_Community_Otitis_status
+
+make_heatmap(heatmap.m*100, 
+             mymetadata = heatmap_metadata.df,
+             filename = paste0("Result_figures/heatmaps/Remote_community_genus_top_10_mean_relative_abundance_heatmap.pdf"),
+             variables = c("Remote_Community_Otitis_status"),
+             column_title = "Remote community",
+             row_title = "Genus",
+             plot_height = 10,
+             plot_width = 10,
+             cluster_columns = F,
+             cluster_rows = T,
+             column_title_size = 10,
+             row_title_size = 10,
+             annotation_name_size = 6,
+             my_annotation_palette = my_colour_palette_15,
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             discrete_legend = T,
+             legend_title = "Mean relative abundance %",
+             palette_choice = 'purple',
+             row_dend_width = unit(3, "cm"),
+             simple_anno_size = unit(.25, "cm")
+)
+
+
+
+
+
+
 
 
 heatmap_genus_rel.m <- filter_heatmap_matrix(otu_genus_rare_rel.m, row_max = 0.01, prevalence = 0.1)

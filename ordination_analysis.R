@@ -91,75 +91,73 @@ bin_my_variable <- function(mydataframe, variable, breaks){
 ############################################################
 
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_project")
+source("Code/helper_functions.R")
 
 # Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
-otu_rare.df <- read.table("Result_tables/count_tables/OTU_counts_rarefied.csv", sep =",", header =T)
-otu.df <- read.table("Result_tables/count_tables/OTU_counts.csv", sep =",", header =T)
+# otu_rare.df <- read.table("Result_tables/count_tables/OTU_counts_rarefied.csv", sep =",", header =T)
+otu_decontaminated.df <- read.table("Result_tables/count_tables/OTU_counts_decontaminated.csv", sep =",", header =T)
 
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
 
-
 # Load the processed metadata
-metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
+metadata_decontaminated.df <- read.csv("Result_tables/other/processed_metadata_decontaminated.csv", sep =",", header = T)
 
 # Set the Index to be the rowname
-rownames(metadata.df) <- metadata.df$Index
+rownames(metadata_decontaminated.df) <- metadata_decontaminated.df$Index
 
 # Since we likely removed samples from the count matrix
 # in the main script, remove them from the metadata.df here
-samples_removed <- metadata.df$Index[!metadata.df$Index %in% names(otu_rare.df)]
-metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
+# samples_removed <- metadata.df$Index[!metadata.df$Index %in% names(otu_rare.df)]
+# metadata.df <- metadata.df[! metadata.df$Index %in% samples_removed,]
 
 # Remove samples from the OTU table that are not in the filtered metadata
-otu_rare.df <- otu_rare.df[,names(otu_rare.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
-otu.df <- otu.df[,names(otu.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
+# otu_rare.df <- otu_rare.df[,names(otu_rare.df) %in% c("OTU.ID", as.character(metadata.df$Index))]
+otu_decontaminated.df <- otu_decontaminated.df[,names(otu_decontaminated.df) %in% c("OTU.ID", as.character(metadata_decontaminated.df$Index))]
+
+# Remove samples from metadata that are not in the data
+metadata_decontaminated.df <- metadata_decontaminated.df[metadata_decontaminated.df$Index %in% colnames(otu_decontaminated.df),]
 
 # Order the metadata.df by the index value
-metadata.df <- metadata.df[order(metadata.df$Index),]
+metadata_decontaminated.df <- metadata_decontaminated.df[order(metadata_decontaminated.df$Index),]
 
 # Create matrices
-otu_rare.m <- otu_rare.df
-rownames(otu_rare.m) <- otu_rare.df$OTU.ID
-otu_rare.m$OTU.ID <- NULL
-otu_rare.m <- as.matrix(otu_rare.m)
-
-otu.m <- otu.df
-rownames(otu.m) <- otu.df$OTU.ID
-otu.m$OTU.ID <- NULL
-otu.m <- as.matrix(otu.m)
+# otu_rare.m <- otu_rare.df
+# rownames(otu_rare.m) <- otu_rare.df$OTU.ID
+# otu_rare.m$OTU.ID <- NULL
+# otu_rare.m <- as.matrix(otu_rare.m)
+otu_decontaminated.m <- df2matrix(otu_decontaminated.df)
 
 # Filter by reads per sample if you don't want to use the existing filtering
 minimum_reads <- 0
-otu_rare.m <- otu_rare.m[,colSums(otu_rare.m) >= minimum_reads]
-otu.m <- otu.m[,colSums(otu.m) >= minimum_reads]
-metadata.df <- metadata.df[rownames(metadata.df) %in% colnames(otu_rare.m),]
-
+# otu_rare.m <- otu_rare.m[,colSums(otu_rare.m) >= minimum_reads]
+# otu_decontaminated.m <- otu_decontaminated.m[,colSums(otu_decontaminated.m) >= minimum_reads]
+# metadata.df <- metadata.df[rownames(metadata.df) %in% colnames(otu_rare.m),]
+metadata_decontaminated.df <- metadata_decontaminated.df[rownames(metadata_decontaminated.df) %in% colnames(otu_decontaminated.m),]
 
 # Order the matrices and metadata to be the same order
-metadata.df <- metadata.df[order(rownames(metadata.df)),]
-otu_rare.m <- otu_rare.m[,order(rownames(metadata.df))]
-otu.m <- otu.m[,order(rownames(metadata.df))]
-
-# otu_rare.m <- otu_rare.m[,colSums(otu_rare.m) >= 5000]
+metadata_decontaminated.df <- metadata_decontaminated.df[order(rownames(metadata_decontaminated.df)),]
+# otu_rare.m <- otu_rare.m[,order(rownames(metadata.df))]
+otu_decontaminated.m <- otu_decontaminated.m[,order(rownames(metadata_decontaminated.df))]
 
 
 # Filter out OTUs that do not have at # reads in at least one sample
-dim(otu_rare.m)
-otu_rare_filtered.m <- otu_rare.m[apply(otu_rare.m,1,max) >= 50,]
-dim(otu_rare_filtered.m)
+# dim(otu_rare.m)
+# otu_rare_filtered.m <- otu_rare.m[apply(otu_rare.m,1,max) >= 50,]
+# dim(otu_rare_filtered.m)
 
-dim(otu.m)
-otu_filtered.m <- otu_rare.m[apply(otu.m,1,max) >= 50,]
-dim(otu_filtered.m)
+# dim(otu.m)
+# otu_filtered.m <- otu_rare.m[apply(otu.m,1,max) >= 50,]
+# dim(otu_filtered.m)
 
 # CLR transform the otu matrix.
-otu_rare_clr_filtered.m <- clr(otu_rare_filtered.m)
-otu_clr_filtered.m <- clr(otu_filtered.m)
+otu_clr_decontaminated.m <- clr(otu_decontaminated.m)
+# otu_genus_clr.m <- clr(otu_genus.m)
+# otu_class_clr.m <- clr(otu_class.m)
 
 # If there are negative values, assign them a value of zero
-otu_rare_clr_filtered.m[which(otu_rare_clr_filtered.m < 0)] <- 0
-otu_clr_filtered.m[which(otu_clr_filtered.m < 0)] <- 0
+# otu_rare_clr_filtered.m[which(otu_rare_clr_filtered.m < 0)] <- 0
+# otu_clr_filtered.m[which(otu_clr_filtered.m < 0)] <- 0
 
 
 # --------------------------------------------------------------------------------
@@ -168,301 +166,11 @@ otu_clr_filtered.m[which(otu_clr_filtered.m < 0)] <- 0
 # Ordination analysis
 
 
-generate_pca <- function(pca_object, mymetadata, variable_to_plot, color_palette, limits = NULL, filename = NULL, include_legend = F, add_spider = F, add_ellipse = F,
-                         point_alpha = 1, plot_width = 10, plot_height=10, point_size = 0.8, point_line_thickness = 1,
-                         label_sites = F, label_species = F,
-                         legend_x = NULL, legend_y = NULL, legend_x_offset = 0, legend_y_offset = 0,
-                         plot_spiders = NULL, plot_ellipses = NULL,plot_hulls = NULL, legend_cols = 2, legend_title = NULL,
-                         label_ellipse = F, ellipse_label_size = 0.5, ellipse_border_width = 1,variable_colours_available = F, 
-                         plot_title = NULL, use_shapes = F){
-  
-  pca.scores <- scores(pca_object, choices=c(1,2,3))
-  # Get component x,y coordinates
-  pca_site_scores <- scores(pca_object, display = "sites")
-  pca_specie_scores <- scores(pca_object, display = "species")
-  pca_percentages <- (pca_object$CA$eig/sum(pca_object$CA$eig)) * 100
-  
-  # Remove NA entries from the metadata and from the 
-  internal_metadata <- mymetadata[!is.na(mymetadata[[variable_to_plot]]),]
-  pca_site_scores <- pca_site_scores[rownames(pca_site_scores) %in% rownames(internal_metadata),]
-  
-  if (!is.null(limits)){
-    x_min <- limits[1]
-    x_max <- limits[2]
-    y_min <- limits[3]
-    y_max <- limits[4]
-  }
-  else {
-    x_min <- round(lapply(min(pca_site_scores[,1]), function(x) ifelse(x > 0, x + 1, x - 1))[[1]])
-    x_max <- round(lapply(max(pca_site_scores[,1]), function(x) ifelse(x > 0, x + 1, x - 1))[[1]])
-    y_min <- round(lapply(min(pca_site_scores[,2]), function(x) ifelse(x > 0, x + 1, x - 1))[[1]])
-    y_max <- round(lapply(max(pca_site_scores[,2]), function(x) ifelse(x > 0, x + 1, x - 1))[[1]])
-    
-  }
-  
-  
-  my_xlab = paste("PC1 (", round(pca_percentages[1],1), "%)", sep = "")
-  my_ylab = paste("PC2 (", round(pca_percentages[2],1), "%)", sep = "")
-  
-  metadata_ordered.df <- internal_metadata[order(rownames(internal_metadata)),]
-  metadata_ordered.df <- metadata_ordered.df[order(metadata_ordered.df[[variable_to_plot]]),]
-  
-  if (!is.null(filename)){
-    pdf(filename, height=plot_height,width=plot_width)  
-  }
-  
-  plot(pca_object,
-       type='n',
-       # x = 0, y=0,
-       xlim = c(x_min,x_max),
-       ylim = c(y_min,y_max),
-       xlab = my_xlab,
-       ylab = my_ylab)
-  
-  # Make grid
-  grid(NULL,NULL, lty = 2, col = "grey80")
-  
-  # Assign (unique) colours and shapes for each grouping variable
-  # variable_values <- factor(sort(as.character(unique(metadata_ordered.df[[variable_to_plot]]))))
-  variable_values <- factor(as.character(unique(metadata_ordered.df[[variable_to_plot]])))
-  
-  # If variable colour column "variable_colour" in metadata, use colours from there
-  if (variable_colours_available == T){
-    color_col_name <- paste0(variable_to_plot, "_colour")
-    variable_colours <- setNames(as.character(unique(metadata_ordered.df[[color_col_name]])), as.character(unique(metadata_ordered.df[[variable_to_plot]])))
-  } else{
-    variable_colours <- setNames(color_palette[1:length(variable_values)], variable_values)  
-  }
-  if (use_shapes == T){
-    # variable_shapes <- setNames(c(25,24,23,22,21,8,6,5,4,3,2,1)[1:length(variable_values)],variable_values)
-    variable_shapes <- setNames(rep(c(25,24,23,22,21),length(variable_values))[1:length(variable_values)],variable_values)
-  } else{
-    variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)  
-  }
-  #variable_shapes <- setNames(c(25,24,23,22,21,8,6,5,4,3,2,1)[1:length(variable_values)],variable_values)
-  # print(variable_colours)
-  annotation_dataframe <- data.frame(variable_colours, variable_shapes)
-  annotation_dataframe$variable_outline_colours <- as.character(annotation_dataframe$variable_colours)
-  annotation_dataframe[annotation_dataframe$variable_shapes > 15,"variable_outline_colours"] <- "black"
-  
-  # Order the site scores by the order of the rows in the metadata
-  pca_site_scores <- pca_site_scores[rownames(metadata_ordered.df),]
-  
-  all_sample_colours <- as.character(
-    lapply(
-      as.character(metadata_ordered.df[rownames(pca_site_scores),variable_to_plot]), 
-      function(x) variable_colours[x]
-    )
-  )
-  
-  all_sample_shapes <- as.numeric(
-    lapply(
-      as.character(sort(metadata_ordered.df[rownames(pca_site_scores),variable_to_plot])), 
-      function(x) variable_shapes[x][[1]]
-    )
-  )
-  
-  # Set the outline colours for all samples based on the sample colours and refering to the annotation dataframe created above
-  all_sample_outline_colours <- as.character(unlist(lapply(all_sample_colours, function(x) annotation_dataframe[annotation_dataframe$variable_colours == x, "variable_outline_colours"])))
-  
-  # Need to construct the legend outline colour vector.
-  legend_point_outline_colours <- annotation_dataframe$variable_outline_colours
-  # 
-  # for (i in 1:length(all_sample_colours)){ 
-  #   if (as.numeric(all_sample_shapes[i]) < 15){
-  #     
-  #     all_sample_outline_colours <- c(all_sample_outline_colours, all_sample_colours[i])
-  #   } else{
-  #     all_sample_outline_colours <- c(all_sample_outline_colours, "black")
-  #   }
-  # }
-  # print(all_sample_outline_colours)
-  # all_sample_outline_colours
-  
-  # all_sample_outline_colours <- as.character(
-  #   lapply(
-  #     all_sample_shapes, 
-  #     function(x) variable_colours[x]
-  #   )
-  # )
-  # for (i in )
-  # 
-  
-  points(pca_site_scores, 
-         cex = point_size,
-         lwd = point_line_thickness,
-         pch = all_sample_shapes,
-         col = alpha(all_sample_outline_colours,point_alpha),
-         # col = alpha("black",point_alpha),
-         bg = alpha(all_sample_colours, point_alpha),
-  )
-  
-  # Plot ellipses that are filled
-  plot_ellipses_func <- function () {
-    for (member in variable_values) {
-      if (nrow(metadata_ordered.df[metadata_ordered.df[[variable_to_plot]] == member,]) > 2){ # if too few samples, skip plotting ellipse
-        ordiellipse(pca_site_scores,
-                    groups = metadata_ordered.df[[variable_to_plot]],
-                    kind = "ehull",
-                    lwd = ellipse_border_width,
-                    # border = variable_colours[member][[1]],
-                    border = alpha(variable_colours[member][[1]],point_alpha),
-                    # col = variable_colours[member][[1]],
-                    col = alpha(variable_colours[member][[1]],point_alpha),
-                    show.groups = member,
-                    alpha = .05,
-                    draw = "polygon",
-                    label = F,
-                    cex = .5)
-      }
-    }
-  }
-  
-  # Plot hulls that are filled
-  plot_hulls_func <- function () {
-    for (member in variable_values){
-      if (nrow(metadata_ordered.df[metadata_ordered.df[[variable_to_plot]] == member,]) > 2){ # if too few samples, skip plotting ellipse}
-        ordihull(pca_site_scores,
-                 groups = metadata_ordered.df[[variable_to_plot]],
-                 lwd = ellipse_border_width,
-                 # border = variable_colours[member][[1]],
-                 border = alpha(variable_colours[member][[1]],point_alpha),
-                 # col = variable_colours[member][[1]],
-                 col = alpha(variable_colours[member][[1]],point_alpha),
-                 show.groups = member,
-                 alpha = .05,
-                 draw = "polygon",
-                 label = F,
-                 cex = .5)
-      }
-    }
-  }
-  if (hasArg(plot_hulls)){
-    if (plot_hulls == T){
-      plot_hulls_func()    
-    }
-  }
-  
-  plot_ellipses_labels_func <- function(label_ellipse = F){
-    # Repeat to have labels clearly on top of all ellipses
-    for (member in variable_values){
-      if (nrow(metadata_ordered.df[metadata_ordered.df[[variable_to_plot]] == member,]) > 2){ # if too few samples, skip plotting ellipse
-        ordiellipse(pca_site_scores,
-                    groups = metadata_ordered.df[[variable_to_plot]],
-                    kind = "ehull",
-                    # border = variable_colours[member][[1]],
-                    border = NA,
-                    # col = variable_colours[member][[1]],
-                    col = NA,
-                    show.groups = member,
-                    alpha = 0,
-                    draw = "polygon",
-                    label = label_ellipse,
-                    cex = ellipse_label_size)
-      }
-    }
-  }
-  
-  if (hasArg(plot_ellipses) | hasArg(label_ellipse)){
-    if (plot_ellipses == T){
-      plot_ellipses_func()    
-      plot_ellipses_labels_func(label_ellipse = label_ellipse)
-    } else if (label_ellipse == T){
-      plot_ellipses_labels_func(label_ellipse = label_ellipse)
-    }
-  } 
-  
-  #Plot spiders
-  plot_spiders_func <- function (label_spider = F) {
-    for (member in variable_values){
-      if (nrow(metadata_ordered.df[metadata_ordered.df[[variable_to_plot]] == member,]) > 2){ # if too few samples, skip plotting ellipse
-        ordispider(pca_site_scores,
-                   groups = metadata_ordered.df[[variable_to_plot]],
-                   # col = variable_colours[member][[1]],
-                   col = alpha(variable_colours[member][[1]],point_alpha),
-                   show.groups = member,
-                   #alpha = .05,
-                   label = label_spider)
-      }
-    }
-  }
-  if (hasArg(plot_spiders)){
-    if (plot_spiders == T){
-      plot_spiders_func(F)    
-    }
-  }
-  
-  # points(pca_specie_scores, 
-  #        cex = 0.8,
-  #        col = "red",
-  #        bg = "red",
-  #        pch = 3,
-  # )
-  
-  if (label_sites == T){
-    text(x = pca_site_scores[,1],
-         y = pca_site_scores[,2],
-         labels = rownames(pca_site_scores),
-         cex = .5,
-         pos = 2)
-  }
-  if (label_species == T){
-    text(x = pca_specie_scores[,1],
-         y = pca_specie_scores[,2],
-         labels = rownames(pca_specie_scores),
-         cex = .5,
-         pos = 2)
-    # arrows(x = pca_specie_scores[,1],
-    #        y = pca_specie_scores[,2])
-  }
-  
-  if (is.null(legend_x) || is.null(legend_y)){
-    legend_x <- x_min + legend_x_offset
-    legend_y <- y_max + legend_y_offset
-  }
-  if (is.null(legend_title)){
-    legend_title <- variable_to_plot
-  }
-  
-  if (!is.null(plot_title)){
-    title(plot_title)  
-  }
-  
-  if (include_legend){
-    legend(
-      # title = bold(variable_to_plot),
-      title = as.expression(bquote(bold(.(legend_title)))),
-      title.col="black",
-      # x = x_min-4,
-      # y = y_max-6,
-      x = legend_x,
-      y = legend_y,
-      legend= variable_values,
-      pch= unique(all_sample_shapes),
-      col= legend_point_outline_colours,
-      # col= "black",
-      pt.bg = unique(all_sample_colours),
-      #bg = "white",
-      bty = "n",
-      ncol = legend_cols,
-      cex = 0.6,
-      # pt.cex = 0.6,
-      pt.lwd = point_line_thickness,
-      y.intersp =1,
-      x.intersp =1,
-    )  
-  }
-  
-  if (!is.null(filename)){
-    dev.off()
-  }
-}
-
 discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season",
                         "Nose","Otitis_status_OM_6mo", "Remote_Community_Otitis_status", "OM_6mo_Type_OM","Remote_Community_Season")
 
 # ------------------------
-pca_full_data <- rda(t(otu_rare_clr_filtered.m), data = metadata.df) # ~1 makes it unconstrained
+# pca_full_data <- rda(t(otu_rare_clr_filtered.m), data = metadata.df) # ~1 makes it unconstrained
 
 # pca.scores <- scores(pca_full_data, choices=c(1,2,3),scaling = "symmetric")
 # # Get component x,y coordinates
@@ -557,24 +265,50 @@ pca_full_data <- rda(t(otu_rare_clr_filtered.m), data = metadata.df) # ~1 makes 
 #        cor(X[,1], scr[,2]) * 0.8 * sqrt(nrow(X) - 1), 
 #        lwd = 1, angle = 30, length = 0.1, col = 4)
 # --------------------------------------------------------------------------------------------------------
+otu_pca <- rda(t(otu_clr_decontaminated.m), data = metadata_decontaminated.df)
 
-generate_pca(pca_full_data, mymetadata = metadata.df,
-             plot_height = 5, plot_width =5,
-             legend_x = -5, legend_y = 5,
-             point_size = 1, point_line_thickness = .3,point_alpha =.9,
-             legend_title = "Remote Community",
-             label_species = F,
-             plot_title = "Remote Community",
-             # limits = c(-7,7,-8,7),
+source("Code/helper_functions.R")
+rownames(otu_pca$CA$u)[!rownames(otu_pca$CA$u) %in% metadata_decontaminated.df$Index]
+"PGDCPos"
+
+
+my_relabeller_function <- function(my_labels){
+  unlist(lapply(my_labels, 
+                function(x) {
+                  phylostring <- unlist(strsplit(x, split = ";"))
+                  # paste(phylostring[2],phylostring[3], phylostring[6], sep = ";")
+                  paste(phylostring[3], phylostring[6], sep = ";")
+                }))
+}
+
+generate_pca(otu_pca, mymetadata = metadata_decontaminated.df,
+             plot_height = 5, plot_width = 5,
+             legend_x = -9, legend_y = 3,
+             # legend_x = -2, legend_y = 2,
+             point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
+             legend_title = "Remote_Community",
+             legend_cex = .5,
+             plot_title = "",
+             limits = c(-9,4,-4,3),
+             # limits = c(-2,2,-2,2),
              plot_spiders = F,
-             plot_ellipses = T,
+             plot_ellipses = F,
              plot_hulls = F,
              use_shapes = T,
              ellipse_border_width = .5,
-             label_ellipse = F, ellipse_label_size = .5,
-             color_palette = my_colour_palette_10_distinct,
+             include_legend = T,
+             label_ellipse = F, ellipse_label_size = .3,
+             colour_palette = my_colour_palette_15,
              variable_to_plot = "Remote_Community", legend_cols = 1,
-             variable_colours_available = T)
+             variable_colours_available = T,
+             num_top_species = 3,
+             plot_arrows = T,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 2,arrow_thickness = .5,
+             label_arrows = T, arrow_label_size = .25, arrow_label_colour = "black", arrow_label_font_type = 1,
+             specie_labeller_function = my_relabeller_function,arrow_label_offset = 0,)
+
+
+
+
 
 for (myvar in discrete_variables){
   generate_pca(pca_full_data, mymetadata = metadata.df,
