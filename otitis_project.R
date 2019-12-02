@@ -110,6 +110,9 @@ dir.create(file.path("./Result_figures", "heatmaps"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "exploratory_analysis"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "DESeq_plots"), showWarnings = FALSE)
 
+dir.create(file.path("./Result_other", "sequences"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_other", "trees"), showWarnings = FALSE,recursive = T)
+
 
 ###############################################################
 
@@ -403,7 +406,48 @@ otu_decontaminated.m <- otu_decontaminated.m[apply(otu_decontaminated.m, 1, max)
 sample_ids <- colnames(otu.m)
 sample_ids_decontaminated <- colnames(otu_decontaminated.m)
 
-##############################################################
+# -------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
+# Get the most abundant unassigned features
+
+# Project table with just unassigned features
+unassigned_project_otu_table_unfiltered.df <- project_otu_table_unfiltered.df[project_otu_table_unfiltered.df$Domain == "Unassigned",]
+
+# Convert to dataframe
+unassigned_otu_unfiltered_rel.df <- m2df(otu_unfiltered_rel.m[as.character(unassigned_project_otu_table_unfiltered.df$OTU.ID),,drop =F],
+                                         name_of_taxonomy_col = "OTU.ID")
+
+# Melt
+unassigned_otu_unfiltered_rel.df <- melt(unassigned_otu_unfiltered_rel.df, variable.name = "Sample", value.name = "Relative_abundance")
+if (max(unassigned_otu_unfiltered_rel.df$Relative_abundance) != 0){
+  
+  # Get the top most abundant unassigned features per sample
+  
+  most_abundant_unassigned.df <- unassigned_otu_unfiltered_rel.df %>% 
+    group_by(Sample) %>%
+    filter(Relative_abundance > 0) %>%
+    top_n(n = 10, wt = Relative_abundance) %>% 
+    mutate(Relative_abundance = round(Relative_abundance*100,3)) %>%
+    as.data.frame() 
+  
+
+  # Get corresponding representative sequence
+  most_abundant_unassigned.df$RepSeq <- unlist(lapply(most_abundant_unassigned.df$OTU.ID, function(x) as.character(unassigned_project_otu_table_unfiltered.df[unassigned_project_otu_table_unfiltered.df$OTU.ID == x,]$RepSeq)))
+  write.csv(x = most_abundant_unassigned.df, file = paste0("Result_tables/other/most_abundant_unassigned.csv"), row.names = F)
+  
+  # Get unique set of features
+  unique_most_abundant_unassigned.df <- unique(most_abundant_unassigned.df[c("OTU.ID", "RepSeq")])
+  
+  # Write fasta file
+  write.fasta(sequences = as.list(unique_most_abundant_unassigned.df$RepSeq),open = "w", 
+              names = as.character(unique_most_abundant_unassigned.df$OTU.ID),
+              file.out = paste0("Result_other/sequences/most_abundant_unassigned_features.fasta"))
+  
+}
+
+
+# -------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
 #         OPTIONAL - rarefying
 
 # Note - For samples with a read count lower then the sample=# parameter, 
@@ -467,7 +511,8 @@ otu_rare_count.m <- otu_rare_count.m[apply(otu_rare_count.m, 1, max) > 0,]
 # OTUs in the rarified table that are not in the un-rarified table
 otus_removed <- rownames(otu.m)[!rownames(otu.m) %in% rownames(otu_rare_count.m)]
 
-##############################################################
+# -------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------
 # And re-calculate the abundances after filtering
 otu_rel.m <- t(t(otu.m)/ colSums(otu.m))
 otu_rel.m[is.nan(otu_rel.m)] <- 0
