@@ -129,22 +129,25 @@ rownames(metadata.df) <- metadata.df$Index
 # ------------------------
 # Create customised variable combinations
 
-metadata.df$Otitis_status_OM_6mo <- with(metadata.df, paste0(Otitis_status, "_", OM_6mo))
-metadata.df$Otitis_status_OM_6mo[grepl("NA", metadata.df$Otitis_status_OM_6mo)] <- NA
-metadata.df$Otitis_status_OM_6mo <- factor(metadata.df$Otitis_status_OM_6mo)
-
-metadata.df$Remote_Community_Otitis_status <- with(metadata.df, paste0(Remote_Community, "_", Otitis_status))
-metadata.df$Remote_Community_Otitis_status[grepl("NA", metadata.df$Remote_Community_Otitis_status)] <- NA
-metadata.df$Remote_Community_Otitis_status <- factor(metadata.df$Remote_Community_Otitis_status)
-
-metadata.df$OM_6mo_Type_OM <- with(metadata.df, paste0(OM_6mo, "_", Type_OM))
-metadata.df$OM_6mo_Type_OM[grepl("NA", metadata.df$OM_6mo_Type_OM)] <- NA
-metadata.df$OM_6mo_Type_OM <- factor(metadata.df$OM_6mo_Type_OM)
+# metadata.df$Otitis_status_OM_6mo <- with(metadata.df, paste0(Otitis_status, "_", OM_6mo))
+# metadata.df$Otitis_status_OM_6mo[grepl("NA", metadata.df$Otitis_status_OM_6mo)] <- NA
+# metadata.df$Otitis_status_OM_6mo <- factor(metadata.df$Otitis_status_OM_6mo)
+# 
+# metadata.df$Remote_Community_Otitis_status <- with(metadata.df, paste0(Remote_Community, "_", Otitis_status))
+# metadata.df$Remote_Community_Otitis_status[grepl("NA", metadata.df$Remote_Community_Otitis_status)] <- NA
+# metadata.df$Remote_Community_Otitis_status <- factor(metadata.df$Remote_Community_Otitis_status)
+# 
+# metadata.df$OM_6mo_Type_OM <- with(metadata.df, paste0(OM_6mo, "_", Type_OM))
+# metadata.df$OM_6mo_Type_OM[grepl("NA", metadata.df$OM_6mo_Type_OM)] <- NA
+# metadata.df$OM_6mo_Type_OM <- factor(metadata.df$OM_6mo_Type_OM)
 
 metadata.df$Remote_Community_Season <- with(metadata.df, paste0(Remote_Community, "_", Season))
 metadata.df$Remote_Community_Season[grepl("NA", metadata.df$Remote_Community_Season)] <- NA
 metadata.df$Remote_Community_Season <- factor(metadata.df$Remote_Community_Season)
 
+metadata.df$OM_6mo_OM_Classification <- with(metadata.df, paste0(OM_6mo, "_", OM_Classification))
+metadata.df$OM_6mo_OM_Classification[grepl("NA", metadata.df$OM_6mo_OM_Classification)] <- NA
+metadata.df$OM_6mo_OM_Classification <- factor(metadata.df$OM_6mo_OM_Classification)
 
 # ------------------------
 
@@ -211,8 +214,13 @@ project_otu_table_unfiltered.df <- project_otu_table.df
 # ------------------------------------------------
 # ------------------------------------------------
 # Assign unique colours for each discrete state
-discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season",
-                        "Nose","Otitis_status_OM_6mo", "Remote_Community_Otitis_status", "OM_6mo_Type_OM","Remote_Community_Season")
+# discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season",
+#                         "Nose","Otitis_status_OM_6mo", "Remote_Community_Otitis_status", "OM_6mo_Type_OM","Remote_Community_Season")
+
+discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose","OM_Classification", "Remote_Community_Season")
+
+discrete_variables[!discrete_variables %in% names(metadata.df)]
+# "Otitis_status","Type_OM","Otitis_status_OM_6mo","Remote_Community_Otitis_status","OM_6mo_Type_OM"
 
 for (myvar in discrete_variables){
   myvar_values <- factor(as.character(sort(unique(metadata.df[,myvar]))))

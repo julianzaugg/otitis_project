@@ -521,12 +521,14 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
 # Function to create heatmap
 make_heatmap <- function(myheatmap_matrix,
                          mymetadata,
-                         filename,
-                         my_row_labels = NULL,
-                         height = 10,
-                         width = 10,
-                         heatmap_height = 10,
-                         heatmap_width = 10,
+                         filename= NULL,
+                         # Dataframe with two columns. First must match row entry, second the new label
+                         my_row_labels = NULL, 
+                         my_col_labels = NULL, # Same as my_row_labels, though with columns
+                         height = 10, # Not currently used
+                         width = 10, # Not currently used
+                         heatmap_height = 10, # Not currently used
+                         heatmap_width = 10, # Not currently used
                          plot_height =10,
                          plot_width =10,
                          column_title_size = 10,
@@ -568,7 +570,6 @@ make_heatmap <- function(myheatmap_matrix,
   }
   
   # Create annotations
-  
   colour_lists <- list()
   for (myvar in variables){
     var_colour_name <- paste0(myvar, "_colour")
@@ -636,14 +637,18 @@ make_heatmap <- function(myheatmap_matrix,
   
   my_row_labels.v = rownames(internal_heatmap_matrix.m)
   if (!is.null(my_row_labels)){
-    my_row_labels.v <- as.character(lapply(my_row_labels.v, function(x) as.character(row_labels.df[row_labels.df[,1] == x,][,2])))
+    my_row_labels.v <- as.character(lapply(my_row_labels.v, function(x) as.character(my_row_labels[my_row_labels[,1] == x,][,2])))
   }
+  my_col_labels.v = colnames(internal_heatmap_matrix.m)
+  if (!is.null(my_col_labels)){
+    my_col_labels.v <- as.character(lapply(my_col_labels.v, function(x) as.character(my_col_labels[my_col_labels[,1] == x,][,2])))
+  }
+  
   if (do_not_order != T){
     # Order the heatmap rows by the row labels names
     internal_heatmap_matrix.m <- internal_heatmap_matrix.m[order(my_row_labels.v),]
     my_row_labels.v <- my_row_labels.v[order(my_row_labels.v)]    
   }
-  
   hm <- Heatmap(matrix = internal_heatmap_matrix.m,
                 
                 top_annotation = ha,
@@ -656,6 +661,7 @@ make_heatmap <- function(myheatmap_matrix,
                 show_heatmap_legend = F,
                 row_names_max_width = unit(35,"cm"),
                 row_labels = my_row_labels.v,
+                column_labels = my_col_labels.v,
                 # row_names_side = "left",
                 # height = unit(height,"cm"),
                 # width = unit(width,"cm"),
@@ -720,13 +726,16 @@ make_heatmap <- function(myheatmap_matrix,
       title = legend_title,
       direction = "vertical",
       border = "black",
-      
     )
   }
   
-  pdf(filename,height=plot_height,width=plot_width)
-  draw(hm, annotation_legend_list = c(hm_legend))
-  dev.off()
+  if (!is.null(filename)){
+    pdf(filename,height=plot_height,width=plot_width)
+    draw(hm, annotation_legend_list = c(hm_legend))
+    dev.off()    
+  }
+  return(list("heatmap" = hm, "legend" = hm_legend))
+
 }
 
 

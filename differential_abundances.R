@@ -118,12 +118,14 @@ all(colnames(otu_decontaminated.m) == rownames(metadata_decontaminated.df)) # Sh
 
 
 # Define the discrete variables
-discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season","Nose", 
-                        "Otitis_status_OM_6mo","Remote_Community_Otitis_status","OM_6mo_Type_OM","Remote_Community_Season")
+# discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season","Nose", 
+#                         "Otitis_status_OM_6mo","Remote_Community_Otitis_status","OM_6mo_Type_OM","Remote_Community_Season")
+discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose","OM_Classification", "Remote_Community_Season")
 
 # Convert variables to factors
 metadata.df[discrete_variables] <- lapply(metadata.df[discrete_variables], factor)
 metadata_decontaminated.df[discrete_variables] <- lapply(metadata_decontaminated.df[discrete_variables], factor)
+
 
 compare_groups_deseq <- function(mydata.m, mymetadata.df, myvariables, assign_taxonomy = T){
   # Compare groups for all variables
@@ -131,6 +133,10 @@ compare_groups_deseq <- function(mydata.m, mymetadata.df, myvariables, assign_ta
   for (myvar in myvariables){
     # Get all non-NA entries in the metadata
     mymetadata_filtered.df <- mymetadata.df[!is.na(mymetadata.df[,myvar]),]
+    
+    # Ensure factored variable
+    mymetadata_filtered.df[,myvar] <- factor(mymetadata_filtered.df[,myvar])
+    
     # Extract corresponding entries from data
     mydata_filtered.m <- mydata.m[,rownames(mymetadata_filtered.df)]
 
@@ -140,6 +146,7 @@ compare_groups_deseq <- function(mydata.m, mymetadata.df, myvariables, assign_ta
     dds <- estimateSizeFactors(dds, geoMeans = geoMeans)
     dds <- try(DESeq(dds, test = "Wald", fitType = "parametric", parallel = T))
     group_combinations <- combn(sort(unique(mymetadata_filtered.df[,myvar])),2)
+    
     for (i in 1:ncol(group_combinations)){
       group_1 <- as.character(group_combinations[1,i])
       group_2 <- as.character(group_combinations[2,i])
@@ -169,18 +176,136 @@ compare_groups_deseq <- function(mydata.m, mymetadata.df, myvariables, assign_ta
         # Convert to dataframe
         resMFSource <- m2df(resMFSource, "Taxonomy")
       }
+      # print(resMFSource)
       resMFSource <- filter_and_sort_dds_results(resMFSource, 0.01)
       combined_results_ordered.df <- rbind(combined_results_ordered.df, resMFSource)
     }
   }
   combined_results_ordered.df
 }
-otu_group_comparison_results.df <- compare_groups_deseq(mydata.m = otu.m, mymetadata.df = metadata.df, myvariables = discrete_variables, assign_taxonomy = T)
-genus_group_comparison_results.df <- compare_groups_deseq(mydata.m = genus.m, mymetadata.df = metadata.df, myvariables = discrete_variables, assign_taxonomy = F)
-otu_decontaminated_group_comparison_results.df <- compare_groups_deseq(mydata.m = otu_decontaminated.m, mymetadata.df = metadata_decontaminated.df, myvariables = discrete_variables, assign_taxonomy = T)
-genus_decontaminated_group_comparison_results.df <- compare_groups_deseq(mydata.m = genus_decontaminated.m, mymetadata.df = metadata_decontaminated.df, myvariables = discrete_variables, assign_taxonomy = F)
+otu_group_comparison.df <- compare_groups_deseq(mydata.m = otu.m, mymetadata.df = metadata.df, myvariables = discrete_variables, assign_taxonomy = T)
+genus_group_comparison.df <- compare_groups_deseq(mydata.m = genus.m, mymetadata.df = metadata.df, myvariables = discrete_variables, assign_taxonomy = F)
+otu_decontaminated_group_comparison.df <- compare_groups_deseq(mydata.m = otu_decontaminated.m, mymetadata.df = metadata_decontaminated.df, myvariables = discrete_variables, assign_taxonomy = T)
+genus_decontaminated_group_comparison.df <- compare_groups_deseq(mydata.m = genus_decontaminated.m, mymetadata.df = metadata_decontaminated.df, myvariables = discrete_variables, assign_taxonomy = F)
+
+write.csv(x =otu_group_comparison.df,file ="Result_tables/DESeq_results/OTU_deseq.csv",quote = F, row.names =F)
+write.csv(x =genus_group_comparison.df,file ="Result_tables/DESeq_results/Genus_deseq.csv",quote = F, row.names =F)
+write.csv(x =otu_decontaminated_group_comparison.df,file ="Result_tables/DESeq_results/OTU_deseq_decontaminated.csv",quote = F, row.names =F)
+write.csv(x =genus_decontaminated_group_comparison.df,file ="Result_tables/DESeq_results/Genus_deseq_decontaminated.csv",quote = F, row.names =F)
 
 
+compare_groups_deseq_within_group <- function(mydata.m, mymetadata.df, myvariables, within_group_variable, assign_taxonomy = F){
+  combined_results.df <- data.frame()
+  for (myvar_value in unique(metadata.df[,within_group_variable])){
+    temp <- compare_groups_deseq(mydata.m = mydata.m, 
+                                 mymetadata.df = subset(mymetadata.df, get(within_group_variable) == myvar_value), 
+                                 myvariables = myvariables, 
+                                 assign_taxonomy = assign_taxonomy)
+    temp[,within_group_variable] <- myvar_value
+    combined_results.df <- rbind(combined_results.df, temp)
+  }
+  combined_results.df
+}
+
+reduced_variables <- discrete_variables[which(!discrete_variables == "Remote_Community")]
+otu_group_comparison_within_community.df <- compare_groups_deseq_within_group(mydata.m = otu.m, 
+                                                                                mymetadata.df = metadata.df, 
+                                                                                myvariables = reduced_variables, 
+                                                                                within_group_variable = "Remote_Community", 
+                                                                                assign_taxonomy = T)
+
+genus_group_comparison_within_community.df <- compare_groups_deseq_within_group(mydata.m = genus.m, 
+                                                                                mymetadata.df = metadata.df, 
+                                                                                myvariables = reduced_variables, 
+                                                                                within_group_variable = "Remote_Community", 
+                                                                                assign_taxonomy = F)
+
+otu_decontaminated_group_comparison_within_community.df <- compare_groups_deseq_within_group(mydata.m = otu_decontaminated.m, 
+                                                                                             mymetadata.df = metadata_decontaminated.df, 
+                                                                                             myvariables = reduced_variables, 
+                                                                                             within_group_variable = "Remote_Community", 
+                                                                                             assign_taxonomy = T)
+
+genus_decontaminated_group_comparison_within_community.df <- compare_groups_deseq_within_group(mydata.m = genus_decontaminated.m, 
+                                                                                               mymetadata.df = metadata_decontaminated.df, 
+                                                                                               myvariables = reduced_variables, 
+                                                                                               within_group_variable = "Remote_Community", 
+                                                                                               assign_taxonomy = F)
+write.csv(x =otu_group_comparison_within_community.df,file ="Result_tables/DESeq_results/OTU_deseq_within_community.csv",quote = F, row.names =F)
+write.csv(x =genus_group_comparison_within_community.df,file ="Result_tables/DESeq_results/Genus_deseq_within_community.csv",quote = F, row.names =F)
+write.csv(x =otu_decontaminated_group_comparison_within_community.df,file ="Result_tables/DESeq_results/OTU_deseq_within_community_decontaminated.csv",quote = F, row.names =F)
+write.csv(x =genus_decontaminated_group_comparison_within_community.df,file ="Result_tables/DESeq_results/Genus_deseq_within_community_decontaminated.csv",quote = F, row.names =F)
+
+
+# ------------------------------------------------------------------------
+# ------------------------------------------------------------------------
+# heatmap test
+
+# x axis (col) = group_vs_group
+# y axis (row) = taxa
+# fill = log change
+# Annotation = variable (+ Remote community if applicable)
+
+# From deseq results, extract columns of interest
+temp <- genus_decontaminated_group_comparison.df[c("Group_1", "Group_2", "Variable","Taxonomy", "log2FoldChange", "padj")]
+
+# Create unique label for group comparison and the corresponding variable
+temp$column_label <- with(temp, paste0(Group_1, " vs ", Group_2))
+temp$unique_label <- with(temp, paste0(Group_1, " vs ", Group_2, " (",Variable,")"))
+heatmap_metadata.df <- unique(temp[c("unique_label", "Variable","column_label")])
+
+rownames(heatmap_metadata.df) <- heatmap_metadata.df$unique_label
+
+# Create heatmap matrix
+# unique_label vs Taxonomy, fill is log2FoldChange
+heatmap.m <- temp[c("unique_label", "Taxonomy", "log2FoldChange")]
+heatmap.m <- df2matrix(heatmap.m %>% spread(unique_label, log2FoldChange,fill = 0))
+
+heatmap_metadata.df[c("unique_label", "column_label")]
+source("code/helper_functions.R")
+temp <- make_heatmap(myheatmap_matrix = heatmap.m, 
+             mymetadata = heatmap_metadata.df,
+             filename = "test.pdf",
+             variables = c("Variable"),
+             cluster_columns = F,
+             row_title = "Genus",
+             plot_height = 3,
+             plot_width = 10,
+             # legend_labels = seq(-30, 30, by =5),
+             my_breaks = seq(-30, 30, by =5),
+             discrete_legend = T,
+             my_palette = c("darkred", "white","royalblue"),
+             my_col_labels = heatmap_metadata.df[c("unique_label", "column_label")],
+             my_annotation_palette = my_colour_palette_10_distinct,
+             # column_split = seq(1,ncol(heatmap.m)),
+             # column_gap = 10
+             annotation_name_size = 0,
+             )
+# TODO option to exclude labels so heatmaps can be combined
+draw(object = temp$heatmap + temp2$heatmap, annotation_legend_list = list(temp$legend))
+
+HeatmapAnnotation()
+Heatmap(column_split = T, show_column_dend = T)
+
+# Columns of heatmap matrix must match rows of metadata, hence a unique label is required
+# For deseq results, all we want to annotated is the variable each group belongs to. This requires us to map each label to the variable
+
+
+
+
+hm <- Heatmap(heatmap.m,
+        cluster_rows = T,
+        cluster_columns = F,
+        clustering_method_columns = "average",
+        clustering_method_rows = "average",
+        row_names_gp = gpar(fontsize = 3),
+        column_names_gp = gpar(fontsize = 6),
+        show_column_dend = F,
+        show_row_dend = F)
+draw(hm)
+#draw(hm, annotation_legend_list = c(hm_legend))
+# ------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 
 # outfilename <- paste("Result_tables/DESeq_results/OTU_variable_groups.csv", sep= "")
 # write.csv(combined_results_ordered.df, file=outfilename, quote = F, row.names = F)
