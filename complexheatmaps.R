@@ -98,8 +98,11 @@ otu_phylum_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundanc
 # ------------------------------------------------------------------------------------
 
 # Define the discrete variables
-discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season","Nose",
-                        "Otitis_status_OM_6mo","Remote_Community_Otitis_status","OM_6mo_Type_OM","Remote_Community_Season")
+# discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season","Nose", 
+#                         "Otitis_status_OM_6mo","Remote_Community_Otitis_status","OM_6mo_Type_OM","Remote_Community_Season")
+discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose","OM_Classification", "Remote_Community_Season",
+                        "Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae",
+                        "Remote_Community_OM_Classification")
 
 
 ## FULL HEATMAPS
@@ -308,29 +311,29 @@ genus_data_decontaminated.df <- read.csv("Result_tables/combined_counts_abundanc
 # Generate taxonomy summary for ...
 genus_taxa_summary_decontaminated.df <- generate_taxa_summary(mydata = genus_data_decontaminated.df,
                                                               taxa_column = "taxonomy_genus",
-                                                              group_by_columns = c("Remote_Community_Otitis_status"))
+                                                              group_by_columns = c("Remote_Community_OM_Classification"))
 
 # genus_data_decontaminated.df %>%group_by(Sample, taxonomy_genus) %>% summarise(Relative_abundance)
 
 # Get top taxa by mean abundance
 genus_taxa_summary_filtered_decontaminated.df <- filter_summary_to_top_n(taxa_summary = genus_taxa_summary_decontaminated.df, 
-                                                                         grouping_variables = c("Remote_Community_Otitis_status"),
+                                                                         grouping_variables = c("Remote_Community_OM_Classification"),
                                                                          abundance_column = "Mean_relative_abundance",
                                                                          my_top_n = 20)
 
 # Generate matrix for heatmap
-heatmap.m <- genus_taxa_summary_decontaminated.df[c("Remote_Community_Otitis_status", "taxonomy_genus","Mean_relative_abundance")]
+heatmap.m <- genus_taxa_summary_decontaminated.df[c("Remote_Community_OM_Classification", "taxonomy_genus","Mean_relative_abundance")]
 heatmap.m <- heatmap.m[heatmap.m$taxonomy_genus %in% genus_taxa_summary_filtered_decontaminated.df$taxonomy_genus,]
-heatmap.m <- heatmap.m %>% spread(Remote_Community_Otitis_status, Mean_relative_abundance,fill = 0)
+heatmap.m <- heatmap.m %>% spread(Remote_Community_OM_Classification, Mean_relative_abundance,fill = 0)
 heatmap.m <- df2matrix(heatmap.m)
 
-heatmap_metadata.df <- unique(metadata_decontaminated.df[,c("Remote_Community_Otitis_status", "Remote_Community_Otitis_status_colour")])
-rownames(heatmap_metadata.df) <- heatmap_metadata.df$Remote_Community_Otitis_status
+heatmap_metadata.df <- unique(metadata_decontaminated.df[,c("Remote_Community_OM_Classification", "Remote_Community_OM_Classification_colour")])
+rownames(heatmap_metadata.df) <- heatmap_metadata.df$Remote_Community_OM_Classification
 
 make_heatmap(heatmap.m*100, 
              mymetadata = heatmap_metadata.df,
              filename = paste0("Result_figures/heatmaps/Remote_community_genus_top_10_mean_relative_abundance_heatmap.pdf"),
-             variables = c("Remote_Community_Otitis_status"),
+             variables = c("Remote_Community_OM_Classification"),
              column_title = "Remote community",
              row_title = "Genus",
              plot_height = 10,
@@ -340,7 +343,7 @@ make_heatmap(heatmap.m*100,
              column_title_size = 10,
              row_title_size = 10,
              annotation_name_size = 6,
-             my_annotation_palette = my_colour_palette_15,
+             # my_annotation_palette = my_colour_palette_15,
              legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
              my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
              discrete_legend = T,

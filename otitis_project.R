@@ -149,6 +149,12 @@ metadata.df$OM_6mo_OM_Classification <- with(metadata.df, paste0(OM_6mo, "_", OM
 metadata.df$OM_6mo_OM_Classification[grepl("NA", metadata.df$OM_6mo_OM_Classification)] <- NA
 metadata.df$OM_6mo_OM_Classification <- factor(metadata.df$OM_6mo_OM_Classification)
 
+metadata.df$Remote_Community_OM_Classification <- with(metadata.df, paste0(Remote_Community, "_", OM_Classification))
+metadata.df$Remote_Community_OM_Classification[grepl("NA", metadata.df$Remote_Community_OM_Classification)] <- NA
+metadata.df$Remote_Community_OM_Classification <- factor(metadata.df$Remote_Community_OM_Classification)
+
+
+
 # ------------------------
 
 # Load and process the OTU table
@@ -217,7 +223,9 @@ project_otu_table_unfiltered.df <- project_otu_table.df
 # discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season",
 #                         "Nose","Otitis_status_OM_6mo", "Remote_Community_Otitis_status", "OM_6mo_Type_OM","Remote_Community_Season")
 
-discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose","OM_Classification", "Remote_Community_Season","Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae")
+discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose","OM_Classification", "Remote_Community_Season",
+                        "Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae",
+                        "Remote_Community_OM_Classification")
 
 
 discrete_variables[!discrete_variables %in% names(metadata.df)]

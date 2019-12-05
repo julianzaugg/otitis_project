@@ -69,7 +69,8 @@ metadata_decontaminated.df <- read.csv("Result_tables/other/processed_metadata_d
 # discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season","Nose", 
 #                         "Otitis_status_OM_6mo","Remote_Community_Otitis_status","OM_6mo_Type_OM","Remote_Community_Season")
 discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose","OM_Classification", "Remote_Community_Season",
-                        "Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae")
+                        "Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae",
+                        "Remote_Community_OM_Classification")
 
 # Only keep columns (samples) in the metadata
 # otu_decontaminated.m <- otu_decontaminated.m[,colnames(otu_decontaminated.m) %in% as.character(metadata_decontaminated.df$Index)]
