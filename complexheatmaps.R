@@ -305,7 +305,7 @@ make_heatmap(heatmap.m*100,
 # GENUS LEVEL
 genus_data_decontaminated.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata_decontaminated.csv",header = T)
 
-# Generate taxonomy summary for commodity and study
+# Generate taxonomy summary for ...
 genus_taxa_summary_decontaminated.df <- generate_taxa_summary(mydata = genus_data_decontaminated.df,
                                                               taxa_column = "taxonomy_genus",
                                                               group_by_columns = c("Remote_Community_Otitis_status"))

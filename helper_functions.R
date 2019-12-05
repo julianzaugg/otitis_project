@@ -522,6 +522,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
 make_heatmap <- function(myheatmap_matrix,
                          mymetadata,
                          filename= NULL,
+                         #...,
                          # Dataframe with two columns. First must match row entry, second the new label
                          my_row_labels = NULL, 
                          my_col_labels = NULL, # Same as my_row_labels, though with columns
@@ -550,16 +551,24 @@ make_heatmap <- function(myheatmap_matrix,
                          show_column_dend = F,
                          show_row_dend = F,
                          do_not_order = F,
-                         ...
-){
+                         show_cell_values = F,
+                         # If show_cell_values =T, cells less than this will have a black font colour
+                         # and above white
+                         cell_fun_value_col_threshold = 15,
+                         my_cell_fun = NULL,
+                         ...){
+  # print(list(...))
+  argList<-list(...) # argument list for checking unspecified optional parameters
+  # print(argList$cell_fun)
+  # return(1)
   
   # Assign internal objects
   internal_heatmap_matrix.m <- myheatmap_matrix
   internal_metadata.df <- mymetadata
   # Order/filter the heatmap matrix to order/entries of metadata
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,rownames(internal_metadata.df)]
+  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,rownames(internal_metadata.df),drop = F]
   # Order the heatmap matrix by the variables
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,do.call(order, internal_metadata.df[,variables,drop=F])]
+  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,do.call(order, internal_metadata.df[,variables,drop=F]),drop =F]
   # Order the metadata by the variables
   internal_metadata.df <- internal_metadata.df[do.call(order, internal_metadata.df[,variables,drop=F]),,drop=F]
   # Create metadata just containing the variables
@@ -611,6 +620,8 @@ make_heatmap <- function(myheatmap_matrix,
                           simple_anno_size = simple_anno_size,
                           annotation_name_gp = gpar(fontsize = annotation_name_size))
   
+  # TODO - add option for row annotation
+  
   if (is.null(my_palette)){
     if (is.null(palette_choice)) {palette_choice <- "blue"}
     if (!palette_choice %in% c("blue", "purple","red")) { palette_choice <- "blue"}
@@ -648,6 +659,19 @@ make_heatmap <- function(myheatmap_matrix,
     # Order the heatmap rows by the row labels names
     internal_heatmap_matrix.m <- internal_heatmap_matrix.m[order(my_row_labels.v),]
     my_row_labels.v <- my_row_labels.v[order(my_row_labels.v)]    
+  }
+  
+
+  # if show values and no function provided
+  if (show_cell_values == T & is.null(my_cell_fun)){ 
+    my_cell_fun <- function(j, i, x, y, width, height, fill) {
+      # if(internal_heatmap_matrix.m[i, j] < cell_fun_value_col_threshold & internal_heatmap_matrix.m[i, j] != 0){
+      if(internal_heatmap_matrix.m[i, j] < cell_fun_value_col_threshold){
+        grid.text(sprintf("%.2f", internal_heatmap_matrix.m[i, j]), x, y, gp = gpar(fontsize = 6, col = "black"))}
+      else if(internal_heatmap_matrix.m[i, j] >= cell_fun_value_col_threshold ) {
+        grid.text(sprintf("%.2f", internal_heatmap_matrix.m[i, j]), x, y, gp = gpar(fontsize = 6, col = "white"))
+        }
+    }
   }
   hm <- Heatmap(matrix = internal_heatmap_matrix.m,
                 
@@ -694,6 +718,7 @@ make_heatmap <- function(myheatmap_matrix,
                 # Text appearance
                 row_names_gp = gpar(fontsize = 6),
                 column_names_gp = gpar(fontsize = 6),
+                cell_fun = my_cell_fun,
                 ...
   )
   

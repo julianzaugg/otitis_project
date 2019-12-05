@@ -217,10 +217,10 @@ project_otu_table_unfiltered.df <- project_otu_table.df
 # discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season",
 #                         "Nose","Otitis_status_OM_6mo", "Remote_Community_Otitis_status", "OM_6mo_Type_OM","Remote_Community_Season")
 
-discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose","OM_Classification", "Remote_Community_Season")
+discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose","OM_Classification", "Remote_Community_Season","Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae")
+
 
 discrete_variables[!discrete_variables %in% names(metadata.df)]
-# "Otitis_status","Type_OM","Otitis_status_OM_6mo","Remote_Community_Otitis_status","OM_6mo_Type_OM"
 
 for (myvar in discrete_variables){
   myvar_values <- factor(as.character(sort(unique(metadata.df[,myvar]))))
