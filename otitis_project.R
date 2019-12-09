@@ -101,6 +101,7 @@ dir.create(file.path("./Result_tables/diversity_analysis/variable_summaries_with
 dir.create(file.path("./Result_tables", "DESeq_results"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "abundance_analysis_tables"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "combined_counts_abundances_and_metadata_tables"), showWarnings = FALSE)
+dir.create(file.path("./Result_tables", "stats_various"), showWarnings = FALSE)
 
 dir.create(file.path("./Result_figures", "abundance_analysis_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "pca_plots"), showWarnings = FALSE)
@@ -109,6 +110,16 @@ dir.create(file.path("./Result_figures", "diversity_analysis"), showWarnings = F
 dir.create(file.path("./Result_figures", "heatmaps"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "exploratory_analysis"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "DESeq_plots"), showWarnings = FALSE)
+
+dir.create(file.path("./Result_figures/pca_plots", "otu"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/pca_plots", "genus"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/pca_plots", "otu_within_community"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/pca_plots", "genus_within_community"), showWarnings = FALSE,recursive = T)
+
+dir.create(file.path("./Result_figures/pca_plots", "otu_decontaminated"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/pca_plots", "genus_decontaminated"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/pca_plots", "otu_within_community_decontaminated"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/pca_plots", "genus_within_community_decontaminated"), showWarnings = FALSE,recursive = T)
 
 dir.create(file.path("./Result_other", "sequences"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_other", "trees"), showWarnings = FALSE,recursive = T)
@@ -125,6 +136,7 @@ metadata.df$Index <- metadata.df$Sequence_file_ID_clean
 
 # Make the index the rowname
 rownames(metadata.df) <- metadata.df$Index
+
 
 # ------------------------
 # Create customised variable combinations
@@ -165,6 +177,9 @@ names(project_otu_table.df)[1] <- "OTU.ID"
 
 # Remove J001 from sample names
 names(project_otu_table.df) <- gsub("_J001", "", names(project_otu_table.df))
+
+# Remove PGDCPos sample
+project_otu_table.df[,"PGDCPos"] <- NULL
 
 # Get the sample ids from the OTU table
 sample_ids <- names(project_otu_table.df)[!names(project_otu_table.df) %in% c("OTU.ID","Frequency", "Taxon", "Confidence", "RepSeq") ]
@@ -232,7 +247,8 @@ discrete_variables[!discrete_variables %in% names(metadata.df)]
 
 for (myvar in discrete_variables){
   myvar_values <- factor(as.character(sort(unique(metadata.df[,myvar]))))
-  myvar_colours <- setNames(my_colour_palette_soft_8[1:length(myvar_values)], myvar_values)
+  # myvar_colours <- setNames(my_colour_palette_soft_8[1:length(myvar_values)], myvar_values)
+  myvar_colours <- setNames(my_colour_palette_15[1:length(myvar_values)], myvar_values)
   all_variable_colours <- as.character(lapply(as.character(metadata.df[,myvar]), function(x) myvar_colours[x]))
   metadata.df[,paste0(myvar,"_colour")] <- all_variable_colours
 }
@@ -252,6 +268,8 @@ for (myvar in discrete_variables){
 # Discard anything not Bacterial
 project_otu_table.df <- project_otu_table.df[grepl("D_0__Bacteria", project_otu_table.df$Taxon),]
 
+# Discard anything that is Unassigned at the Phylum level
+project_otu_table.df <- project_otu_table.df[!project_otu_table.df$Phylum == "Unassigned",]
 # ------------------------------------------------
 
 # Remove old Taxon column
@@ -328,12 +346,12 @@ otu_unfiltered_rel.m[is.nan(otu_unfiltered_rel.m)] <- 0
 decontam_contaminants.df <- isContaminant(t(otu.m), 
                                           method = "prevalence", 
                                           neg = rownames(t(otu.m)) %in% neg_sample_ids, 
-                                          threshold = 0.1)
+                                          threshold = 0.5)
 decontam_contaminants_features <- rownames(subset(decontam_contaminants.df, contaminant == T))
 # subset(otu_taxonomy_map, OTU.ID %in% decontam_contaminants_features)$taxonomy_species
 # 2. Use microdecon
 # OTU Neg1 ....Sample 1....taxa (optional)
-microdecon_data.df <- m2df(otu.m[,colnames(otu.m) %in% neg_sample_ids], name_of_taxonomy_col = "OTU.ID")
+microdecon_data.df <- m2df(otu.m[,colnames(otu.m) %in% neg_sample_ids], row_column_name = "OTU.ID")
 microdecon_data.df <- cbind(microdecon_data.df, otu.m[,!colnames(otu.m) %in% neg_sample_ids])
 rownames(microdecon_data.df) <- NULL
 microdecon_data.df$taxonomy_species <- subset(otu_taxonomy_map.df, OTU.ID %in% microdecon_data.df$OTU.ID)$taxonomy_species
@@ -352,9 +370,26 @@ neg_present_features <- rownames(otu.m[rowSums(otu.m) > 0,])
 # as we only have a small number of negative samples.
 otu_negative_sample_prevalences <- apply(otu.m[,neg_sample_ids], 1, function(x) {length(which(x > 0))}) /length(neg_sample_ids)
 neg_prevalent_features <- rownames(melt(otu_negative_sample_prevalences[otu_negative_sample_prevalences > 0]))
-subset(otu_taxonomy_map.df, OTU.ID %in% neg_prevalent_features)$taxonomy_species
+# subset(otu_taxonomy_map.df, OTU.ID %in% neg_prevalent_features)$taxonomy_species
 
-# TODO - write putative contaminant sequences to file
+
+unique(c(decontam_contaminants_features, microdecon_contaminants_features))
+decontam_contaminants_features
+contaminating_feature_taxonomy_data.df <- otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% decontam_contaminants_features,]
+contaminating_feature_taxonomy_data.df <- rbind(contaminating_feature_taxonomy_data.df, otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% microdecon_contaminants_features,])
+contaminating_feature_taxonomy_data.df <- unique(contaminating_feature_taxonomy_data.df)
+contaminating_feature_taxonomy_data.df$Decontam_contaminant <- contaminating_feature_taxonomy_data.df$OTU.ID %in% decontam_contaminants_features
+contaminating_feature_taxonomy_data.df$Microdecon_contaminant <- contaminating_feature_taxonomy_data.df$OTU.ID %in% microdecon_contaminants_features
+temp <- contaminating_feature_taxonomy_data.df$RepSeq
+contaminating_feature_taxonomy_data.df$RepSeq <- NULL
+contaminating_feature_taxonomy_data.df$RepSeq <- temp
+write.csv(x = contaminating_feature_taxonomy_data.df, file = "Result_tables/other/contaminate_taxonomy_data.csv", quote =F, row.names = F)
+
+# Write putative contaminant sequences to file
+# write.fasta(sequences = as.list(combined_fasta_info.df$RepSeq),open = "w", 
+            # names = as.character(combined_fasta_info.df$OTU.ID),
+            # file.out = paste0("Result_other/combined/sequences/combined_most_abundant_unassigned_features.fasta"))
+
 
 # Remove contaminants from data. Retain both datasets for comparison.
 otu_rel_decontaminated.m <- otu_rel.m[!rownames(otu_rel.m) %in% unique(c(decontam_contaminants_features, microdecon_contaminants_features)),]
@@ -431,7 +466,7 @@ unassigned_project_otu_table_unfiltered.df <- project_otu_table_unfiltered.df[pr
 
 # Convert to dataframe
 unassigned_otu_unfiltered_rel.df <- m2df(otu_unfiltered_rel.m[as.character(unassigned_project_otu_table_unfiltered.df$OTU.ID),,drop =F],
-                                         name_of_taxonomy_col = "OTU.ID")
+                                        row_column_name = "OTU.ID")
 
 # Melt
 unassigned_otu_unfiltered_rel.df <- melt(unassigned_otu_unfiltered_rel.df, variable.name = "Sample", value.name = "Relative_abundance")
@@ -592,9 +627,9 @@ write.table(otu_rel_decontaminated.df, file = "Result_tables/relative_abundance_
 samples_retained <- colnames(otu.df)[2:length(colnames(otu.df))]
 samples_retained_decontaminated <- colnames(otu_decontaminated.df)[2:length(colnames(otu_decontaminated.df))]
 
-samples_lost <- metadata.df$Index[!metadata.df$Index %in% samples_retained]
-print(paste(length(samples_retained), "samples retained"))
-print(paste(length(samples_lost), "samples lost"))
+# samples_lost <- metadata.df$Index[!metadata.df$Index %in% samples_retained]
+# print(paste(length(samples_retained), "samples retained"))
+# print(paste(length(samples_lost), "samples lost"))
 # write.table(sample_metadata.df[sample_metadata.df$Index %in% samples_lost,], file = "Result_tables/other/metadata_samples_removed.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
 # Label those samples from the metadata.df that are not in the OTU table. A sample that has been filtered out
@@ -604,16 +639,20 @@ print(paste(length(samples_lost), "samples lost"))
 # write.table(metadata.df[metadata.df$Sample_retained == "yes",], file = "Result_tables/other/processed_metadata.csv", sep = ",", quote = F, row.names = F)
 # write.table(metadata.df[metadata.df$Sample_retained == "no",], file = "Result_tables/other/metadata_samples_removed.csv", sep = ",", quote = F, row.names = F)
 
+
+
 metadata.df$Sample_retained <- "no"
-metadata.df$Sample_retained_decontaminated <- "no"
 metadata.df[metadata.df$Index %in% samples_retained,]$Sample_retained <- "yes"
-metadata.df[metadata.df$Index %in% samples_retained_decontaminated,]$Sample_retained_decontaminated <- "yes"
+
+metadata_decontaminated.df <- metadata.df
+metadata_decontaminated.df$Sample_retained <- "no"
+metadata_decontaminated.df[metadata_decontaminated.df$Index %in% samples_retained_decontaminated,]$Sample_retained <- "yes"
 
 write.table(metadata.df[metadata.df$Sample_retained == "yes",], file = "Result_tables/other/processed_metadata.csv", sep = ",", quote = F, row.names = F)
 write.table(metadata.df[metadata.df$Sample_retained == "no",], file = "Result_tables/other/metadata_samples_removed.csv", sep = ",", quote = F, row.names = F)
 
-write.table(metadata.df[metadata.df$Sample_retained_decontaminated == "yes",], file = "Result_tables/other/processed_metadata_decontaminated.csv", sep = ",", quote = F, row.names = F)
-write.table(metadata.df[metadata.df$Sample_retained_decontaminated == "no",], file = "Result_tables/other/metadata_samples_removed_decontaminated.csv", sep = ",", quote = F, row.names = F)
+write.table(metadata_decontaminated.df[metadata_decontaminated.df$Sample_retained == "yes",], file = "Result_tables/other/processed_metadata_decontaminated.csv", sep = ",", quote = F, row.names = F)
+write.table(metadata_decontaminated.df[metadata_decontaminated.df$Sample_retained == "no",], file = "Result_tables/other/metadata_samples_removed_decontaminated.csv", sep = ",", quote = F, row.names = F)
 
 
 
@@ -1077,43 +1116,43 @@ write.table(phylum_combined, file = "Result_tables/combined_counts_abundances_an
 otu_combined <- create_combined_dataframe_no_rare(counts.df = otu_decontaminated.df, 
                                                   abundances.df = otu_rel_decontaminated.df,
                                                   mylevel = "OTU.ID",
-                                                  mymetadata = metadata.df,
+                                                  mymetadata = metadata_decontaminated.df,
                                                   otu_map.df = reduced_tax_map)
 
 species_combined <- create_combined_dataframe_no_rare(counts.df = otu_species_decontaminated.df, 
                                                       abundances.df = otu_species_rel_decontaminated.df,
                                                       mylevel = "Species",
-                                                      mymetadata = metadata.df,
+                                                      mymetadata = metadata_decontaminated.df,
                                                       otu_map.df = reduced_tax_map)
 
 genus_combined <- create_combined_dataframe_no_rare(counts.df = otu_genus_decontaminated.df, 
                                                     abundances.df = otu_genus_rel_decontaminated.df,
                                                     mylevel = "Genus",
-                                                    mymetadata = metadata.df,
+                                                    mymetadata = metadata_decontaminated.df,
                                                     otu_map.df = reduced_tax_map)
 
 family_combined <- create_combined_dataframe_no_rare(counts.df = otu_family_decontaminated.df, 
                                                      abundances.df = otu_family_rel_decontaminated.df,
                                                      mylevel = "Family",
-                                                     mymetadata = metadata.df,
+                                                     mymetadata = metadata_decontaminated.df,
                                                      otu_map.df = reduced_tax_map)
 
 order_combined <- create_combined_dataframe_no_rare(counts.df = otu_order_decontaminated.df, 
                                                     abundances.df = otu_order_rel_decontaminated.df,
                                                     mylevel = "Order",
-                                                    mymetadata = metadata.df,
+                                                    mymetadata = metadata_decontaminated.df,
                                                     otu_map.df = reduced_tax_map)
 
 class_combined <- create_combined_dataframe_no_rare(counts.df = otu_class_decontaminated.df, 
                                                     abundances.df = otu_class_rel_decontaminated.df,
                                                     mylevel = "Class",
-                                                    mymetadata = metadata.df,
+                                                    mymetadata = metadata_decontaminated.df,
                                                     otu_map.df = reduced_tax_map)
 
 phylum_combined <- create_combined_dataframe_no_rare(counts.df = otu_phylum_decontaminated.df, 
                                                      abundances.df = otu_phylum_rel_decontaminated.df,
                                                      mylevel = "Phylum",
-                                                     mymetadata = metadata.df,
+                                                     mymetadata = metadata_decontaminated.df,
                                                      otu_map.df = reduced_tax_map)
 
 write.table(otu_combined, file = "Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata_decontaminated.csv", sep = ",", quote = F, col.names = T, row.names = F)

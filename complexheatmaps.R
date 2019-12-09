@@ -78,16 +78,15 @@ rownames(metadata_decontaminated.df) <- metadata_decontaminated.df$Index
 # metadata.df$Gold_Star
 
 # Load relative abundance matrices
-otu_genus_rel_decontaminated.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Genus_relative_abundances_decontaminated.csv", sep = ",", header = T, row.names = 1))
-otu_family_rel_decontaminated.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Family_relative_abundances_decontaminated.csv", sep = ",", header = T, row.names = 1))
-otu_class_rel_decontaminated.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Class_relative_abundances_decontaminated.csv", sep = ",", header = T, row.names = 1))
-otu_phylum_rel_decontaminated.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Phylum_relative_abundances_decontaminated.csv", sep = ",", header = T, row.names = 1))
-
 otu_genus_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Genus_relative_abundances.csv", sep = ",", header = T, row.names = 1))
 otu_family_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Family_relative_abundances.csv", sep = ",", header = T, row.names = 1))
 otu_class_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Class_relative_abundances.csv", sep = ",", header = T, row.names = 1))
 otu_phylum_rel.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Phylum_relative_abundances.csv", sep = ",", header = T, row.names = 1))
 
+otu_genus_rel_decontaminated.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Genus_relative_abundances_decontaminated.csv", sep = ",", header = T, row.names = 1))
+otu_family_rel_decontaminated.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Family_relative_abundances_decontaminated.csv", sep = ",", header = T, row.names = 1))
+otu_class_rel_decontaminated.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Class_relative_abundances_decontaminated.csv", sep = ",", header = T, row.names = 1))
+otu_phylum_rel_decontaminated.m <- as.matrix(read.table(file = "Result_tables/relative_abundance_tables/Phylum_relative_abundances_decontaminated.csv", sep = ",", header = T, row.names = 1))
 
 
 # Remove samples that are not in the metadata.
