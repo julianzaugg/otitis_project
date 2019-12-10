@@ -3,12 +3,15 @@ library(plyr)
 library(dplyr)
 library(tidyr)
 library(RColorBrewer)
-# library(vegan)
+library(vegan)
 library(reshape2)
 # library(gplots)
 # library(pheatmap)
 library(grid)
 library(ComplexHeatmap)
+library(scales)
+
+
 
 
 ####################################
@@ -42,13 +45,13 @@ log_matrix <- function(mymat){
 # Specifically, the function "dds<-DESeq(dds, betaPrior = FALSE)" will fail
 # One way to address this is to use the function below as input to DESeq2 to transform the data.
 # Calculate the geometric means prior to estimating the size factors
-gm_mean = function(x, na.rm=TRUE){
+gm_mean <- function(x, na.rm=TRUE){
   # The geometric mean, with some error-protection bits.
   exp(sum(log(x[x > 0 & !is.na(x)]), na.rm=na.rm) / length(x))
 }
 
 # Center log ratio transform
-clr = function(x, base=2){
+clr <- function(x, base=2){
   x <- log((x / gm_mean(x)), base)
   x[!is.finite(x) | is.na(x)] <- 0.0
   return(x)

@@ -7,6 +7,18 @@
 # For more information, see : https://www.nature.com/articles/ismej2017119
 #************************************
 
+detachAllPackages <- function() {
+  
+  basic.packages <- c("package:stats","package:graphics","package:grDevices","package:utils","package:datasets","package:methods","package:base")
+  
+  package.list <- search()[ifelse(unlist(gregexpr("package:",search()))==1,TRUE,FALSE)]
+  
+  package.list <- setdiff(package.list,basic.packages)
+  
+  if (length(package.list)>0)  for (package in package.list) detach(package, character.only=TRUE)
+  
+}
+detachAllPackages()
 # Uncomment and run to install the libraries that might be needed 
 # install.packages("ggplot2")
 # install.packages("plyr")
@@ -17,6 +29,21 @@
 # install.packages("reshape2")
 # install.packages("gplots")
 # install.packages("heatmap3")
+# install.packages("ggfortify")
+
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+# install.packages("BiocManager")
+# BiocManager::install("decontam")
+library(decontam)
+
+# install.packages("devtools") #Installs devtools (if not already installed)
+# devtools::install_github("donaldtmcknight/microDecon") #Installs microDecon
+library(microDecon)
+
+# BiocManager::install("DESeq2")
+library(DESeq2)
+
+# BiocManager::install("ComplexHeatmap")
 
 library(ggplot2)
 library(plyr)
@@ -30,15 +57,7 @@ library(gplots)
 library(phyloseq)
 library(seqinr) # For writing fasta files
 
-# if (!requireNamespace("BiocManager", quietly = TRUE))
-  # install.packages("BiocManager")
 
-# BiocManager::install("decontam")
-library(decontam)
-
-# install.packages("devtools") #Installs devtools (if not already installed)
-# devtools::install_github("donaldtmcknight/microDecon") #Installs microDecon
-library(microDecon)
 
 
 ####################################
