@@ -96,8 +96,13 @@ dir.create(file.path("./Result_tables", "other"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "count_tables"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "relative_abundance_tables"), showWarnings = FALSE)
 
-dir.create(file.path("./Result_tables/diversity_analysis/variable_summaries"),recursive = T)
-dir.create(file.path("./Result_tables/diversity_analysis/variable_summaries_within_community"),recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/otu"),recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/genus"),recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/otu_decontaminated"),recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/genus_decontaminated"),recursive = T)
+
+# dir.create(file.path("./Result_tables/diversity_analysis/variable_summaries"),recursive = T)
+# dir.create(file.path("./Result_tables/diversity_analysis/variable_summaries_within_community"),recursive = T)
 dir.create(file.path("./Result_tables", "DESeq_results"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "abundance_analysis_tables"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "combined_counts_abundances_and_metadata_tables"), showWarnings = FALSE)
@@ -106,7 +111,20 @@ dir.create(file.path("./Result_tables", "stats_various"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "abundance_analysis_plots"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "pca_plots"), showWarnings = FALSE)
 # dir.create(file.path("./Result_figures", "abundance_plots"), showWarnings = FALSE)
+
 dir.create(file.path("./Result_figures", "diversity_analysis"), showWarnings = FALSE)
+
+dir.create(file.path("./Result_figures/diversity_analysis", "otu"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/diversity_analysis", "otu_within_community"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/diversity_analysis", "otu_decontaminated"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/diversity_analysis", "otu_within_community_decontaminated"), showWarnings = FALSE,recursive = T)
+
+dir.create(file.path("./Result_figures/diversity_analysis", "genus"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/diversity_analysis", "genus_within_community"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/diversity_analysis", "genus_decontaminated"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/diversity_analysis", "genus_within_community_decontaminated"), showWarnings = FALSE,recursive = T)
+
+
 dir.create(file.path("./Result_figures", "heatmaps"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "exploratory_analysis"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "DESeq_plots"), showWarnings = FALSE)
@@ -270,6 +288,10 @@ project_otu_table.df <- project_otu_table.df[grepl("D_0__Bacteria", project_otu_
 
 # Discard anything that is Unassigned at the Phylum level
 project_otu_table.df <- project_otu_table.df[!project_otu_table.df$Phylum == "Unassigned",]
+
+# Discard mitochondria and chloroplast features
+project_otu_table.df <- project_otu_table.df[!grepl("mitochondria|chloroplast", project_otu_table.df$Taxon,ignore.case = T),]
+
 # ------------------------------------------------
 
 # Remove old Taxon column
@@ -346,8 +368,11 @@ otu_unfiltered_rel.m[is.nan(otu_unfiltered_rel.m)] <- 0
 decontam_contaminants.df <- isContaminant(t(otu.m), 
                                           method = "prevalence", 
                                           neg = rownames(t(otu.m)) %in% neg_sample_ids, 
-                                          threshold = 0.5)
+                                          threshold = 0.3)
+hist(decontam_contaminants.df$p,100, ylim = c(0,400), xlim = c(0,1))
+abline(v = 0.5, col = 'red')
 decontam_contaminants_features <- rownames(subset(decontam_contaminants.df, contaminant == T))
+
 # subset(otu_taxonomy_map, OTU.ID %in% decontam_contaminants_features)$taxonomy_species
 # 2. Use microdecon
 # OTU Neg1 ....Sample 1....taxa (optional)
@@ -355,7 +380,11 @@ microdecon_data.df <- m2df(otu.m[,colnames(otu.m) %in% neg_sample_ids], row_colu
 microdecon_data.df <- cbind(microdecon_data.df, otu.m[,!colnames(otu.m) %in% neg_sample_ids])
 rownames(microdecon_data.df) <- NULL
 microdecon_data.df$taxonomy_species <- subset(otu_taxonomy_map.df, OTU.ID %in% microdecon_data.df$OTU.ID)$taxonomy_species
-microdecon_contaminants.df <- decon(microdecon_data.df, numb.blanks = length(neg_sample_ids),numb.ind = length(sample_ids) - length(neg_sample_ids),taxa = T,)
+microdecon_contaminants.df <- decon(microdecon_data.df, 
+                                    numb.blanks = length(neg_sample_ids),
+                                    numb.ind = length(sample_ids) - length(neg_sample_ids),
+                                    taxa = T,
+                                    runs = 2)
 
 microdecon_contaminants_features <- microdecon_contaminants.df$OTUs.removed$OTU.ID
 # summary(microdecon_contaminants_features %in% decontam_contaminants_features)
@@ -374,7 +403,7 @@ neg_prevalent_features <- rownames(melt(otu_negative_sample_prevalences[otu_nega
 
 
 unique(c(decontam_contaminants_features, microdecon_contaminants_features))
-decontam_contaminants_features
+
 contaminating_feature_taxonomy_data.df <- otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% decontam_contaminants_features,]
 contaminating_feature_taxonomy_data.df <- rbind(contaminating_feature_taxonomy_data.df, otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID %in% microdecon_contaminants_features,])
 contaminating_feature_taxonomy_data.df <- unique(contaminating_feature_taxonomy_data.df)
@@ -536,13 +565,13 @@ ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/sample_r
 myplot <- ggplot(column_sums.df, aes(x = value)) + 
   xlab("Read count") +
   ylab("Number of samples") +
-  scale_x_continuous(breaks = seq(500,max(column_sums.df$value), 1000)) +
+  scale_x_continuous(breaks = seq(500,max(column_sums.df$value), 2000)) +
   scale_y_continuous(breaks = seq(0,100, 10)) +
   geom_histogram(stat = "bin", bins = 80, colour = "black",fill = "grey") +
   common_theme +
   theme(axis.text.x = element_text(angle = 90, vjust = .5))
 myplot
-ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/sample_read_depth_distribution_2.pdf", width=6, height=6)
+ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/sample_read_depth_distribution_2.pdf", width=20, height=6)
 
 # Rarefaction curve
 # rarecurve(t(otu.m[,colSums(otu.m) > 1]),step = 500, label = F,xlim = c(0,30000),sample = 30000)
@@ -679,14 +708,16 @@ stats.df$Remote_Community <- metadata.df[samples_passing_QC,"Remote_Community"]
 stats.df$Otitis_status <- metadata.df[samples_passing_QC,"Otitis_status"]
 stats.df$Gold_Star <- metadata.df[samples_passing_QC,"Gold_Star"]
 stats.df$OM_6mo <- metadata.df[samples_passing_QC,"OM_6mo"]
-stats.df$Type_OM <- metadata.df[samples_passing_QC,"Type_OM"]
+# stats.df$Type_OM <- metadata.df[samples_passing_QC,"Type_OM"]
+stats.df$OM_Classification <- metadata.df[samples_passing_QC,"OM_Classification"]
 stats.df$Season <- metadata.df[samples_passing_QC,"Season"]
 stats.df$Nose <- metadata.df[samples_passing_QC,"Nose"]
 
 stats.df[,"Original_read_counts"] <- colSums(otu_unfiltered.m[,samples_passing_QC])
 stats.df[,"Filtered_read_counts"] <- colSums(otu.m[,samples_passing_QC])
 stats.df[,"Filtered_rarefied_read_counts"] <- colSums(otu_rare_count.m[,samples_passing_QC])
-stats.df[,"Filtered_read_counts_decontaminated"] <- colSums(otu_decontaminated.m[,samples_passing_QC])
+# FIXME - May fail if samples_passing_QC not all in otu_decontaminated.m
+stats.df[,"Filtered_read_counts_decontaminated"] <- colSums(otu_decontaminated.m[,samples_passing_QC]) 
 
 # Reads removed from filtering
 stats.df[,"Reads_removed_filtered"] <- stats.df[,"Original_read_counts"] - stats.df[,"Filtered_read_counts"]

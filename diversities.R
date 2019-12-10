@@ -1,7 +1,13 @@
-# Diversity calculations (Shannon, Chao1, Simpson) for each sample.
+# Diversity calculations Alpha (Shannon, Chao1, Simpson) and Beta (CLR transformed counts) diveristy for each sample.
 # Significance tests of each discrete group comparing diversity indices.
 # Generate boxplots for discrete 
 # Comparison of continuous variables vs diversity indices
+
+# "Alpha diversity measures the diversity within a single sample and is generally 
+# based on the number and relative abundance of taxa at some rank (e.g. species or OTUs).
+# Beta diversity also uses the number of relative abundance of taxa at some rank, but measures 
+# variation between samples. In other words, an alpha diversity statistic describes a single 
+# sample and a beta diversity statistic describes how two samples compare."
 
 detachAllPackages <- function() {
   
@@ -125,17 +131,17 @@ genus_decontaminated_rare_alpha.df <- left_join(metadata_decontaminated.df[c("In
 
 # Write per-sample diversities to file
 write.csv(otu_rare_alpha.df,
-          "Result_tables/diversity_analysis/sample_otu_alpha_diversities.csv", quote = F, row.names = F
+          "Result_tables/diversity_analysis/otu/sample_otu_alpha_diversities.csv", quote = F, row.names = F
 )
 write.csv(genus_rare_alpha.df,
-          "Result_tables/diversity_analysis/sample_genus_alpha_diversities.csv", quote = F, row.names = F
+          "Result_tables/diversity_analysis/genus/sample_genus_alpha_diversities.csv", quote = F, row.names = F
 )
 
 write.csv(otu_decontaminated_rare_alpha.df,
-          "Result_tables/diversity_analysis/sample_otu_alpha_diversities_decontaminated.csv", quote = F, row.names = F
+          "Result_tables/diversity_analysis/otu_decontaminated/sample_otu_alpha_diversities_decontaminated.csv", quote = F, row.names = F
 )
 write.csv(genus_decontaminated_rare_alpha.df,
-          "Result_tables/diversity_analysis/sample_genus_alpha_diversities_decontaminated.csv", quote = F, row.names = F
+          "Result_tables/diversity_analysis/genus_decontaminated/sample_genus_alpha_diversities_decontaminated.csv", quote = F, row.names = F
 )
 
 # ------------------------------------------------------------------------------------------------------------------------------------------
@@ -215,38 +221,38 @@ for (myvar in discrete_variables){
 }
 # Normal, OTU level
 write.csv(x = alpha_diversity_summary.df, 
-          file = paste0("Result_tables/diversity_analysis/otu_alpha_diversities_summary.csv"), 
+          file = paste0("Result_tables/diversity_analysis/otu/otu_alpha_diversities_summary.csv"), 
           quote = F, row.names = F)
 
 write.csv(x = alpha_diversity_significances.df, 
-          file = paste0("Result_tables/diversity_analysis/otu_alpha_diversities_significance.csv"), 
+          file = paste0("Result_tables/diversity_analysis/otu/otu_alpha_diversities_significance.csv"), 
           quote = F, row.names = F)
 
 # Normal, Genus level
 write.csv(x = alpha_diversity_summary_genus.df, 
-          file = paste0("Result_tables/diversity_analysis/genus_alpha_diversities_summary.csv"), 
+          file = paste0("Result_tables/diversity_analysis/genus/genus_alpha_diversities_summary.csv"), 
           quote = F, row.names = F)
 
 write.csv(x = alpha_diversity_significances.df, 
-          file = paste0("Result_tables/diversity_analysis/genus_alpha_diversities_significance.csv"), 
+          file = paste0("Result_tables/diversity_analysis/genus/genus_alpha_diversities_significance.csv"), 
           quote = F, row.names = F)
 
 # Decontaminated, OTU level
 write.csv(x = alpha_diversity_summary_decontaminated.df, 
-          file = paste0("Result_tables/diversity_analysis/otu_alpha_diversities_summary_decontaminated.csv"), 
+          file = paste0("Result_tables/diversity_analysis/otu_decontaminated/otu_alpha_diversities_summary_decontaminated.csv"), 
           quote = F, row.names = F)
 
 write.csv(x = alpha_diversity_significances_decontaminated.df, 
-          file = paste0("Result_tables/diversity_analysis/otu_alpha_diversities_significance_decontaminated.csv"), 
+          file = paste0("Result_tables/diversity_analysis/otu_decontaminated/otu_alpha_diversities_significance_decontaminated.csv"), 
           quote = F, row.names = F)
 
 # Decontaminated, Genus level
 write.csv(x = alpha_diversity_summary_decontaminated.df, 
-          file = paste0("Result_tables/diversity_analysis/genus_alpha_diversities_summary_decontaminated.csv"), 
+          file = paste0("Result_tables/diversity_analysis/genus_decontaminated/genus_alpha_diversities_summary_decontaminated.csv"), 
           quote = F, row.names = F)
 
 write.csv(x = alpha_diversity_significances_decontaminated.df, 
-          file = paste0("Result_tables/diversity_analysis/genus_alpha_diversities_significance_decontaminated.csv"), 
+          file = paste0("Result_tables/diversity_analysis/genus_decontaminated/genus_alpha_diversities_significance_decontaminated.csv"), 
           quote = F, row.names = F)
 
 
@@ -351,38 +357,38 @@ for (myvar in discrete_variables){
 }
 # Normal, OTU level
 write.csv(x = alpha_diversity_summary.df, 
-          file = paste0("Result_tables/diversity_analysis/otu_alpha_diversities_summary_within_community.csv"), 
+          file = paste0("Result_tables/diversity_analysis/otu/otu_alpha_diversities_summary_within_community.csv"), 
           quote = F, row.names = F)
 
 write.csv(x = alpha_diversity_significances.df, 
-          file = paste0("Result_tables/diversity_analysis/otu_alpha_diversities_significance_within_community.csv"), 
+          file = paste0("Result_tables/diversity_analysis/otu/otu_alpha_diversities_significance_within_community.csv"), 
           quote = F, row.names = F)
 
 # Normal, Genus level
 write.csv(x = alpha_diversity_summary_genus.df, 
-          file = paste0("Result_tables/diversity_analysis/genus_alpha_diversities_summary_within_community.csv"), 
+          file = paste0("Result_tables/diversity_analysis/genus/genus_alpha_diversities_summary_within_community.csv"), 
           quote = F, row.names = F)
 
 write.csv(x = alpha_diversity_significances.df, 
-          file = paste0("Result_tables/diversity_analysis/genus_alpha_diversities_significance_within_community.csv"), 
+          file = paste0("Result_tables/diversity_analysis/genus/genus_alpha_diversities_significance_within_community.csv"), 
           quote = F, row.names = F)
 
 # Decontaminated, OTU level
 write.csv(x = alpha_diversity_summary_decontaminated.df, 
-          file = paste0("Result_tables/diversity_analysis/otu_alpha_diversities_summary_within_community_decontaminated.csv"), 
+          file = paste0("Result_tables/diversity_analysis/otu_decontaminated/otu_alpha_diversities_summary_within_community_decontaminated.csv"), 
           quote = F, row.names = F)
 
 write.csv(x = alpha_diversity_significances_decontaminated.df, 
-          file = paste0("Result_tables/diversity_analysis/otu_alpha_diversities_significance_within_community_decontaminated.csv"), 
+          file = paste0("Result_tables/diversity_analysis/otu_decontaminated/otu_alpha_diversities_significance_within_community_decontaminated.csv"), 
           quote = F, row.names = F)
 
 # Decontaminated, Genus level
 write.csv(x = alpha_diversity_summary_decontaminated.df, 
-          file = paste0("Result_tables/diversity_analysis/genus_alpha_diversities_summary_within_community_decontaminated.csv"), 
+          file = paste0("Result_tables/diversity_analysis/genus_decontaminated/genus_alpha_diversities_summary_within_community_decontaminated.csv"), 
           quote = F, row.names = F)
 
 write.csv(x = alpha_diversity_significances_decontaminated.df, 
-          file = paste0("Result_tables/diversity_analysis/genus_alpha_diversities_significance_within_community_decontaminated.csv"), 
+          file = paste0("Result_tables/diversity_analysis/genus_decontaminated/genus_alpha_diversities_significance_within_community_decontaminated.csv"), 
           quote = F, row.names = F)
 
 
@@ -451,19 +457,39 @@ for (myvar in discrete_variables){
     ggtitle("Chao1") +
     scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
   
-  ggsave(filename = paste0("Result_figures/diversity_analysis/",myvar,"_Chao1.pdf"),myplot, width = 10, height = 8,units = "cm")
+  ggsave(filename = paste0("Result_figures/diversity_analysis/otu/otu_",myvar,"_Chao1.pdf"),myplot, width = 10, height = 8,units = "cm")
   
   myplot <- generate_diversity_boxplot(otu_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
     guides(fill = F, color = F) + 
     ggtitle("Shannon") +
     scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
-  ggsave(filename = paste0("Result_figures/diversity_analysis/",myvar,"_Shannon.pdf"),myplot, width = 10, height = 8,units = "cm")
+  ggsave(filename = paste0("Result_figures/diversity_analysis/otu/otu_",myvar,"_Shannon.pdf"),myplot, width = 10, height = 8,units = "cm")
   
   myplot <- generate_diversity_boxplot(otu_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
     guides(fill = F, color = F) +
     ggtitle("Simpson") +
     scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
-  ggsave(filename = paste0("Result_figures/diversity_analysis/",myvar,"_Simpson.pdf"),myplot, width = 10, height = 8,units = "cm")
+  ggsave(filename = paste0("Result_figures/diversity_analysis/otu/otu_",myvar,"_Simpson.pdf"),myplot, width = 10, height = 8,units = "cm")
+  
+  # Normal, genus level
+  myplot <- generate_diversity_boxplot(genus_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Chao1",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Chao1") +
+    scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
+  
+  ggsave(filename = paste0("Result_figures/diversity_analysis/genus/genus_",myvar,"_Chao1.pdf"),myplot, width = 10, height = 8,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(genus_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Shannon") +
+    scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/genus/genus_",myvar,"_Shannon.pdf"),myplot, width = 10, height = 8,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(genus_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
+    guides(fill = F, color = F) +
+    ggtitle("Simpson") +
+    scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/genus/genus_",myvar,"_Simpson.pdf"),myplot, width = 10, height = 8,units = "cm")
   
   # Decontaminated, otu level
   myplot <- generate_diversity_boxplot(otu_decontaminated_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Chao1",variable_colours_available = T) + 
@@ -471,17 +497,141 @@ for (myvar in discrete_variables){
     ggtitle("Chao1") +
     scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
   
-  ggsave(filename = paste0("Result_figures/diversity_analysis/",myvar,"_decontaminated_Chao1.pdf"),myplot, width = 10, height = 8,units = "cm")
+  ggsave(filename = paste0("Result_figures/diversity_analysis/otu_decontaminated/otu_decontaminated_",myvar,"_Chao1.pdf"),myplot, width = 10, height = 8,units = "cm")
   
   myplot <- generate_diversity_boxplot(otu_decontaminated_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
     guides(fill = F, color = F) + 
     ggtitle("Shannon") +
     scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
-  ggsave(filename = paste0("Result_figures/diversity_analysis/",myvar,"_decontaminated_Shannon.pdf"),myplot, width = 10, height = 8,units = "cm")
+  ggsave(filename = paste0("Result_figures/diversity_analysis/otu_decontaminated/otu_decontaminated_",myvar,"_Shannon.pdf"),myplot, width = 10, height = 8,units = "cm")
   
   myplot <- generate_diversity_boxplot(otu_decontaminated_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
     guides(fill = F, color = F) +
     ggtitle("Simpson") +
     scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
-  ggsave(filename = paste0("Result_figures/diversity_analysis/",myvar,"_decontaminated_Simpson.pdf"),myplot, width = 10, height = 8,units = "cm")
+  ggsave(filename = paste0("Result_figures/diversity_analysis/otu_decontaminated/otu_decontaminated_",myvar,"_Simpson.pdf"),myplot, width = 10, height = 8,units = "cm")
+  
+  # Decontaminated, genus level
+  myplot <- generate_diversity_boxplot(genus_decontaminated_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Chao1",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Chao1") +
+    scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
+  
+  ggsave(filename = paste0("Result_figures/diversity_analysis/genus_decontaminated/genus_decontaminated_",myvar,"_Chao1.pdf"),myplot, width = 10, height = 8,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(genus_decontaminated_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
+    guides(fill = F, color = F) + 
+    ggtitle("Shannon") +
+    scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/genus_decontaminated/genus_decontaminated_",myvar,"_Shannon.pdf"),myplot, width = 10, height = 8,units = "cm")
+  
+  myplot <- generate_diversity_boxplot(genus_decontaminated_rare_alpha.df, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
+    guides(fill = F, color = F) +
+    ggtitle("Simpson") +
+    scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
+  ggsave(filename = paste0("Result_figures/diversity_analysis/genus_decontaminated/genus_decontaminated_",myvar,"_Simpson.pdf"),myplot, width = 10, height = 8,units = "cm")
 }
+
+
+for (myvar in discrete_variables){
+  if (myvar == "Remote_Community") {next}
+  for (community in unique(otu_rare_alpha.df$Remote_Community)){
+    data_subset <- subset(otu_rare_alpha.df, Remote_Community == community)
+    data_subset_decontaminated <- subset(otu_decontaminated_rare_alpha.df, Remote_Community == community)
+    
+    data_subset_genus <- subset(genus_rare_alpha.df, Remote_Community == community)
+    data_subset_genus_decontaminated <- subset(genus_decontaminated_rare_alpha.df, Remote_Community == community)
+    # Normal, otu level
+    myplot <- generate_diversity_boxplot(data_subset, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Chao1",variable_colours_available = T) + 
+      guides(fill = F, color = F) + 
+      ggtitle(paste0("Chao1, Community ", community)) +
+      scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
+    
+    ggsave(filename = paste0("Result_figures/diversity_analysis/otu_within_community/otu_within_community_",community,"_",myvar,"_Chao1.pdf"),myplot, width = 10, height = 8,units = "cm")
+    
+    myplot <- generate_diversity_boxplot(data_subset, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
+      guides(fill = F, color = F) + 
+      ggtitle(paste0("Shannon, Community ", community)) +
+      scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
+    ggsave(filename = paste0("Result_figures/diversity_analysis/otu_within_community/otu_within_community_",community,"_",myvar,"_Shannon.pdf"),myplot, width = 10, height = 8,units = "cm")
+    
+    myplot <- generate_diversity_boxplot(data_subset, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
+      guides(fill = F, color = F) +
+      ggtitle(paste0("Simpson, Community ", community)) +
+      scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
+    ggsave(filename = paste0("Result_figures/diversity_analysis/otu_within_community/otu_within_community_",community,"_",myvar,"_Simpson.pdf"),myplot, width = 10, height = 8,units = "cm")
+    
+    # Normal, genus level
+    myplot <- generate_diversity_boxplot(data_subset_genus, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Chao1",variable_colours_available = T) + 
+      guides(fill = F, color = F) + 
+      ggtitle(paste0("Chao1, Community ", community)) +
+      scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
+    
+    ggsave(filename = paste0("Result_figures/diversity_analysis/genus_within_community/genus_within_community_",community,"_",myvar,"_Chao1.pdf"),myplot, width = 10, height = 8,units = "cm")
+    
+    myplot <- generate_diversity_boxplot(data_subset_genus, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
+      guides(fill = F, color = F) + 
+      ggtitle(paste0("Shannon, Community ", community)) +
+      scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
+    ggsave(filename = paste0("Result_figures/diversity_analysis/genus_within_community/genus_within_community_",community,"_",myvar,"_Shannon.pdf"),myplot, width = 10, height = 8,units = "cm")
+    
+    myplot <- generate_diversity_boxplot(data_subset_genus, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
+      guides(fill = F, color = F) +
+      ggtitle(paste0("Simpson, Community ", community)) +
+      scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
+    ggsave(filename = paste0("Result_figures/diversity_analysis/genus_within_community/genus_within_community_",community,"_",myvar,"_Simpson.pdf"),myplot, width = 10, height = 8,units = "cm")
+    
+    # Decontaminated, otu level
+    myplot <- generate_diversity_boxplot(data_subset_decontaminated, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Chao1",variable_colours_available = T) + 
+      guides(fill = F, color = F) + 
+      ggtitle(paste0("Chao1, Community ", community)) +
+      scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
+    
+    ggsave(filename = paste0("Result_figures/diversity_analysis/otu_within_community_decontaminated/otu_within_community_",community,"_decontaminated_",myvar,"_Chao1.pdf"),myplot, width = 10, height = 8,units = "cm")
+    
+    myplot <- generate_diversity_boxplot(data_subset_decontaminated, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
+      guides(fill = F, color = F) + 
+      ggtitle(paste0("Shannon, Community ", community)) +
+      scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
+    ggsave(filename = paste0("Result_figures/diversity_analysis/otu_within_community_decontaminated/otu_within_community_",community,"_decontaminated_",myvar,"_Shannon.pdf"),myplot, width = 10, height = 8,units = "cm")
+    
+    myplot <- generate_diversity_boxplot(data_subset_decontaminated, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
+      guides(fill = F, color = F) +
+      ggtitle(paste0("Simpson, Community ", community)) +
+      scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
+    ggsave(filename = paste0("Result_figures/diversity_analysis/otu_within_community_decontaminated/otu_within_community_",community,"_decontaminated_",myvar,"_Simpson.pdf"),myplot, width = 10, height = 8,units = "cm")
+    
+    # Decontaminated, genus level
+    myplot <- generate_diversity_boxplot(data_subset_genus_decontaminated, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Chao1",variable_colours_available = T) + 
+      guides(fill = F, color = F) + 
+      ggtitle(paste0("Chao1, Community ", community)) +
+      scale_y_continuous(limits = c(0,200), breaks = seq(0,200,50))
+    
+    ggsave(filename = paste0("Result_figures/diversity_analysis/genus_within_community_decontaminated/genus_within_community_",community,"_decontaminated_",myvar,"_Chao1.pdf"),myplot, width = 10, height = 8,units = "cm")
+    
+    myplot <- generate_diversity_boxplot(data_subset_genus_decontaminated, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Shannon",variable_colours_available = T) + 
+      guides(fill = F, color = F) + 
+      ggtitle(paste0("Shannon, Community ", community)) +
+      scale_y_continuous(limits = c(0,5), breaks = seq(0,5,.5))
+    ggsave(filename = paste0("Result_figures/diversity_analysis/genus_within_community_decontaminated/genus_within_community_",community,"_decontaminated_",myvar,"_Shannon.pdf"),myplot, width = 10, height = 8,units = "cm")
+    
+    myplot <- generate_diversity_boxplot(data_subset_genus_decontaminated, variable = myvar,fill_palette = my_colour_palette_10_distinct,metric = "Simpson",variable_colours_available = T) +
+      guides(fill = F, color = F) +
+      ggtitle(paste0("Simpson, Community ", community)) +
+      scale_y_continuous(limits = c(0,1), breaks = seq(0,1,.2))
+    ggsave(filename = paste0("Result_figures/diversity_analysis/genus_within_community_decontaminated/genus_within_community_",community,"_decontaminated_",myvar,"_Simpson.pdf"),myplot, width = 10, height = 8,units = "cm")
+  }
+}
+
+
+# ---------------------------------------------
+# Calculate the beta-diversity for each variable 
+# Centre-log transform the counts first and use a euclidean distance. This should be equivalent or superior to 
+# a bray curtis transform/distance used on counts. 
+# As far as I can tell in the literature, e.g.
+# Calle M Luz. (2019). Statistical Analysis of Metagenomics Data. Genomics Inform, 17(1), e6–.
+# the euclidean distance between CLR values is an appropriate beta diversity measure
+
+
+
+

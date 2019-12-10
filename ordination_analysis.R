@@ -81,6 +81,10 @@ metadata_decontaminated.df <- read.csv("Result_tables/other/processed_metadata_d
 rownames(metadata.df) <- metadata.df$Index
 rownames(metadata_decontaminated.df) <- metadata_decontaminated.df$Index
 
+# Convert variables to factors
+metadata.df[discrete_variables] <- lapply(metadata.df[discrete_variables], factor)
+metadata_decontaminated.df[discrete_variables] <- lapply(metadata_decontaminated.df[discrete_variables], factor)
+
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
 
@@ -164,7 +168,13 @@ genus_relabeller_function <- function(my_labels){
 }
 
 # --------------------
-# Generate PCA plots
+# Generate PCA plots. If CLR transformed values with euclidean distances, these will be the same as
+# the values calculated from betadisper...maybe not important
+temp <- betadiver(t(otu_clr.m),method = "e")
+# temp <- with(metadata.df, betadisper...maybe(vegdist(t(otu_clr.m),method = "euclidean"),group = Gold_Star))
+# temp$eig["PCoA1"] / sum(temp$eig)
+# temp$eig["PCoA2"] / sum(temp$eig)
+# plot(temp)
 
 # Generate ordination objects
 otu_pca <- rda(t(otu_clr.m), data = metadata.df)
@@ -422,41 +432,148 @@ for (community in unique(metadata.df$Remote_Community)){
 
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
-# ANOSIM tests whether distances between groups are greater than within groups.
 # PERMANOVA tests whether distance differ between groups.
 
 # Genus, clr euclidean
 print("Centred-log ratio transformed counts - Euclidean distance")
+# otu_clr.m <- clr(otu.m)
+# genus_clr.m <- clr(genus.m)
+# otu_clr_decontaminated.m <- clr(otu_decontaminated.m)
+# genus_clr_decontaminated.m <- clr(genus_decontaminated.m)
+otu_permanova_results <- data.frame()
+genus_permanova_results <- data.frame()
+otu_decontaminated_permanova_results <- data.frame()
+genus_decontaminated_permanova_results <- data.frame()
 
-permanova_results <- run_permanova_custom(my_metadata = metadata.df,
-                                          my_formula = as.formula(t(genus_clr.m)~Remote_Community),
-                                          my_method = "euclidean",
-                                          label = "CLR")
+otu_within_community_permanova_results <- data.frame()
+genus_within_community_permanova_results <- data.frame()
+otu_within_community_decontaminated_permanova_results <- data.frame()
+genus_within_community_decontaminated_permanova_results <- data.frame()
 
-write.csv(permanova_results, file = "Result_tables/stats_various/PERMANOVA.csv", row.names = F, quote = F)
+for (myvar in discrete_variables){
+  print(myvar)
+  metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
+  metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
+  
+  otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
+  genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
+  otu_clr_decontaminated_subset.m <- otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
+  genus_clr_decontaminated_subset.m <- genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
+  
+  otu_permanova_results <- rbind(otu_permanova_results,run_permanova_custom(my_metadata = metadata.df, 
+                                                      my_formula = as.formula(paste0("t(otu_clr_subset.m)~", myvar)),
+                                                      my_method = "euclidean",label = "CLR"))
+  
+  genus_permanova_results <- rbind(genus_permanova_results,run_permanova_custom(my_metadata = metadata.df, 
+                                                      my_formula = as.formula(paste0("t(genus_clr_subset.m)~", myvar)),
+                                                      my_method = "euclidean",label = "CLR"))
+  
+  otu_decontaminated_permanova_results <- rbind(otu_decontaminated_permanova_results, run_permanova_custom(my_metadata = metadata_decontaminated_subset.df, 
+                                                      my_formula = as.formula(paste0("t(otu_clr_decontaminated_subset.m)~", myvar)),
+                                                      my_method = "euclidean",label = "CLR"))
+  
+  genus_decontaminated_permanova_results <- rbind(genus_decontaminated_permanova_results, run_permanova_custom(my_metadata = metadata_decontaminated_subset.df, 
+                                                        my_formula = as.formula(paste0("t(genus_clr_decontaminated_subset.m)~", myvar)),
+                                                        my_method = "euclidean",label = "CLR"))
+  if (myvar == "Remote_Community") {next}
+  for (community in unique(metadata.df$Remote_Community)){
+    
+    metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
+    metadata_subset.df <- subset(metadata_subset.df, Remote_Community = community)
+    metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
+    metadata_decontaminated_subset.df <- subset(metadata_decontaminated_subset.df, Remote_Community = community)
+    
+    otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
+    genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
+    otu_clr_decontaminated_subset.m <- otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
+    genus_clr_decontaminated_subset.m <- genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
+    
+    temp <- run_permanova_custom(my_metadata = metadata.df, 
+                                 my_formula = as.formula(paste0("t(otu_clr_subset.m)~", myvar)),
+                                 my_method = "euclidean",label = "CLR")
+    temp$Remote_Community <- community
+    otu_within_community_permanova_results <- rbind(otu_within_community_permanova_results, temp)
+    
+    temp <- run_permanova_custom(my_metadata = metadata.df, 
+                         my_formula = as.formula(paste0("t(genus_clr_subset.m)~", myvar)),
+                         my_method = "euclidean",label = "CLR")
+    temp$Remote_Community <- community
+    genus_within_community_permanova_results <- rbind(genus_within_community_permanova_results,temp)
+    
+    temp <- run_permanova_custom(my_metadata = metadata_decontaminated_subset.df, 
+                                 my_formula = as.formula(paste0("t(otu_clr_decontaminated_subset.m)~", myvar)),
+                                 my_method = "euclidean",label = "CLR")
+    temp$Remote_Community <- community
+    otu_within_community_decontaminated_permanova_results <- rbind(otu_within_community_decontaminated_permanova_results, temp)
+    
+    temp <- run_permanova_custom(my_metadata = metadata_decontaminated_subset.df, 
+                                 my_formula = as.formula(paste0("t(genus_clr_decontaminated_subset.m)~", myvar)),
+                                 my_method = "euclidean",label = "CLR")
+    temp$Remote_Community <- community
+    genus_within_community_decontaminated_permanova_results <- rbind(genus_within_community_decontaminated_permanova_results, temp)
+  }
+}
+
+write.csv(otu_permanova_results, file = "Result_tables/stats_various/otu_PERMANOVA.csv", row.names = F, quote = F)
+write.csv(genus_permanova_results, file = "Result_tables/stats_various/genus_PERMANOVA.csv", row.names = F, quote = F)
+write.csv(otu_decontaminated_permanova_results, file = "Result_tables/stats_various/otu_decontaminated_PERMANOVA.csv", row.names = F, quote = F)
+write.csv(genus_decontaminated_permanova_results, file = "Result_tables/stats_various/genus_decontaminated_PERMANOVA.csv", row.names = F, quote = F)
+
+write.csv(otu_within_community_permanova_results, file = "Result_tables/stats_various/otu_within_community_PERMANOVA.csv", row.names = F, quote = F)
+write.csv(genus_within_community_permanova_results, file = "Result_tables/stats_various/genus_within_community_PERMANOVA.csv", row.names = F, quote = F)
+write.csv(otu_decontaminated_permanova_results, file = "Result_tables/stats_various/otu_within_community_decontaminated_PERMANOVA.csv", row.names = F, quote = F)
+write.csv(genus_decontaminated_permanova_results, file = "Result_tables/stats_various/genus_within_community_decontaminated_PERMANOVA.csv", row.names = F, quote = F)
+
+# run_permanova_custom(my_metadata = metadata.df, my_formula = as.formula(t(otu_clr.m)~Season*Remote_Community),
+                     # my_method = "euclidean",label = "CLR")
+# myvar <- "Remote_Community"
+# run_permanova_custom(my_metadata = metadata.df, my_formula = as.formula(t(otu_clr.m)~get(myvar)),
+#                      my_method = "euclidean",label = "CLR")
+# 
+# run_permanova_custom(my_metadata = metadata.df, my_formula = as.formula(t(otu_clr.m)~OM_6mo),
+#                      my_method = "euclidean",label = "CLR")
+# 
+# run_permanova_custom(my_metadata = metadata.df, my_formula = as.formula(paste0("t(otu_clr.m)~", myvar)),
+#                      my_method = "euclidean",label = "CLR")
+# write.csv(permanova_results, file = "Result_tables/stats_various/PERMANOVA.csv", row.names = F, quote = F)
 
 
 
 # ---------------------------------------------
 # Takes awhile to calculate, uncomment to run
+# ANOSIM tests whether distances between groups are greater than within groups.
+# "Nonparametric procedure for testing the hypothesis of no difference between two or more groups of entities
+# based on permutation test of among- and within-group similarities"
+# R = 1 when all pairs of samples within groups are more similar than to any pair of samples from different groups
+# R = 0 expected value under the null model that among-and within- group dissimilarities are the same on average.
 
-# Calculate the beta-diversity for each variable 
-# Centre-log transform the counts first and use a euclidean distance. This should be equivalent or superior to 
-# a bray curtis transform/distance used on counts. 
-# As far as I can tell in the literature, the euclidean distance between CLR values is an appropriate beta diversity measure
+# "If you have very different group sizes, you may consider analysis of similarities (ANOSIM) instead of PERMANOVA. 
+# This test does not assume equal group variances."
 
-beta_diversity_significances <- data.frame("Variable" = character(),
+# FIXME
+anosim_significances <- data.frame("Variable" = character(),
                                            "P_value" = numeric(),
                                            "R_value" = numeric()
 )
 for (myvar in discrete_variables){
   metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
-  otu_rare_subset.m <- otu_genus_clr.m[,rownames(metadata_subset.df)]
+  metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
+  
+  otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
+  genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
+  otu_clr_decontaminated_subset.m <- otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
+  genus_clr_decontaminated_subset.m <- genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
+  
   temp <- with(metadata_subset.df, anosim(t(clr(otu_rare_subset.m)),get(myvar), distance = "euclidean",permutations = 999,parallel = 2))
-  beta_diversity_significances <- rbind(beta_diversity_significances, data.frame("Variable" = myvar,
+  anosim_significances <- rbind(anosim_significances, data.frame("Variable" = myvar,
                                                                                  "P_value" = temp$signif,
                                                                                  "R_value" = temp$statistic))
 }
-beta_diversity_significances$padj <- round(p.adjust(beta_diversity_significances$P_value,method = "BH"),6)
-# write.csv(beta_diversity_significances, file = "Result_tables/combined/diversity_analysis/variable_beta_diversity_significance.csv", row.names = F, quote = F)
+anosim_significances$padj <- round(p.adjust(anosim_significances$P_value,method = "BH"),6)
+# write.csv(anosim_significances, file = "Result_tables/combined/diversity_analysis/variable_beta_diversity_significance.csv", row.names = F, quote = F)
 
+
+# ---------------------------------------------
+# PERMDISP (betadisper)
+temp <- with(metadata.df, betadisper(vegdist(t(otu_clr.m), method = "euclidean"),group = Remote_Community))
+adonis(data = temp)

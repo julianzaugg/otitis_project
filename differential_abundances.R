@@ -485,6 +485,10 @@ heatmap_decontaminated.m <- heatmap_decontaminated.m %>% spread(Sample, Relative
 heatmap_decontaminated.m <- df2matrix(heatmap_decontaminated.m)
 heatmap_metadata_decontaminated.df <- metadata_decontaminated.df[colnames(heatmap_decontaminated.m),]
 
+row_labels.df <- subset(otu_taxonomy_map.df, OTU.ID %in% rownames(heatmap.m))[,c("OTU.ID", "taxonomy_genus")]
+row_labels.df$label <- with(row_labels.df, paste0(OTU.ID, " : ", taxonomy_genus))
+row_labels.df$taxonomy_genus <- NULL
+
 make_heatmap(myheatmap_matrix = heatmap.m*100, 
              mymetadata = heatmap_metadata.df,
              filename = paste0("Result_figures/heatmaps/Sample_DESeq_OTU_relative_abundance_heatmap.pdf"),
@@ -492,7 +496,7 @@ make_heatmap(myheatmap_matrix = heatmap.m*100,
              # variables = c("Remote_Community", "Gold_Star"),
              column_title = "Sample",
              row_title = "Sequence variant",
-             plot_height = 10,
+             plot_height = 13,
              plot_width = 20,
              cluster_columns = F,
              cluster_rows = T,
@@ -508,9 +512,13 @@ make_heatmap(myheatmap_matrix = heatmap.m*100,
              row_dend_width = unit(3, "cm"),
              simple_anno_size = unit(.25, "cm"),
              show_cell_values = F,
-             cell_fun_value_col_threshold = 15
+             cell_fun_value_col_threshold = 15,
+             my_row_labels = row_labels.df
 )
 
+row_labels.df <- subset(otu_taxonomy_map.df, OTU.ID %in% rownames(heatmap_decontaminated.m))[,c("OTU.ID", "taxonomy_genus")]
+row_labels.df$label <- with(row_labels.df, paste0(OTU.ID, " : ", taxonomy_genus))
+row_labels.df$taxonomy_genus <- NULL
 
 make_heatmap(myheatmap_matrix = heatmap_decontaminated.m*100, 
              mymetadata = heatmap_metadata_decontaminated.df,
@@ -519,7 +527,7 @@ make_heatmap(myheatmap_matrix = heatmap_decontaminated.m*100,
              # variables = c("Remote_Community", "Gold_Star"),
              column_title = "Sample",
              row_title = "Sequence variant",
-             plot_height = 10,
+             plot_height = 13,
              plot_width = 20,
              cluster_columns = F,
              cluster_rows = T,
@@ -535,7 +543,8 @@ make_heatmap(myheatmap_matrix = heatmap_decontaminated.m*100,
              row_dend_width = unit(3, "cm"),
              simple_anno_size = unit(.25, "cm"),
              show_cell_values = F,
-             cell_fun_value_col_threshold = 15
+             cell_fun_value_col_threshold = 15,
+             my_row_labels = row_labels.df
 )
 
 
