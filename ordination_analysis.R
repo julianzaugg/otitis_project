@@ -206,7 +206,7 @@ genus_data_decontaminated.df <- read.csv("Result_tables/combined_counts_abundanc
 temp <- calculate_PC_abundance_correlations(genus_pca, mydata.df = genus_data.df,taxa_column = "taxonomy_genus",variables = discrete_variables)
 temp <- calculate_PC_abundance_correlations(genus_decontaminated_pca, mydata.df = genus_data_decontaminated.df,taxa_column = "taxonomy_genus",variables = discrete_variables)
 temp <- calculate_PC_abundance_correlations(otu_decontaminated_pca, mydata.df = otu_data_decontaminated.df,taxa_column = "OTU.ID",variables = discrete_variables)
-temp %>% filter(N_Samples > 5)
+# temp %>% filter(N_Samples > 5)
 
 for (myvar in discrete_variables){
   
@@ -475,19 +475,19 @@ for (myvar in discrete_variables){
   
   otu_permanova_results <- rbind(otu_permanova_results,run_permanova_custom(my_metadata = metadata.df, 
                                                       my_formula = as.formula(paste0("t(otu_clr_subset.m)~", myvar)),
-                                                      my_method = "euclidean",label = "CLR"))
+                                                      my_method = "euclidean",label = "CLR",permutations = 9999))
   
   genus_permanova_results <- rbind(genus_permanova_results,run_permanova_custom(my_metadata = metadata.df, 
                                                       my_formula = as.formula(paste0("t(genus_clr_subset.m)~", myvar)),
-                                                      my_method = "euclidean",label = "CLR"))
+                                                      my_method = "euclidean",label = "CLR",permutations = 9999))
   
   otu_decontaminated_permanova_results <- rbind(otu_decontaminated_permanova_results, run_permanova_custom(my_metadata = metadata_decontaminated_subset.df, 
                                                       my_formula = as.formula(paste0("t(otu_clr_decontaminated_subset.m)~", myvar)),
-                                                      my_method = "euclidean",label = "CLR"))
+                                                      my_method = "euclidean",label = "CLR",permutations = 9999))
   
   genus_decontaminated_permanova_results <- rbind(genus_decontaminated_permanova_results, run_permanova_custom(my_metadata = metadata_decontaminated_subset.df, 
                                                         my_formula = as.formula(paste0("t(genus_clr_decontaminated_subset.m)~", myvar)),
-                                                        my_method = "euclidean",label = "CLR"))
+                                                        my_method = "euclidean",label = "CLR",permutations = 9999))
   if (myvar == "Remote_Community") {next}
   for (community in unique(metadata.df$Remote_Community)){
     
@@ -503,25 +503,25 @@ for (myvar in discrete_variables){
     
     temp <- run_permanova_custom(my_metadata = metadata.df, 
                                  my_formula = as.formula(paste0("t(otu_clr_subset.m)~", myvar)),
-                                 my_method = "euclidean",label = "CLR")
+                                 my_method = "euclidean",label = "CLR",permutations = 9999)
     temp$Remote_Community <- community
     otu_within_community_permanova_results <- rbind(otu_within_community_permanova_results, temp)
     
     temp <- run_permanova_custom(my_metadata = metadata.df, 
                          my_formula = as.formula(paste0("t(genus_clr_subset.m)~", myvar)),
-                         my_method = "euclidean",label = "CLR")
+                         my_method = "euclidean",label = "CLR",permutations = 9999)
     temp$Remote_Community <- community
     genus_within_community_permanova_results <- rbind(genus_within_community_permanova_results,temp)
     
     temp <- run_permanova_custom(my_metadata = metadata_decontaminated_subset.df, 
                                  my_formula = as.formula(paste0("t(otu_clr_decontaminated_subset.m)~", myvar)),
-                                 my_method = "euclidean",label = "CLR")
+                                 my_method = "euclidean",label = "CLR",permutations = 9999)
     temp$Remote_Community <- community
     otu_within_community_decontaminated_permanova_results <- rbind(otu_within_community_decontaminated_permanova_results, temp)
     
     temp <- run_permanova_custom(my_metadata = metadata_decontaminated_subset.df, 
                                  my_formula = as.formula(paste0("t(genus_clr_decontaminated_subset.m)~", myvar)),
-                                 my_method = "euclidean",label = "CLR")
+                                 my_method = "euclidean",label = "CLR",permutations = 9999)
     temp$Remote_Community <- community
     genus_within_community_decontaminated_permanova_results <- rbind(genus_within_community_decontaminated_permanova_results, temp)
   }
@@ -537,8 +537,9 @@ write.csv(genus_within_community_permanova_results, file = "Result_tables/stats_
 write.csv(otu_decontaminated_permanova_results, file = "Result_tables/stats_various/otu_within_community_decontaminated_PERMANOVA.csv", row.names = F, quote = F)
 write.csv(genus_decontaminated_permanova_results, file = "Result_tables/stats_various/genus_within_community_decontaminated_PERMANOVA.csv", row.names = F, quote = F)
 
-# run_permanova_custom(my_metadata = metadata.df, my_formula = as.formula(t(otu_clr.m)~Season*Remote_Community),
-                     # my_method = "euclidean",label = "CLR")
+# run_permanova_custom(my_metadata = metadata.df, my_formula = as.formula(t(genus_clr.m)~Remote_Community),
+# my_method = "euclidean",label = "CLR")
+
 # myvar <- "Remote_Community"
 # run_permanova_custom(my_metadata = metadata.df, my_formula = as.formula(t(otu_clr.m)~get(myvar)),
 #                      my_method = "euclidean",label = "CLR")
@@ -549,6 +550,139 @@ write.csv(genus_decontaminated_permanova_results, file = "Result_tables/stats_va
 # run_permanova_custom(my_metadata = metadata.df, my_formula = as.formula(paste0("t(otu_clr.m)~", myvar)),
 #                      my_method = "euclidean",label = "CLR")
 # write.csv(permanova_results, file = "Result_tables/stats_various/PERMANOVA.csv", row.names = F, quote = F)
+
+
+
+# ---------------------------------------------
+# PERMDISP (betadisper)
+# See: https://www.nicholas-ollberding.com/post/introduction-to-the-statistical-analysis-of-microbiome-data-in-r/
+# "Test the homogeneity of within-group multivariate dispersions on the basis of any resemblance measure."
+# If PERMANOVA is significant, while 
+
+# temp <- with(metadata.df, betadisper(vegdist(t(genus_clr.m), method = "euclidean"), group = Remote_Community))
+
+# temp <- permutest(temp, permutations = 999, parallel = 2)
+# plot(temp, main = "Ordination Centroids and Dispersion Labeled: Aitchison Distance", sub = "")
+# boxplot(temp, main = "", xlab = "")
+# 
+# temp <- run_permdisp_custom(metadata.df, 
+#                     my_data = genus_clr.m,
+#                     my_group = "Remote_Community",
+#                     my_method = "euclidean",
+#                     permutations = 999, label = NULL)
+
+otu_permdisp_results <- data.frame()
+genus_permdisp_results <- data.frame()
+otu_decontaminated_permdisp_results <- data.frame()
+genus_decontaminated_permdisp_results <- data.frame()
+
+otu_within_community_permdisp_results <- data.frame()
+genus_within_community_permdisp_results <- data.frame()
+otu_within_community_decontaminated_permdisp_results <- data.frame()
+genus_within_community_decontaminated_permdisp_results <- data.frame()
+
+
+# source("code/helper_functions.R")
+
+for (myvar in discrete_variables){
+  metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
+  metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
+  
+  otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
+  genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
+  otu_clr_decontaminated_subset.m <- otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
+  genus_clr_decontaminated_subset.m <- genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
+  
+  otu_permdisp_results <- rbind(otu_permdisp_results, run_permdisp_custom(my_metadata = metadata_subset.df, 
+                                                                          my_data = otu_clr_subset.m,
+                                                                          my_group = myvar,
+                                                                          my_method = "euclidean",
+                                                                          permutations = 9999,
+                                                                          label = "CLR"))
+  
+  genus_permdisp_results <- rbind(genus_permdisp_results, run_permdisp_custom(my_metadata = metadata_subset.df, 
+                                                                              my_data = genus_clr_subset.m,
+                                                                              my_group = myvar,
+                                                                              my_method = "euclidean",
+                                                                              permutations = 9999,
+                                                                              label = "CLR"))
+  
+  otu_decontaminated_permdisp_results <- rbind(otu_decontaminated_permdisp_results, run_permdisp_custom(my_metadata = metadata_decontaminated_subset.df, 
+                                                                                                        my_data = otu_clr_decontaminated_subset.m,
+                                                                                                        my_group = myvar,
+                                                                                                        my_method = "euclidean",
+                                                                                                        permutations = 9999,
+                                                                                                        label = "CLR"))
+  
+  genus_decontaminated_permdisp_results <- rbind(genus_decontaminated_permdisp_results, run_permdisp_custom(my_metadata = metadata_decontaminated_subset.df, 
+                                                                                                            my_data = genus_clr_decontaminated_subset.m,
+                                                                                                            my_group = myvar,
+                                                                                                            my_method = "euclidean",
+                                                                                                            permutations = 9999,
+                                                                                                            label = "CLR"))
+  if (myvar == "Remote_Community") {next}
+  for (community in unique(metadata.df$Remote_Community)){
+    
+    metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
+    metadata_subset.df <- subset(metadata_subset.df, Remote_Community = community)
+    metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
+    metadata_decontaminated_subset.df <- subset(metadata_decontaminated_subset.df, Remote_Community = community)
+    
+    otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
+    genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
+    otu_clr_decontaminated_subset.m <- otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
+    genus_clr_decontaminated_subset.m <- genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
+    
+    temp <- run_permdisp_custom(my_metadata = metadata_subset.df, 
+                                my_data = otu_clr_subset.m,
+                                my_group = myvar,
+                                my_method = "euclidean",
+                                permutations = 9999,
+                                label = "CLR")
+    temp$Remote_Community <- community
+    otu_within_community_permdisp_results <- rbind(otu_within_community_permdisp_results, temp)
+    
+    temp <- run_permdisp_custom(my_metadata = metadata_subset.df, 
+                                my_data = genus_clr_subset.m,
+                                my_group = myvar,
+                                my_method = "euclidean",
+                                permutations = 9999,
+                                label = "CLR")
+    temp$Remote_Community <- community
+    genus_within_community_permdisp_results <- rbind(genus_within_community_permdisp_results, temp)
+    
+    temp <- run_permdisp_custom(my_metadata = metadata_decontaminated_subset.df, 
+                                my_data = otu_clr_decontaminated_subset.m,
+                                my_group = myvar,
+                                my_method = "euclidean",
+                                permutations = 9999,
+                                label = "CLR")
+    temp$Remote_Community <- community
+    otu_within_community_decontaminated_permdisp_results <- rbind(otu_within_community_decontaminated_permdisp_results, temp)
+    
+    temp <- run_permdisp_custom(my_metadata = metadata_decontaminated_subset.df, 
+                                my_data = genus_clr_decontaminated_subset.m,
+                                my_group = myvar,
+                                my_method = "euclidean",
+                                permutations = 9999,
+                                label = "CLR")
+    temp$Remote_Community <- community
+    genus_within_community_decontaminated_permdisp_results <- rbind(genus_within_community_decontaminated_permdisp_results, temp)
+  }
+  
+}
+  
+
+write.csv(otu_permdisp_results, file = "Result_tables/stats_various/otu_PERMDISP.csv", row.names = F, quote = F)
+write.csv(genus_permdisp_results, file = "Result_tables/stats_various/genus_PERMDISP.csv", row.names = F, quote = F)
+write.csv(otu_decontaminated_permdisp_results, file = "Result_tables/stats_various/otu_decontaminated_PERMDISP.csv", row.names = F, quote = F)
+write.csv(genus_decontaminated_permdisp_results, file = "Result_tables/stats_various/genus_decontaminated_PERMDISP.csv", row.names = F, quote = F)
+
+write.csv(otu_within_community_permdisp_results, file = "Result_tables/stats_various/otu_within_community_PERMDISP.csv", row.names = F, quote = F)
+write.csv(genus_within_community_permdisp_results, file = "Result_tables/stats_various/genus_within_community_PERMDISP.csv", row.names = F, quote = F)
+write.csv(otu_decontaminated_permdisp_results, file = "Result_tables/stats_various/otu_within_community_decontaminated_PERMDISP.csv", row.names = F, quote = F)
+write.csv(genus_decontaminated_permdisp_results, file = "Result_tables/stats_various/genus_within_community_decontaminated_PERMDISP.csv", row.names = F, quote = F)
+
 
 
 
@@ -565,8 +699,8 @@ write.csv(genus_decontaminated_permanova_results, file = "Result_tables/stats_va
 
 # FIXME
 anosim_significances <- data.frame("Variable" = character(),
-                                           "P_value" = numeric(),
-                                           "R_value" = numeric()
+                                   "P_value" = numeric(),
+                                   "R_value" = numeric()
 )
 for (myvar in discrete_variables){
   metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
@@ -579,14 +713,8 @@ for (myvar in discrete_variables){
   
   temp <- with(metadata_subset.df, anosim(t(clr(otu_rare_subset.m)),get(myvar), distance = "euclidean",permutations = 999,parallel = 2))
   anosim_significances <- rbind(anosim_significances, data.frame("Variable" = myvar,
-                                                                                 "P_value" = temp$signif,
-                                                                                 "R_value" = temp$statistic))
+                                                                 "P_value" = temp$signif,
+                                                                 "R_value" = temp$statistic))
 }
 anosim_significances$padj <- round(p.adjust(anosim_significances$P_value,method = "BH"),6)
 # write.csv(anosim_significances, file = "Result_tables/combined/diversity_analysis/variable_beta_diversity_significance.csv", row.names = F, quote = F)
-
-
-# ---------------------------------------------
-# PERMDISP (betadisper)
-temp <- with(metadata.df, betadisper(vegdist(t(otu_clr.m), method = "euclidean"), group = Remote_Community))
-adonis(data = temp)

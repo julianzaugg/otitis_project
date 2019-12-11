@@ -1,3 +1,31 @@
+# Uncomment and run to install the libraries that might be needed 
+# install.packages("ggplot2")
+# install.packages("plyr")
+# install.packages("dplyr")
+# install.packages("tidyr")
+# install.packages("RColorBrewer")
+# install.packages("vegan")
+# install.packages("reshape2")
+# install.packages("gplots")
+# install.packages("heatmap3")
+# install.packages("ggfortify")
+# install.packages("scales")
+# install.packages("seqinr")
+
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+# install.packages("BiocManager")
+# BiocManager::install("decontam")
+library(decontam)
+
+# install.packages("devtools") #Installs devtools (if not already installed)
+# devtools::install_github("donaldtmcknight/microDecon") #Installs microDecon
+library(microDecon)
+
+# BiocManager::install("DESeq2")
+library(DESeq2)
+
+# BiocManager::install("ComplexHeatmap")
+
 library(ggplot2)
 library(plyr)
 library(dplyr)
@@ -5,12 +33,10 @@ library(tidyr)
 library(RColorBrewer)
 library(vegan)
 library(reshape2)
-# library(gplots)
-# library(pheatmap)
+library(gplots)
 library(grid)
-library(ComplexHeatmap)
-library(scales)
-
+library(phyloseq)
+library(seqinr) # For writing fasta files
 
 
 
@@ -964,7 +990,6 @@ summarise_alpha_diversities <- function(mydata, group_by_columns){
 }
 
 
-
 run_permanova_custom <- function(my_metadata, my_formula, my_method = "euclidean", permutations = 999, label = NULL){
   stat_sig_table <- NULL
   result <- adonis(my_formula,data = my_metadata, permu=permutations,method= my_method)
@@ -998,6 +1023,43 @@ run_permanova_custom <- function(my_metadata, my_formula, my_method = "euclidean
   }
   stat_sig_table
 }
+
+
+
+run_permdisp_custom <- function(my_metadata, my_data, my_group, my_method = "euclidean", permutations = 999, label = NULL){
+  stat_sig_table <- NULL
+  dist_matrix <- vegdist(t(my_data), method = my_method)
+  betadisper_object <- with(my_metadata, betadisper(dist_matrix, group = get(my_group)))
+  permutest_results <- permutest(betadisper_object, permutations = permutations, parallel = 2)
+  
+  for (r in rownames(permutest_results$tab)){
+    variable <- r
+    Degrees_of_freedom <- permutest_results$tab[r,]$Df[1]
+    SumOfSqs <- round(permutest_results$tab[r,]$`Sum Sq`[1],3)
+    meanSqs <- round(permutest_results$tab[r,]$`Mean Sq`[1], 3)
+    F.model <- round(permutest_results$tab[r,]$F[1], 3)
+    N_permutations <- permutest_results$tab[r,]$N.Perm[1]
+    p_value <- round(permutest_results$tab[r,]$`Pr(>F)`[1], 5)
+    stat_sig_table <- rbind(stat_sig_table, data.frame(variable,
+                                                       Degrees_of_freedom,
+                                                       SumOfSqs,
+                                                       meanSqs,
+                                                       F.model,
+                                                       N_permutations,
+                                                       p_value))
+  }
+  print(permutest_results)
+  names(stat_sig_table) <- c("Term","Df", "SumOfSqs","MeanSqs","F.Model","Permutations","Pr(>F)")
+  stat_sig_table <- stat_sig_table[order(stat_sig_table$"Pr(>F)"),]
+  stat_sig_table$Method <- my_method
+  stat_sig_table$Group <- my_group
+  if (!is.null(label)){
+    stat_sig_table$Label <- label
+  }
+  stat_sig_table
+}
+
+
 
 
 

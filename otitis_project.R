@@ -30,6 +30,7 @@ detachAllPackages()
 # install.packages("gplots")
 # install.packages("heatmap3")
 # install.packages("ggfortify")
+# install.packages("seqinr")
 
 # if (!requireNamespace("BiocManager", quietly = TRUE))
 # install.packages("BiocManager")
@@ -115,10 +116,10 @@ dir.create(file.path("./Result_tables", "other"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "count_tables"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "relative_abundance_tables"), showWarnings = FALSE)
 
-dir.create(file.path("./Result_tables/diversity_analysis/otu"),recursive = T)
-dir.create(file.path("./Result_tables/diversity_analysis/genus"),recursive = T)
-dir.create(file.path("./Result_tables/diversity_analysis/otu_decontaminated"),recursive = T)
-dir.create(file.path("./Result_tables/diversity_analysis/genus_decontaminated"),recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/otu"),showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/genus"),showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/otu_decontaminated"),showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/genus_decontaminated"),showWarnings = FALSE, recursive = T)
 
 # dir.create(file.path("./Result_tables/diversity_analysis/variable_summaries"),recursive = T)
 # dir.create(file.path("./Result_tables/diversity_analysis/variable_summaries_within_community"),recursive = T)
@@ -309,7 +310,10 @@ project_otu_table.df <- project_otu_table.df[grepl("D_0__Bacteria", project_otu_
 project_otu_table.df <- project_otu_table.df[!project_otu_table.df$Phylum == "Unassigned",]
 
 # Discard mitochondria and chloroplast features
-project_otu_table.df <- project_otu_table.df[!grepl("mitochondria|chloroplast", project_otu_table.df$Taxon,ignore.case = T),]
+# project_otu_table.df <- project_otu_table.df[!grepl("mitochondria|chloroplast", project_otu_table.df$Taxon,ignore.case = T),]
+
+# Discard chloroplast features
+project_otu_table.df <- project_otu_table.df[!grepl("chloroplast", project_otu_table.df$Taxon,ignore.case = T),]
 
 # ------------------------------------------------
 
