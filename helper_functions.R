@@ -25,6 +25,7 @@ library(microDecon)
 library(DESeq2)
 
 # BiocManager::install("ComplexHeatmap")
+library(ComplexHeatmap)
 
 library(ggplot2)
 library(plyr)
@@ -37,6 +38,8 @@ library(gplots)
 library(grid)
 library(phyloseq)
 library(seqinr) # For writing fasta files
+
+
 
 
 
@@ -1053,6 +1056,26 @@ run_permdisp_custom <- function(my_metadata, my_data, my_group, my_method = "euc
   stat_sig_table <- stat_sig_table[order(stat_sig_table$"Pr(>F)"),]
   stat_sig_table$Method <- my_method
   stat_sig_table$Group <- my_group
+  if (!is.null(label)){
+    stat_sig_table$Label <- label
+  }
+  stat_sig_table
+}
+
+run_anosim_custom <- function(my_metadata, my_data, my_group, my_method = "euclidean", permutations = 999, label = NULL){
+  stat_sig_table <- NULL
+  anosim_object <- with(my_metadata, anosim(x = t(my_data), 
+                                            grouping = get(my_group),
+                                            permutations = permutations,
+                                            distance = my_method,
+                                            parallel = 2))
+  
+  stat_sig_table <- rbind(stat_sig_table, data.frame(my_group,
+                                                     anosim_object$statistic,
+                                                     anosim_object$signif,
+                                                     anosim_object$permutations))
+  names(stat_sig_table) <- c("Variable","R_statistic", "Significance","Permutations")
+  stat_sig_table$Method <- my_method
   if (!is.null(label)){
     stat_sig_table$Label <- label
   }

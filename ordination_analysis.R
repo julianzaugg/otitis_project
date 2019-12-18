@@ -95,6 +95,12 @@ rownames(metadata.df) <- metadata.df$Index
 rownames(metadata_decontaminated.df) <- metadata_decontaminated.df$Index
 
 # Convert variables to factors
+# discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season",
+# "Nose","Otitis_status_OM_6mo", "Remote_Community_Otitis_status", "OM_6mo_Type_OM","Remote_Community_Season")
+discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose","OM_Classification", "Remote_Community_Season",
+                        "Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae",
+                        "Remote_Community_OM_Classification")
+
 metadata.df[discrete_variables] <- lapply(metadata.df[discrete_variables], factor)
 metadata_decontaminated.df[discrete_variables] <- lapply(metadata_decontaminated.df[discrete_variables], factor)
 
@@ -151,13 +157,6 @@ genus_clr_decontaminated.m <- clr(genus_decontaminated.m)
 # --------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------
 # Ordination analysis
-
-
-# discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season",
-                        # "Nose","Otitis_status_OM_6mo", "Remote_Community_Otitis_status", "OM_6mo_Type_OM","Remote_Community_Season")
-discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose","OM_Classification", "Remote_Community_Season",
-                        "Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae",
-                        "Remote_Community_OM_Classification")
 
 otu_relabeller_function <- function(my_labels){
   taxonomy_strings <- unlist(lapply(my_labels, function(x) {
@@ -697,11 +696,16 @@ write.csv(genus_decontaminated_permdisp_results, file = "Result_tables/stats_var
 # "If you have very different group sizes, you may consider analysis of similarities (ANOSIM) instead of PERMANOVA. 
 # This test does not assume equal group variances."
 
-# FIXME
-anosim_significances <- data.frame("Variable" = character(),
-                                   "P_value" = numeric(),
-                                   "R_value" = numeric()
-)
+otu_anosim_results <- data.frame()
+genus_anosim_results <- data.frame()
+otu_decontaminated_anosim_results <- data.frame()
+genus_decontaminated_anosim_results <- data.frame()
+
+otu_within_community_anosim_results <- data.frame()
+genus_within_community_anosim_results <- data.frame()
+otu_within_community_decontaminated_anosim_results <- data.frame()
+genus_within_community_decontaminated_anosim_results <- data.frame()
+
 for (myvar in discrete_variables){
   metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
   metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
@@ -711,10 +715,95 @@ for (myvar in discrete_variables){
   otu_clr_decontaminated_subset.m <- otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
   genus_clr_decontaminated_subset.m <- genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
   
-  temp <- with(metadata_subset.df, anosim(t(clr(otu_rare_subset.m)),get(myvar), distance = "euclidean",permutations = 999,parallel = 2))
-  anosim_significances <- rbind(anosim_significances, data.frame("Variable" = myvar,
-                                                                 "P_value" = temp$signif,
-                                                                 "R_value" = temp$statistic))
+  otu_anosim_results <- rbind(otu_anosim_results, run_anosim_custom(my_metadata = metadata_subset.df, 
+                                                                    my_data = otu_clr_subset.m,
+                                                                    my_group = myvar,
+                                                                    my_method = "euclidean",
+                                                                    permutations = 9999,
+                                                                    label = "CLR"))
+  
+  genus_anosim_results <- rbind(genus_anosim_results, run_anosim_custom(my_metadata = metadata_subset.df, 
+                                                                        my_data = genus_clr_subset.m,
+                                                                        my_group = myvar,
+                                                                        my_method = "euclidean",
+                                                                        permutations = 9999,
+                                                                        label = "CLR"))
+  
+  
+  otu_decontaminated_anosim_results <- rbind(otu_decontaminated_anosim_results, run_anosim_custom(my_metadata = metadata_decontaminated_subset.df, 
+                                                                                                  my_data = otu_clr_decontaminated_subset.m,
+                                                                                                  my_group = myvar,
+                                                                                                  my_method = "euclidean",
+                                                                                                  permutations = 9999,
+                                                                                                  label = "CLR"))
+  
+  genus_decontaminated_anosim_results <- rbind(genus_decontaminated_anosim_results, run_anosim_custom(my_metadata = metadata_decontaminated_subset.df, 
+                                                                                                      my_data = genus_clr_decontaminated_subset.m,
+                                                                                                      my_group = myvar,
+                                                                                                      my_method = "euclidean",
+                                                                                                      permutations = 9999,
+                                                                                                      label = "CLR"))
+  
+  if (myvar == "Remote_Community") {next}
+  for (community in unique(metadata.df$Remote_Community)){
+    metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
+    metadata_subset.df <- subset(metadata_subset.df, Remote_Community = community)
+    metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
+    metadata_decontaminated_subset.df <- subset(metadata_decontaminated_subset.df, Remote_Community = community)
+    
+    otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
+    genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
+    otu_clr_decontaminated_subset.m <- otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
+    genus_clr_decontaminated_subset.m <- genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
+    
+    temp <- run_anosim_custom(my_metadata = metadata_subset.df, 
+                              my_data = otu_clr_subset.m,
+                              my_group = myvar,
+                              my_method = "euclidean",
+                              permutations = 9999,
+                              label = "CLR")
+    temp$Remote_Community <- community
+    otu_within_community_anosim_results <- rbind(otu_within_community_anosim_results, temp)
+    
+    temp <- run_anosim_custom(my_metadata = metadata_subset.df, 
+                              my_data = genus_clr_subset.m,
+                              my_group = myvar,
+                              my_method = "euclidean",
+                              permutations = 9999,
+                              label = "CLR")
+    temp$Remote_Community <- community
+    genus_within_community_anosim_results <- rbind(genus_within_community_anosim_results, temp)
+    
+    temp <- run_anosim_custom(my_metadata = metadata_decontaminated_subset.df, 
+                              my_data = otu_clr_decontaminated_subset.m,
+                              my_group = myvar,
+                              my_method = "euclidean",
+                              permutations = 9999,
+                              label = "CLR")
+    temp$Remote_Community <- community
+    otu_within_community_decontaminated_anosim_results <- rbind(otu_within_community_decontaminated_anosim_results, temp)
+    
+    temp <- run_anosim_custom(my_metadata = metadata_decontaminated_subset.df, 
+                              my_data = genus_clr_decontaminated_subset.m,
+                              my_group = myvar,
+                              my_method = "euclidean",
+                              permutations = 9999,
+                              label = "CLR")
+    temp$Remote_Community <- community
+    genus_within_community_decontaminated_anosim_results <- rbind(genus_within_community_decontaminated_anosim_results, temp)
+  }
 }
-anosim_significances$padj <- round(p.adjust(anosim_significances$P_value,method = "BH"),6)
-# write.csv(anosim_significances, file = "Result_tables/combined/diversity_analysis/variable_beta_diversity_significance.csv", row.names = F, quote = F)
+
+
+write.csv(otu_anosim_results, file = "Result_tables/stats_various/otu_ANOSIM.csv", row.names = F, quote = F)
+write.csv(genus_anosim_results, file = "Result_tables/stats_various/genus_ANOSIM.csv", row.names = F, quote = F)
+write.csv(otu_decontaminated_anosim_results, file = "Result_tables/stats_various/otu_decontaminated_ANOSIM.csv", row.names = F, quote = F)
+write.csv(genus_decontaminated_anosim_results, file = "Result_tables/stats_various/genus_decontaminated_ANOSIM.csv", row.names = F, quote = F)
+
+write.csv(otu_within_community_anosim_results, file = "Result_tables/stats_various/otu_within_community_ANOSIM.csv", row.names = F, quote = F)
+write.csv(genus_within_community_anosim_results, file = "Result_tables/stats_various/genus_within_community_ANOSIM.csv", row.names = F, quote = F)
+write.csv(otu_decontaminated_anosim_results, file = "Result_tables/stats_various/otu_within_community_decontaminated_ANOSIM.csv", row.names = F, quote = F)
+write.csv(genus_decontaminated_anosim_results, file = "Result_tables/stats_various/genus_within_community_decontaminated_ANOSIM.csv", row.names = F, quote = F)
+
+
+
