@@ -102,7 +102,7 @@ common_theme <- theme(
 
 ################################################################################################
 # Set the working directory
-setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_project/")
+setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_16S_project/")
 source("Code/helper_functions.R")
 
 
@@ -208,7 +208,9 @@ metadata.df$Remote_Community_OM_Classification <- factor(metadata.df$Remote_Comm
 # ------------------------
 
 # Load and process the OTU table
-project_otu_table.df <- read.csv("data/features_statistics.csv")
+project_otu_table.df <- read.csv("data/otitis_single_qc/result/statistics/features_statistics.csv")
+
+project_otu_table.df$Taxon <- gsub("; ", ";", project_otu_table.df$Taxon)
 
 # Fix name of first column
 names(project_otu_table.df)[1] <- "OTU.ID"
@@ -242,13 +244,13 @@ project_otu_table.df <- separate(project_otu_table.df, "Taxon", into = c("Domain
 project_otu_table.df[is.na(project_otu_table.df)] <- "Unassigned"
 
 # Replace D_# at beginning of taxon rank string to corresponding taxa label, e.g. D_0 = d (domain) D_1 = p (phylum), etc.
-project_otu_table.df$Domain <- as.character(lapply(project_otu_table.df$Domain, FUN = function(x) gsub("D_0", "d", x)))
-project_otu_table.df$Phylum <- as.character(lapply(project_otu_table.df$Phylum, FUN = function(x) gsub("D_1", "p", x)))
-project_otu_table.df$Class <- as.character(lapply(project_otu_table.df$Class, FUN = function(x) gsub("D_2", "c", x)))
-project_otu_table.df$Order <- as.character(lapply(project_otu_table.df$Order, FUN = function(x) gsub("D_3", "o", x)))
-project_otu_table.df$Family <- as.character(lapply(project_otu_table.df$Family, FUN = function(x) gsub("D_4", "f", x)))
-project_otu_table.df$Genus <- as.character(lapply(project_otu_table.df$Genus, FUN = function(x) gsub("D_5", "g", x)))
-project_otu_table.df$Species <- as.character(lapply(project_otu_table.df$Species, FUN = function(x) gsub("D_6", "s", x)))
+# project_otu_table.df$Domain <- as.character(lapply(project_otu_table.df$Domain, FUN = function(x) gsub("D_0", "d", x)))
+# project_otu_table.df$Phylum <- as.character(lapply(project_otu_table.df$Phylum, FUN = function(x) gsub("D_1", "p", x)))
+# project_otu_table.df$Class <- as.character(lapply(project_otu_table.df$Class, FUN = function(x) gsub("D_2", "c", x)))
+# project_otu_table.df$Order <- as.character(lapply(project_otu_table.df$Order, FUN = function(x) gsub("D_3", "o", x)))
+# project_otu_table.df$Family <- as.character(lapply(project_otu_table.df$Family, FUN = function(x) gsub("D_4", "f", x)))
+# project_otu_table.df$Genus <- as.character(lapply(project_otu_table.df$Genus, FUN = function(x) gsub("D_5", "g", x)))
+# project_otu_table.df$Species <- as.character(lapply(project_otu_table.df$Species, FUN = function(x) gsub("D_6", "s", x)))
 
 
 # Recreate the full taxonomy string with the 'prettier' taxa labels
@@ -304,7 +306,8 @@ for (myvar in discrete_variables){
 # project_otu_table.df <- project_otu_table.df[grep("D_0__Eukaryota", project_otu_table.df$Taxon, value =F, invert = T),]
 
 # Discard anything not Bacterial
-project_otu_table.df <- project_otu_table.df[grepl("D_0__Bacteria", project_otu_table.df$Taxon),]
+# project_otu_table.df <- project_otu_table.df[grepl("D_0__Bacteria", project_otu_table.df$Taxon),]
+project_otu_table.df <- project_otu_table.df[grepl("d__Bacteria", project_otu_table.df$Taxon),]
 
 # Discard anything that is Unassigned at the Phylum level
 project_otu_table.df <- project_otu_table.df[!project_otu_table.df$Phylum == "Unassigned",]
@@ -489,12 +492,12 @@ otu.m  <- otu.m[rownames(otu_rel.m),]
 otu_decontaminated.m  <- otu_decontaminated.m[rownames(otu_rel_decontaminated.m),]
 
 # Discard samples with less than # reads.
-# dim(otu.m)
+dim(otu.m)
 otu.m <- otu.m[,colSums(otu.m) >= 2000]
-# dim(otu.m)
-# dim(otu_decontaminated.m)
+dim(otu.m)
+dim(otu_decontaminated.m)
 otu_decontaminated.m <- otu_decontaminated.m[,colSums(otu_decontaminated.m) >= 2000]
-# dim(otu_decontaminated.m)
+dim(otu_decontaminated.m)
 
 # The might be many rows whose maximum is 0 at this point. Remove them.
 # dim(otu.m)
