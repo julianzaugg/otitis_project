@@ -98,6 +98,7 @@ filter_heatmap_matrix <- function(myheatmap, row_max = 0, prevalence = 0){
   return(internal_heatmap[entries_from_prevalences,])
 }
 
+
 df2matrix <- function(mydataframe){
   mymatrix <- mydataframe
   rownames(mymatrix) <- mydataframe[,1]
@@ -1082,7 +1083,123 @@ run_anosim_custom <- function(my_metadata, my_data, my_group, my_method = "eucli
   stat_sig_table
 }
 
+calculate_correlation_matrix <- function(mydata, method = "pearson", adjust = "none"){
+  
+  # Remove row entries that don't vary across all samples
+  internal_data.m <- mydata
+  zv <- apply(internal_data.m, 1, function(x) length(unique(x)) == 1)
+  internal_data.m <- internal_data.m[!zv, ]
+  
+  cor_result <- corr.test(t(internal_data.m), adjust = adjust, method = method)
+  # r	The matrix of correlations
+  # n	Number of cases per correlation
+  # t	value of t-test for each correlation
+  # p	two tailed probability of t for each correlation. For symmetric matrices, p values adjusted for multiple tests are reported above the diagonal.
+  # se	standard error of the correlation
+  # ci	the alpha/2 lower and upper values, as well as the (Holm or Bonferroni) adjusted confidence intervals.
+  list(cor_matrix = cor_result$r, cor_pval_matrix = cor_result$p)
+}
 
+# Calculates correlations between a feature and all other features. Works by row.
+# Assumes feature is in the row, generally sample will be the column
+calculate_feature_correlations <- function(mydata, feature, method = "pearson", filename = NULL){
+  
+  # Remove entries that don't vary across all samples
+  internal_data.m <- mydata
+  zv <- apply(internal_data.m, 1, function(x) length(unique(x)) == 1)
+  internal_data.m <- internal_data.m[!zv, ]
+  
+  # Take a two vectors and perform a signficance/correlation test
+  calculate_stats <- function(x, y, dist.name) {
+    k<-cor.test(x, y, method=dist.name);
+    c(k$estimate, k$stat, k$p.value)
+  }
+  
+  feature_data <- t(internal_data.m)[,feature]
+  correlation_results.m <- apply(t(internal_data.m), 2, calculate_stats, feature_data, method);
+  correlation_results.m <- t(correlation_results.m)
+  fdr.col <- p.adjust(correlation_results.m[,3], "fdr");
+  pval_adj.col <- p.adjust(correlation_results.m[,3], "BH");
+  correlation_results.m <- cbind(correlation_results.m,fdr.col, pval_adj.col)
+  colnames(correlation_results.m) <- c("correlation", "t-stat", "p-value", "FDR", "pval_adj_BH");
+  ord.inx <- order(correlation_results.m[,3]) # order by p-value
+  sig.m <- signif(correlation_results.m[ord.inx,],5); # Round values
+  
+  # Remove self-comparison
+  sig.m <- sig.m[!rownames(sig.m) == feature, ]
+  
+  # Write to file
+  if (!is.null(filename)){
+    write.csv(sig.m, file = filename)
+  }
+  
+  # Remove Inf values from table
+  sig.df <- as.data.frame(sig.m)
+  is.na(sig.df) <- sapply(sig.df, is.infinite);
+  sig.df[is.na(sig.df)] <- 0
+  
+  sig.df
+}
+
+# Given data matrix, plot correlations between a feature/variable and other features/variables
+plot_correlations <- function(mydata, feature, method = "pearson", top_n = 25){
+  # internal_data.m <- mydata
+  # internal_data.m <- internal_data.m[apply(internal_data.m, 1, function(x) {length(which(x > 0))}) /length(internal_data.m[1,]) > 0.1,]
+  
+  correlation_result.m <- calculate_feature_correlations(mydata, feature, method = method )
+  
+  # First get most signficant correlations (p-value)
+  ord.inx <- order(correlation_result.m[,3]);
+  correlation_result.m <- correlation_result.m[ord.inx,] # Should be ordered already, though just ensure
+  
+  if(nrow(correlation_result.m) > top_n){
+    correlation_result.m <- correlation_result.m[1:top_n, ];
+  }
+  
+  # Then order by correlation direction
+  ord.inx <- order(correlation_result.m[,1]);
+  
+  if(sum(correlation_result.m[,1] > 0) == 0){ # all negative correlation
+    ord.inx <- rev(ord.inx);
+  }
+  correlation_result.m <- correlation_result.m[ord.inx,]
+  # if (!is.null(filename)){
+  #   Cairo::Cairo(file = filename, unit="cm", dpi=300, width=w, height=h, type=format, bg="white");
+  # }
+  plot_title <- paste("Top",nrow(correlation_result.m), "features correlated with", feature);
+  
+  # rownames(correlation_result.m) <- substr(rownames(correlation_result.m), 1, 18);
+  cols <- ifelse(correlation_result.m[,1] > 0, "mistyrose","lightblue");
+  dotchart(correlation_result.m[,1], 
+           labels = rownames(correlation_result.m),
+           pch="", 
+           xlim=c(-1,1), 
+           xlab="Correlation Coefficients", 
+           # main=title,
+           cex = .7);
+  title(main = plot_title, cex.main = 0.8)
+  # rownames(correlation_result.m) <- NULL;
+  barplot(correlation_result.m[,1], 
+          space=c(0.5, rep(0, nrow(correlation_result.m)-1)), 
+          xlim=c(-1,1), 
+          xaxt="n", 
+          col = cols, 
+          add=T,
+          horiz=T);
+  
+  for (row in 1:nrow(correlation_result.m)){
+    offset <- ifelse(correlation_result.m[row,"correlation"] < 0, -0.1, 0.1)
+    if (correlation_result.m[row,"pval_adj_BH"] <= 0.05 & correlation_result.m[row,"pval_adj_BH"] > 0.01){
+      text(correlation_result.m[row,"correlation"] + offset, row, labels = "*")
+    } else if (correlation_result.m[row,"pval_adj_BH"] <= 0.01 & correlation_result.m[row,"pval_adj_BH"] > 0.001){
+      text(correlation_result.m[row,"correlation"] + offset, row, labels = "**")
+    } else if (correlation_result.m[row,"pval_adj_BH"] <= 0.001){
+      text(correlation_result.m[row,"correlation"] + offset, row, labels = "***")
+    }
+  }
+
+  # dev.off();
+}
 
 
 

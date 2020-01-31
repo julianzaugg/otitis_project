@@ -83,7 +83,7 @@ bin_my_variable <- function(mydataframe, variable, breaks){
 }
 ############################################################
 
-setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_project/")
+setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_16S_project/")
 source("code/helper_functions.R")
 
 # Load the processed metadata

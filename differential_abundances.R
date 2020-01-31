@@ -39,7 +39,7 @@ filter_matrix_rows <- function(my_matrix, row_max){
 ############################################################
 
 # Set the working directory
-setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_project/")
+setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_16S_project/")
 source("Code/helper_functions.R")
 
 # Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
