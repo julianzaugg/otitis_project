@@ -161,6 +161,7 @@ dir.create(file.path("./Result_figures/pca_plots", "genus_within_community_decon
 
 dir.create(file.path("./Result_other", "sequences"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_other", "trees"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_other", "correlation_analysis"), showWarnings = FALSE,recursive = T)
 
 
 ###############################################################
