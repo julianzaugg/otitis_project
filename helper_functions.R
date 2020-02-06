@@ -1083,6 +1083,17 @@ run_anosim_custom <- function(my_metadata, my_data, my_group, my_method = "eucli
   stat_sig_table
 }
 
+
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
+# Correlation analysis
+
+calculate_correlation_matrix_stats <- function(correlation_matrix, method = "pearson", adjust = "none"){
+  cor_result <- corr.test(correlation_matrix, adjust = adjust, method = method)
+  cor_result$p
+}
+
 calculate_correlation_matrix <- function(mydata, method = "pearson", adjust = "none"){
   
   # Remove row entries that don't vary across all samples
@@ -1108,6 +1119,10 @@ calculate_feature_correlations <- function(mydata, feature, method = "pearson", 
   internal_data.m <- mydata
   zv <- apply(internal_data.m, 1, function(x) length(unique(x)) == 1)
   internal_data.m <- internal_data.m[!zv, ]
+  if (!feature %in% rownames(internal_data.m)){
+    print(paste0("feature ", feature, " not found in input data. Possibly does not vary across samples?"))
+    return()
+  }
   
   # Take a two vectors and perform a signficance/correlation test
   calculate_stats <- function(x, y, dist.name) {
@@ -1142,36 +1157,41 @@ calculate_feature_correlations <- function(mydata, feature, method = "pearson", 
 }
 
 # Given data matrix, plot correlations between a feature/variable and other features/variables
-plot_correlations <- function(mydata, feature, method = "pearson", top_n = 25){
+plot_feature_correlations <- function(mydata, feature, method = "pearson", top_n = 25){
   # internal_data.m <- mydata
   # internal_data.m <- internal_data.m[apply(internal_data.m, 1, function(x) {length(which(x > 0))}) /length(internal_data.m[1,]) > 0.1,]
   
-  correlation_result.m <- calculate_feature_correlations(mydata, feature, method = method )
+  correlation_result.df <- calculate_feature_correlations(mydata, feature, method = method)
+  if(is.null(correlation_result.df)){
+    return()
+  }
   
   # First get most signficant correlations (p-value)
-  ord.inx <- order(correlation_result.m[,3]);
-  correlation_result.m <- correlation_result.m[ord.inx,] # Should be ordered already, though just ensure
+  ord.inx <- order(correlation_result.df[,3]);
+  correlation_result.df <- correlation_result.df[ord.inx,] # Should be ordered already, though just ensure
   
-  if(nrow(correlation_result.m) > top_n){
-    correlation_result.m <- correlation_result.m[1:top_n, ];
+  if(nrow(correlation_result.df) > top_n){
+    correlation_result.df <- correlation_result.df[1:top_n, ];
   }
   
   # Then order by correlation direction
-  ord.inx <- order(correlation_result.m[,1]);
+  ord.inx <- order(correlation_result.df[,1]);
   
-  if(sum(correlation_result.m[,1] > 0) == 0){ # all negative correlation
+  if(sum(correlation_result.df[,1] > 0) == 0){ # all negative correlation
     ord.inx <- rev(ord.inx);
   }
-  correlation_result.m <- correlation_result.m[ord.inx,]
+  correlation_result.df <- correlation_result.df[ord.inx,]
   # if (!is.null(filename)){
   #   Cairo::Cairo(file = filename, unit="cm", dpi=300, width=w, height=h, type=format, bg="white");
   # }
-  plot_title <- paste("Top",nrow(correlation_result.m), "features correlated with", feature);
+  plot_title <- paste("Top",nrow(correlation_result.df), "features correlated with", feature);
   
   # rownames(correlation_result.m) <- substr(rownames(correlation_result.m), 1, 18);
-  cols <- ifelse(correlation_result.m[,1] > 0, "mistyrose","lightblue");
-  dotchart(correlation_result.m[,1], 
-           labels = rownames(correlation_result.m),
+  cols <- ifelse(correlation_result.df[,1] > 0, "mistyrose","lightblue");
+  # cols <- ifelse(correlation_result.df[,1] > 0, "#67001F","#053061");
+  
+  dotchart(correlation_result.df[,1], 
+           labels = rownames(correlation_result.df),
            pch="", 
            xlim=c(-1,1), 
            xlab="Correlation Coefficients", 
@@ -1179,27 +1199,94 @@ plot_correlations <- function(mydata, feature, method = "pearson", top_n = 25){
            cex = .7);
   title(main = plot_title, cex.main = 0.8)
   # rownames(correlation_result.m) <- NULL;
-  barplot(correlation_result.m[,1], 
-          space=c(0.5, rep(0, nrow(correlation_result.m)-1)), 
+  barplot(correlation_result.df[,1], 
+          space=c(0.5, rep(0, nrow(correlation_result.df)-1)), 
           xlim=c(-1,1), 
           xaxt="n", 
           col = cols, 
           add=T,
           horiz=T);
   
-  for (row in 1:nrow(correlation_result.m)){
-    offset <- ifelse(correlation_result.m[row,"correlation"] < 0, -0.1, 0.1)
-    if (correlation_result.m[row,"pval_adj_BH"] <= 0.05 & correlation_result.m[row,"pval_adj_BH"] > 0.01){
-      text(correlation_result.m[row,"correlation"] + offset, row, labels = "*")
-    } else if (correlation_result.m[row,"pval_adj_BH"] <= 0.01 & correlation_result.m[row,"pval_adj_BH"] > 0.001){
-      text(correlation_result.m[row,"correlation"] + offset, row, labels = "**")
-    } else if (correlation_result.m[row,"pval_adj_BH"] <= 0.001){
-      text(correlation_result.m[row,"correlation"] + offset, row, labels = "***")
+  for (row in 1:nrow(correlation_result.df)){
+    offset <- ifelse(correlation_result.df[row,"correlation"] < 0, -0.1, 0.1)
+    if (correlation_result.df[row,"pval_adj_BH"] <= 0.05 & correlation_result.df[row,"pval_adj_BH"] > 0.01){
+      text(correlation_result.df[row,"correlation"] + offset, row, labels = "*")
+    } else if (correlation_result.df[row,"pval_adj_BH"] <= 0.01 & correlation_result.df[row,"pval_adj_BH"] > 0.001){
+      text(correlation_result.df[row,"correlation"] + offset, row, labels = "**")
+    } else if (correlation_result.df[row,"pval_adj_BH"] <= 0.001){
+      text(correlation_result.df[row,"correlation"] + offset, row, labels = "***")
     }
   }
 
   # dev.off();
 }
 
+# ------------------------------------------------
+generate_correlation_network_from_count_data <- function(mydata, p_value_threshold = 0.05, cor_threshold = 0.5, method = "pearson", adjust = "none"){
+  correlation_results <- calculate_correlation_matrix(mydata, adjust = adjust, method = method)
+  cor.m <- correlation_results$cor_matrix
+  cor_pval.m <- correlation_results$cor_pval_matrix
+  generate_correlation_network(cor.m, cor_pval.m,p_value_threshold = 0.05, cor_threshold = 0.5)
+}
 
+generate_correlation_network <- function(cor_matrix, p_matrix, p_value_threshold = 0.05, cor_threshold = 0.5){
+  cor.m <- cor_matrix
+  cor_pval.m <- p_matrix
+  
+  graph.df <- melt(cor.m)
+  graph.df$pvalue <- melt(cor_pval.m)$value
+  names(graph.df) <- c("Variable_1", "Variable_2", "Correlation", "P_value")
+  graph.df <- graph.df[graph.df$P_value <= p_value_threshold,]
+  graph.df <- graph.df[abs(graph.df$Correlation) >= cor_threshold,]
+  
+  # Generate graph object and remove looped edges and isolated nodes
+  # browseVignettes("ggraph") 
+  graph.df <- as_tbl_graph(graph.df) %>%
+    # Remove loops
+    activate(edges) %>%
+    filter(!edge_is_loop()) %>%
+    # Remove isolated nodes
+    activate(nodes) %>%
+    filter(!node_is_isolated())
+  
+  correlation_graph_plot <- ggraph(graph.df, layout = 'kk') +
+    geom_edge_link(aes(colour = Correlation), show.legend = T, width = .5, alpha = 1) +
+    # scale_edge_color_gradient2(low = "darkblue", high = "red", mid = "lightyellow", limits = c(-1,1)) +
+    scale_edge_colour_gradientn(colours = colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D",
+                                                     "#F4A582", "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE",
+                                                     "#4393C3", "#2166AC", "#053061")))(200),
+                          limits = c(-1,1), breaks = seq(-1,1,.2),
+                          guide = guide_edge_colourbar(barwidth = 0.5, barheight = 10)) +
+    geom_node_point(colour = "black", fill = "darkolivegreen3", pch = 21,size =6) +
+    geom_node_text(aes(label = name), size = 2, nudge_y = -.01,repel = T, fontface = "bold") +
+    ggtitle("") +
+    theme_graph()
+  list(network_data = graph.df, network_plot = correlation_graph_plot)
+}
 
+library(corrplot)
+plot_corrplot <- function(correlation_matrix, p_value_matrix = NULL, p_value_threshold = 0.05){
+  
+  corrplot(corr = correlation_matrix,
+           outline = T,
+           tl.col = "black",
+           tl.cex = .3,
+           col = colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D", 
+                                        "#F4A582", "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE", 
+                                        "#4393C3", "#2166AC", "#053061")))(200),
+           type = "lower",
+           diag = F,
+           order = "hclust",
+           hclust.method = "average",
+           p.mat = p_value_matrix,
+           sig.level = p_value_threshold,
+           insig = "blank",
+           pch = 4,
+           pch.cex = .1,
+           pch.col = "black",
+           cl.pos = 'r')
+}
+
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
