@@ -162,6 +162,9 @@ dir.create(file.path("./Result_figures/pca_plots", "genus_within_community_decon
 dir.create(file.path("./Result_other", "sequences"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_other", "trees"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_other", "correlation_analysis"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_other/correlation_analysis", "networks"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_other/correlation_analysis", "corrplots"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_other/correlation_analysis", "by_feature"), showWarnings = FALSE,recursive = T)
 
 
 ###############################################################
@@ -284,7 +287,6 @@ discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose",
                         "Remote_Community_OM_Classification")
 
 
-discrete_variables[!discrete_variables %in% names(metadata.df)]
 
 for (myvar in discrete_variables){
   myvar_values <- factor(as.character(sort(unique(metadata.df[,myvar]))))

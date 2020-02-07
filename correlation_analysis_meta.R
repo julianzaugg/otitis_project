@@ -27,9 +27,8 @@ data.m <- rbind(data.m, Gold_Star = metadata.df[colnames(data.m),]$Gold_Star)
 # data.m["N_FLU_B",]
 # data.m["N_FLU_A",]
 
-# internal_data.m <- mydata
-# zv <- apply(data.m, 1, function(x) length(unique(x)) == 1)
-# internal_data.m <- internal_data.m[!zv, ]
+zv <- apply(data.m, 1, function(x) length(unique(x)) == 1)
+data.m <- data.m[!zv, ]
 
 # ?logit()
 
@@ -45,7 +44,7 @@ data.m <- rbind(data.m, Gold_Star = metadata.df[colnames(data.m),]$Gold_Star)
 # dim(temp)
 # rownames(data.m)[!rownames(data.m) %in% rownames(temp)]
 
-plot_feature_correlations(data.m, feature = "Bacillus_cereus",top_n = 25, method = "pearson")
+# plot_feature_correlations(data.m, feature = "Bacillus_cereus",top_n = 25, method = "pearson")
 
 # Calculate correlation results and generate correlation plots for each variable
 for (feature in rownames(data.m)){
@@ -62,6 +61,7 @@ for (feature in rownames(data.m)){
   dev.off()
 }
 
+
 # Calculate correlation matrix and p-values
 correlation_results <- calculate_correlation_matrix(data.m, method = "pearson", adjust = "BH")
 correlation_results <- calculate_correlation_matrix(data.m, method = "pearson", adjust = "BH")
@@ -74,8 +74,77 @@ cor_pval.m <- correlation_results$cor_pval_matrix
 
 cor_g0.m <- correlation_results_g0$cor_matrix
 cor_pval_g0.m <- correlation_results_g0$cor_pval_matrix
+
 cor_g1.m <- correlation_results_g1$cor_matrix
 cor_pval_g1.m <- correlation_results_g1$cor_pval_matrix
+
+source("code/helper_functions.R")
+
+Mcat <- as.data.frame(t(combn(grep("Mcat", rownames(data.m),value =T),2)))
+H_inf <- as.data.frame(t(combn(grep("H.inf", rownames(data.m),value =T),2)))
+Spn <- as.data.frame(t(combn(grep("Spn", rownames(data.m),value =T),2)))
+
+edges_to_remove.df <- rbind(Mcat, H_inf,Spn)
+
+correlation_network.l <- generate_correlation_network(cor_matrix = cor.m,
+                                                      p_matrix = cor_pval.m,
+                                                      p_value_threshold = 0.05,
+                                                      cor_threshold = 0.4,
+                                                      node_size = 4,
+                                                      node_colour = "grey20",
+                                                      node_fill = "grey20",
+                                                      label_colour = "black",
+                                                      label_size = 4,
+                                                      plot_height = 10,
+                                                      plot_width = 10,
+                                                      plot_title = "Correlations between culture variables (p-value <= 0.05, |correlation| >= 0.4)",
+                                                      edge_width_min = .5,
+                                                      edge_width_max = 1.5,
+                                                      network_layout = "fr",
+                                                      exclude_to_from_df = edges_to_remove.df,
+                                                      filename="culture_paper_analysis/results/correlation_graph.pdf")
+
+correlation_network.l <- generate_correlation_network(cor_matrix = cor_g0.m,
+                                                      p_matrix = cor_pval_g0.m,
+                                                      p_value_threshold = 0.05,
+                                                      cor_threshold = 0.4,
+                                                      node_size = 4,
+                                                      node_colour = "grey20",
+                                                      node_fill = "grey20",
+                                                      label_colour = "black",
+                                                      label_size = 4,
+                                                      plot_height = 10,
+                                                      plot_width = 10,
+                                                      plot_title = "Correlations between culture variables, Gold star 0 (p-value <= 0.05, |correlation| >= 0.4)",
+                                                      edge_width_min = .5,
+                                                      edge_width_max = 1.5,
+                                                      network_layout = "fr",
+                                                      exclude_to_from_df = edges_to_remove.df,
+                                                      filename="culture_paper_analysis/results/correlation_graph_gold_star_0.pdf")
+
+
+# cor_g1.m["H.influnezae_>3rd_IQR"]
+# plot_feature_correlations(data.m[,data.m["Gold_Star",] == 1], "H.influnezae_>3rd_IQR")
+
+correlation_network.l <- generate_correlation_network(cor_matrix = cor_g1.m,
+                                                      p_matrix = cor_pval_g1.m,
+                                                      p_value_threshold = 0.05,
+                                                      cor_threshold = 0.4,
+                                                      node_size = 4,
+                                                      node_colour = "grey20",
+                                                      node_fill = "grey20",
+                                                      label_colour = "black",
+                                                      label_size = 4,
+                                                      plot_height = 10,
+                                                      plot_width = 10,
+                                                      plot_title = "Correlations between culture variables, Gold star 1 (p-value <= 0.05, |correlation| >= 0.4)",
+                                                      edge_width_min = .5,
+                                                      edge_width_max = 1.5,
+                                                      network_layout = "fr",
+                                                      exclude_to_from_df = edges_to_remove.df,
+                                                      filename="culture_paper_analysis/results/correlation_graph_gold_star_1.pdf")
+
+
 
 library(corrplot)
 pdf(file = "culture_paper_analysis/corrplot_metadata_v2.pdf",width = 8,height =8)
@@ -122,7 +191,17 @@ graph.df <- as_tbl_graph(graph.df) %>%
   # Remove isolated nodes
   activate(nodes) %>%
   filter(!node_is_isolated())
-
+ggraph(graph.df, layout = "kk") +
+  # geom_edge_fan(aes(colour = Correlation), show.legend = T, width = .8, alpha = 1) +
+  # geom_edge_elbow(aes(colour = Correlation), show.legend = T, width = .8, alpha = 1,strength = 1) +
+  # geom_edge_bend(aes(colour = Correlation), show.legend = T, width = .8, alpha = 1,strength = 1) +
+  # geom_edge_hive(aes(colour = Correlation), show.legend = T, width = .8, alpha = 1,strength = 1) +
+  geom_node_point(colour = "black", fill = "grey20", pch = 21,size = 4) +
+  scale_edge_colour_gradientn(colours = colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D",
+                                                               "#F4A582", "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE",
+                                                               "#4393C3", "#2166AC", "#053061")))(200),
+                              limits = c(-1,1), breaks = seq(-1,1,.2),
+                              guide = guide_edge_colourbar(barwidth = 0.5, barheight = 10))
 
 correlation_graph_plot <- ggraph(graph.df, layout = "kk") +
   geom_edge_link(aes(colour = Correlation), show.legend = T, width = .8, alpha = 1) +
