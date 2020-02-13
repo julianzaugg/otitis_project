@@ -52,7 +52,7 @@ common_theme <- theme(
   complete = F,
   plot.title = element_text(size = 8))
 
-setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_project/")
+setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_16S_project/")
 source("code/helper_functions.R")
 
 # Load the processed metadata

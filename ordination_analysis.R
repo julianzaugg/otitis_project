@@ -194,6 +194,7 @@ genus_pca <- rda(t(genus_clr.m), data = metadata.df)
 otu_decontaminated_pca <- rda(t(otu_clr_decontaminated.m), data = metadata_decontaminated.df)
 genus_decontaminated_pca <- rda(t(genus_clr_decontaminated.m), data = metadata_decontaminated.df)
 
+
 source("code/helper_functions.R")
 # calculate_PC_taxa_contributions(genus_pca)
 otu_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata.csv",header = T)
@@ -206,6 +207,35 @@ temp <- calculate_PC_abundance_correlations(genus_pca, mydata.df = genus_data.df
 temp <- calculate_PC_abundance_correlations(genus_decontaminated_pca, mydata.df = genus_data_decontaminated.df,taxa_column = "taxonomy_genus",variables = discrete_variables)
 temp <- calculate_PC_abundance_correlations(otu_decontaminated_pca, mydata.df = otu_data_decontaminated.df,taxa_column = "OTU.ID",variables = discrete_variables)
 # temp %>% filter(N_Samples > 5)
+# temp <- rda(t(clr(t(rrarefy(t(genus_decontaminated.m[,colSums(genus_decontaminated.m) >= 3000]), 3000)))))
+# temp_meta <- metadata_decontaminated.df[rownames(temp$CA$u),]
+# par(mfrow=c(1, 2))
+# generate_pca(temp,  mymetadata = temp_meta,variable_to_plot = "Nose", colour_palette = my_colour_palette_15)
+# generate_pca(genus_decontaminated_pca,  mymetadata = metadata_decontaminated.df,variable_to_plot = "Nose", colour_palette = my_colour_palette_15)
+generate_pca(otu_pca, mymetadata = metadata.df,
+             plot_height = 5, plot_width = 5,
+             legend_x = -8, legend_y = 4,
+             # legend_x = -2, legend_y = 2,
+             point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
+             legend_title = myvar,
+             legend_cex = .5,
+             plot_title = myvar,
+             limits = c(-8,5,-6,5),
+             plot_spiders = F,
+             plot_ellipses = F,
+             plot_hulls = F,
+             use_shapes = T,
+             ellipse_border_width = .5,
+             include_legend = T,
+             label_ellipse = F, ellipse_label_size = .3,
+             colour_palette = my_colour_palette_15,
+             variable_to_plot = "Remote_Community", legend_cols = 1,
+             variable_colours_available = T,
+             num_top_species = 3,
+             plot_arrows = T,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 1,arrow_thickness = .7,
+             label_arrows = T, arrow_label_size = .25, arrow_label_colour = "black", arrow_label_font_type = 1,
+             specie_labeller_function = otu_relabeller_function,arrow_label_offset = 0)
+
 
 for (myvar in discrete_variables){
   
@@ -327,6 +357,13 @@ for (community in unique(metadata.df$Remote_Community)){
   genus_pca <- rda(t(genus_clr.m[,rownames(metadata_subset.df)]), data = metadata_subset.df)
   otu_decontaminated_pca <- rda(t(otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]), data = metadata_decontaminated_subset.df)
   genus_decontaminated_pca <- rda(t(genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]), data = metadata_decontaminated_subset.df)
+  
+  # print(community)
+  # pca_percentages <- (genus_pca$CA$eig/sum(genus_pca$CA$eig)) * 100
+  # pca_percentages2 <- (genus_decontaminated_pca$CA$eig/sum(genus_decontaminated_pca$CA$eig)) * 100
+  # print(pca_percentages)
+  # print(pca_percentages2)
+
   for (myvar in discrete_variables){
     if (myvar == "Remote_Community") {next}
     # OTU, normal

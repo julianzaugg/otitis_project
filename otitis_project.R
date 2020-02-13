@@ -161,11 +161,14 @@ dir.create(file.path("./Result_figures/pca_plots", "genus_within_community_decon
 
 dir.create(file.path("./Result_other", "sequences"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_other", "trees"), showWarnings = FALSE,recursive = T)
-dir.create(file.path("./Result_other", "correlation_analysis"), showWarnings = FALSE,recursive = T)
-dir.create(file.path("./Result_other/correlation_analysis", "networks"), showWarnings = FALSE,recursive = T)
-dir.create(file.path("./Result_other/correlation_analysis", "corrplots"), showWarnings = FALSE,recursive = T)
-dir.create(file.path("./Result_other/correlation_analysis", "by_feature"), showWarnings = FALSE,recursive = T)
 
+dir.create(file.path("./Result_figures/correlation_analysis", "networks"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/correlation_analysis", "corrplots"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/correlation_analysis", "by_feature"), showWarnings = FALSE,recursive = T)
+
+dir.create(file.path("./Result_tables/correlation_analysis", "networks"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_tables/correlation_analysis", "corrplots"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_tables/correlation_analysis", "by_feature"), showWarnings = FALSE,recursive = T)
 
 ###############################################################
 
@@ -320,7 +323,7 @@ project_otu_table.df <- project_otu_table.df[!project_otu_table.df$Phylum == "Un
 
 # Discard chloroplast features
 project_otu_table.df <- project_otu_table.df[!grepl("chloroplast", project_otu_table.df$Taxon,ignore.case = T),]
-
+# project_otu_table.df[grepl("chloroplast", project_otu_table.df$Taxon,ignore.case = T),]
 # ------------------------------------------------
 
 # Remove old Taxon column
