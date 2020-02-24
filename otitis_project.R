@@ -423,15 +423,18 @@ microdecon_contaminants_features <- microdecon_contaminants.df$OTUs.removed$OTU.
 # summary(decontam_contaminants_features %in% microdecon_contaminants_features)
 
 # 3. Identify features that are present in negative controls (extreme approach) 
-neg_present_features <- rownames(otu.m[rowSums(otu.m) > 0,])
+neg_present_features <- rownames(otu.m[,colnames(otu.m) %in% neg_sample_ids][rowSums(otu.m[,colnames(otu.m) %in% neg_sample_ids]) > 0,])
 
 # subset(otu_taxonomy_map.df, OTU.ID %in% neg_present_features)$taxonomy_species
 
 # 4. Identify features that are more prevalent in negative controls. This is not that useful for this study 
 # as we only have a small number of negative samples.
 otu_negative_sample_prevalences <- apply(otu.m[,neg_sample_ids], 1, function(x) {length(which(x > 0))}) /length(neg_sample_ids)
-neg_prevalent_features <- rownames(melt(otu_negative_sample_prevalences[otu_negative_sample_prevalences > 0]))
-# subset(otu_taxonomy_map.df, OTU.ID %in% neg_prevalent_features)$taxonomy_species
+not_negative_sample_ids <- sample_ids[!sample_ids %in% neg_sample_ids]
+otu_not_negative_sample_prevalences <- apply(otu.m[,not_negative_sample_ids], 1, function(x) {length(which(x > 0))}) /length(not_negative_sample_ids)
+contaminating_otus_from_prevalences <- names(otu_not_negative_sample_prevalences[otu_not_negative_sample_prevalences < otu_negative_sample_prevalences])
+
+
 
 
 unique(c(decontam_contaminants_features, microdecon_contaminants_features))

@@ -108,6 +108,7 @@ df2matrix <- function(mydataframe){
   mymatrix <- as.matrix(mymatrix)
   mymatrix
 }
+
 # Taxonomy-sample matrix to dataframe convertor
 # Just converts a matrix where the row name is a taxonomy label (really can be anything)
 m2df <- function(mymatrix, row_column_name = "Row_variable"){
@@ -1091,31 +1092,53 @@ run_anosim_custom <- function(my_metadata, my_data, my_group, my_method = "eucli
 # ------------------------------------------------------------------------------------------------
 # Correlation analysis
 
-calculate_correlation_matrix_stats <- function(correlation_matrix, method = "pearson", adjust = "none"){
-  cor_result <- corr.test(correlation_matrix, adjust = adjust, method = method)
-  cor_result$p
-}
+# calculate_correlation_matrix_stats <- function(correlation_matrix, method = "pearson", adjust = "none"){
+#   cor_result <- corr.test(correlation_matrix, adjust = adjust, method = method)
+#   cor_result$p
+# }
 
-calculate_correlation_matrix <- function(mydata, method = "pearson", adjust = "none"){
+calculate_correlation_matrix <- function(mydata, method = "pearson", adjust = "BH"){
   
   # Remove row entries that don't vary across all samples
   internal_data.m <- mydata
   zv <- apply(internal_data.m, 1, function(x) length(unique(x)) == 1)
   internal_data.m <- internal_data.m[!zv, ]
   
-  cor_result <- corr.test(t(internal_data.m), adjust = adjust, method = method)
+  # Take a two vectors and perform a signficance/correlation test
+  calculate_stats <- function(x, y, dist.name) {
+    k <- cor.test(x, y, method=dist.name)
+    c(k$estimate, k$stat, k$p.value)
+  }
+  
+  # cor_result <- corr.test(t(internal_data.m), adjust = adjust, method = method)
+  r <- apply(t(internal_data.m), 2,function(col) 
+    t(apply(t(internal_data.m), 2, calculate_stats, col, dist.name = method))[,1,drop =F])
+  p <- apply(t(internal_data.m), 2,function(col) 
+    t(apply(t(internal_data.m), 2, calculate_stats, col, dist.name = method))[,3,drop =F])
+  padj <- apply(t(internal_data.m), 2,function(col) 
+    p.adjust(t(apply(t(internal_data.m), 2, calculate_stats, col, dist.name = method))[,3,drop =F],
+             method = adjust))
+  
+  rownames(r) <- colnames(r)
+  rownames(p) <- colnames(p)
+  rownames(padj) <- colnames(padj)
+  r <- signif(r, digits = 5)
+  p <- signif(p, digits = 5)
+  padj <- signif(padj, digits = 5)
+  
   # r	The matrix of correlations
   # n	Number of cases per correlation
   # t	value of t-test for each correlation
   # p	two tailed probability of t for each correlation. For symmetric matrices, p values adjusted for multiple tests are reported above the diagonal.
   # se	standard error of the correlation
   # ci	the alpha/2 lower and upper values, as well as the (Holm or Bonferroni) adjusted confidence intervals.
-  list(cor_matrix = cor_result$r, cor_pval_matrix = cor_result$p)
+  # list(cor_matrix = cor_result$r, cor_pval_matrix = cor_result$p)
+  list(cor_matrix = r, cor_pval_matrix = p, cor_padj_matrix = padj)
 }
 
 # Calculates correlations between a feature and all other features. Works by row.
 # Assumes feature is in the row, generally sample will be the column
-calculate_feature_correlations <- function(mydata, feature, method = "pearson", filename = NULL){
+calculate_feature_correlations <- function(mydata, feature, method = "pearson", adjust = "BH", filename = NULL){
   
   # Remove entries that don't vary across all samples
   internal_data.m <- mydata
@@ -1137,7 +1160,7 @@ calculate_feature_correlations <- function(mydata, feature, method = "pearson", 
   correlation_results.m <- apply(t(internal_data.m), 2, calculate_stats, feature_data, method);
   correlation_results.m <- t(correlation_results.m)
   # fdr.col <- p.adjust(correlation_results.m[,3], "fdr");
-  pval_adj.col <- p.adjust(correlation_results.m[,3], "BH");
+  pval_adj.col <- p.adjust(correlation_results.m[,3], adjust);
   # correlation_results.m <- cbind(correlation_results.m,fdr.col, pval_adj.col)
   correlation_results.m <- cbind(correlation_results.m, pval_adj.col)
   # colnames(correlation_results.m) <- c("correlation", "t-stat", "p-value", "FDR", "pval_adj_BH");
@@ -1162,12 +1185,12 @@ calculate_feature_correlations <- function(mydata, feature, method = "pearson", 
 }
 
 # Given data matrix, plot correlations between a feature/variable and other features/variables
-plot_feature_correlations <- function(mydata, feature, method = "pearson", top_n = 25,
+plot_feature_correlations <- function(mydata, feature, method = "pearson", adjust = "BH", top_n = 25,
                                       filename = NULL, plot_width = 10, plot_height = 10, format = "pdf"){
   # internal_data.m <- mydata
   # internal_data.m <- internal_data.m[apply(internal_data.m, 1, function(x) {length(which(x > 0))}) /length(internal_data.m[1,]) > 0.1,]
   
-  correlation_result.df <- calculate_feature_correlations(mydata, feature, method = method)
+  correlation_result.df <- calculate_feature_correlations(mydata, feature, method = method, adjust = adjust)
   if(is.null(correlation_result.df)){
     return()
   }
@@ -1230,7 +1253,6 @@ plot_feature_correlations <- function(mydata, feature, method = "pearson", top_n
     dev.off()
   }
 }
-
 
 # Given correlation matrix and (optional) p-value matrix, 
 # plot correlations between a feature/variable and other features/variables
@@ -1322,7 +1344,7 @@ plot_feature_correlations_external <- function(cor_matrix, feature, p_value_matr
 }
 
 # ------------------------------------------------
-generate_correlation_network_from_count_data <- function(mydata, p_value_threshold = 0.05, cor_threshold = 0.5, method = "pearson", adjust = "none"){
+generate_correlation_network_from_count_data <- function(mydata, p_value_threshold = 0.05, cor_threshold = 0.5, method = "pearson", adjust = "BH"){
   correlation_results <- calculate_correlation_matrix(mydata, adjust = adjust, method = method)
   cor.m <- correlation_results$cor_matrix
   cor_pval.m <- correlation_results$cor_pval_matrix
@@ -1367,6 +1389,7 @@ generate_correlation_network <- function(cor_matrix, p_matrix = NULL, p_value_th
     if (show_p_label==T){
       graph.df$P_value_label <- lapply(graph.df$P_value, function(x) ifelse(x <= 0.001, "***", ifelse(x <= 0.01, "**", ifelse(x <= 0.05, "*", ""))))  
     }
+    # graph.df$P_value_label <- round(graph.df$Correlation,2) # For sanity testing
     
   } else{
     graph.df$P_value_label <- NA
@@ -1431,7 +1454,8 @@ generate_correlation_network <- function(cor_matrix, p_matrix = NULL, p_value_th
                      label_dodge=unit(1,"mm"),label_push=unit(-1,"mm"))
   }
   correlation_graph_plot <- correlation_graph_plot +
-    scale_edge_width_continuous(name="|Correlation|", range = c(edge_width_min,edge_width_max),breaks = seq(-1,1,.2)) +
+    scale_edge_width_continuous(name="Correlation", range = c(edge_width_min,edge_width_max),
+                                breaks = seq(-1,1,.2)) +
     scale_edge_colour_gradientn(colours = colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D",
                                                      "#F4A582", "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE",
                                                      "#4393C3", "#2166AC", "#053061")))(11),
@@ -1447,16 +1471,18 @@ generate_correlation_network <- function(cor_matrix, p_matrix = NULL, p_value_th
                    # family = "serif",
                    repel = T) +
     ggtitle(label = plot_title) +
-    theme_graph(background = "white") 
+    theme_graph(background = "white")
     # Override edge colour to show coloured width, entries for width need to match the
     # breaks defined in the colour gradient (at least in length)
     # guides(edge_color = guide_legend(override.aes = list(edge_width = abs(seq(-1,1,.2)*1.2))),
     break_length <- length(seq(-1,1,.2))
     edge_widths <- abs(c(rev(rev(seq(-edge_width_max, -edge_width_min, length.out = break_length/2))[-1]),
                          rev(seq(edge_width_max, edge_width_min, length.out = break_length/2))))
-    correlation_graph_plot <- correlation_graph_plot + 
+    # edge_widths <- abs(seq(-1,1,.2))
+    # edge_widths <- abs(edge_widths *seq(-1,1,.2))
+    correlation_graph_plot <- correlation_graph_plot +
     guides(edge_color = guide_legend(override.aes = list(edge_width = edge_widths)),
-           edge_width = F) 
+           edge_width = F)
   
   # Save plot to file
   if (!is.null(filename)){

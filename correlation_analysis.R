@@ -154,55 +154,61 @@ otu_correlation_network.l <- generate_correlation_network(cor_matrix = otu_decon
                                                             filename="Result_figures/correlation_analysis/networks/otu_decontaminated_filtered_fastspar_cor_network.pdf")
 network_features.v <- (otu_correlation_network.l$network_data %>% activate(nodes) %>% as.data.frame())$name
 otu_taxonomy_map.df[network_features.v,]$taxonomy_species
-set_graph_style
 
 # genus_correlation_network.l$network_plot
 # generate_correlation_network(genus_decontaminated_fastspar_cor_filtered.m)
 genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_decontaminated_fastspar_cor_filtered.m,
-                                                      p_matrix = genus_decontaminated_fastspar_pval_filtered.m,
-                                                      p_value_threshold = 0.05,
-                                                      cor_threshold = 0.4,
-                                                      relabeller_function = genus_relabeller_function,
-                                                      node_size = 4,
-                                                      node_colour = "grey20",
-                                                      node_fill = "grey20",
-                                                      label_colour = "black",
-                                                      label_size = 2,
-                                                      plot_height = 8,
-                                                      plot_width = 8,
-                                                      plot_title = "",
-                                                      filename="Result_figures/correlation_analysis/networks/genus_decontaminated_filtered_fastspar_cor_network.pdf")
+                                                            p_matrix = genus_decontaminated_fastspar_pval_filtered.m,
+                                                            relabeller_function = genus_relabeller_function,
+                                                            p_value_threshold = 0.05,
+                                                            cor_threshold = 0.4,
+                                                            node_size = 4,
+                                                            node_colour = "grey20",
+                                                            node_fill = "grey20",
+                                                            label_colour = "black",
+                                                            label_size = 3,
+                                                            plot_height = 10,
+                                                            plot_width = 10,
+                                                            edge_width_min = .5,
+                                                            edge_width_max = 2.5,
+                                                            network_layout = "fr",
+                                                            exclude_to_from_df = edges_to_remove.df,
+                                                            filename="Result_figures/correlation_analysis/networks/genus_decontaminated_filtered_fastspar_cor_network.pdf",
+                                                            myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
+
 genus_correlation_network.l$network_plot
 
-genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_decontaminated_fastspar_cor_gold_star_filtered.m,
-                                                            p_matrix = genus_decontaminated_fastspar_pval_gold_star_filtered.m,
-                                                            p_value_threshold = 0.05,
-                                                            cor_threshold = 0.4,
-                                                            relabeller_function = genus_relabeller_function,
-                                                            node_size = 4,
-                                                            node_colour = "grey20",
-                                                            node_fill = "grey20",
-                                                            label_colour = "black",
-                                                            label_size = 2,
-                                                            plot_height = 8,
-                                                            plot_width = 8,
-                                                            plot_title = "",
-                                                            filename="Result_figures/correlation_analysis/networks/genus_decontaminated_gold_star_filtered_fastspar_cor_network.pdf")
-genus_correlation_network.l$network_plot
-genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_decontaminated_fastspar_cor_nose_filtered.m,
-                                                            p_matrix = genus_decontaminated_fastspar_pval_nose_filtered.m,
-                                                            p_value_threshold = 0.05,
-                                                            cor_threshold = 0.4,
-                                                            relabeller_function = genus_relabeller_function,
-                                                            node_size = 4,
-                                                            node_colour = "grey20",
-                                                            node_fill = "grey20",
-                                                            label_colour = "black",
-                                                            label_size = 2,
-                                                            plot_height = 8,
-                                                            plot_width = 8,
-                                                            plot_title = "",
-                                                            filename="Result_figures/correlation_analysis/networks/genus_decontaminated_nose_filtered_fastspar_cor_network.pdf")
+
+
+# genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_decontaminated_fastspar_cor_gold_star_filtered.m,
+#                                                             p_matrix = genus_decontaminated_fastspar_pval_gold_star_filtered.m,
+#                                                             p_value_threshold = 0.05,
+#                                                             cor_threshold = 0.4,
+#                                                             relabeller_function = genus_relabeller_function,
+#                                                             node_size = 4,
+#                                                             node_colour = "grey20",
+#                                                             node_fill = "grey20",
+#                                                             label_colour = "black",
+#                                                             label_size = 2,
+#                                                             plot_height = 8,
+#                                                             plot_width = 8,
+#                                                             plot_title = "",
+#                                                             filename="Result_figures/correlation_analysis/networks/genus_decontaminated_gold_star_filtered_fastspar_cor_network.pdf")
+# genus_correlation_network.l$network_plot
+# genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_decontaminated_fastspar_cor_nose_filtered.m,
+#                                                             p_matrix = genus_decontaminated_fastspar_pval_nose_filtered.m,
+#                                                             p_value_threshold = 0.05,
+#                                                             cor_threshold = 0.4,
+#                                                             relabeller_function = genus_relabeller_function,
+#                                                             node_size = 4,
+#                                                             node_colour = "grey20",
+#                                                             node_fill = "grey20",
+#                                                             label_colour = "black",
+#                                                             label_size = 2,
+#                                                             plot_height = 8,
+#                                                             plot_width = 8,
+#                                                             plot_title = "",
+#                                                             filename="Result_figures/correlation_analysis/networks/genus_decontaminated_nose_filtered_fastspar_cor_network.pdf")
 
 # -------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------

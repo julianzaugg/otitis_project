@@ -233,7 +233,7 @@ write.csv(x = alpha_diversity_summary_genus.df,
           file = paste0("Result_tables/diversity_analysis/genus/genus_alpha_diversities_summary.csv"), 
           quote = F, row.names = F)
 
-write.csv(x = alpha_diversity_significances.df, 
+write.csv(x = alpha_diversity_significances_genus.df, 
           file = paste0("Result_tables/diversity_analysis/genus/genus_alpha_diversities_significance.csv"), 
           quote = F, row.names = F)
 
@@ -251,7 +251,7 @@ write.csv(x = alpha_diversity_summary_decontaminated.df,
           file = paste0("Result_tables/diversity_analysis/genus_decontaminated/genus_alpha_diversities_summary_decontaminated.csv"), 
           quote = F, row.names = F)
 
-write.csv(x = alpha_diversity_significances_decontaminated.df, 
+write.csv(x = alpha_diversity_significances_genus_decontaminated.df, 
           file = paste0("Result_tables/diversity_analysis/genus_decontaminated/genus_alpha_diversities_significance_decontaminated.csv"), 
           quote = F, row.names = F)
 
@@ -369,7 +369,7 @@ write.csv(x = alpha_diversity_summary_genus.df,
           file = paste0("Result_tables/diversity_analysis/genus/genus_alpha_diversities_summary_within_community.csv"), 
           quote = F, row.names = F)
 
-write.csv(x = alpha_diversity_significances.df, 
+write.csv(x = alpha_diversity_significances_genus.df, 
           file = paste0("Result_tables/diversity_analysis/genus/genus_alpha_diversities_significance_within_community.csv"), 
           quote = F, row.names = F)
 
@@ -387,7 +387,7 @@ write.csv(x = alpha_diversity_summary_decontaminated.df,
           file = paste0("Result_tables/diversity_analysis/genus_decontaminated/genus_alpha_diversities_summary_within_community_decontaminated.csv"), 
           quote = F, row.names = F)
 
-write.csv(x = alpha_diversity_significances_decontaminated.df, 
+write.csv(x = alpha_diversity_significances_genus_decontaminated.df, 
           file = paste0("Result_tables/diversity_analysis/genus_decontaminated/genus_alpha_diversities_significance_within_community_decontaminated.csv"), 
           quote = F, row.names = F)
 

@@ -509,11 +509,11 @@ for (myvar in discrete_variables){
   otu_clr_decontaminated_subset.m <- otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
   genus_clr_decontaminated_subset.m <- genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
   
-  otu_permanova_results <- rbind(otu_permanova_results,run_permanova_custom(my_metadata = metadata.df, 
+  otu_permanova_results <- rbind(otu_permanova_results,run_permanova_custom(my_metadata = metadata_subset.df, 
                                                       my_formula = as.formula(paste0("t(otu_clr_subset.m)~", myvar)),
                                                       my_method = "euclidean",label = "CLR",permutations = 9999))
   
-  genus_permanova_results <- rbind(genus_permanova_results,run_permanova_custom(my_metadata = metadata.df, 
+  genus_permanova_results <- rbind(genus_permanova_results,run_permanova_custom(my_metadata = metadata_subset.df, 
                                                       my_formula = as.formula(paste0("t(genus_clr_subset.m)~", myvar)),
                                                       my_method = "euclidean",label = "CLR",permutations = 9999))
   
@@ -593,7 +593,6 @@ write.csv(genus_decontaminated_permanova_results, file = "Result_tables/stats_va
 # PERMDISP (betadisper)
 # See: https://www.nicholas-ollberding.com/post/introduction-to-the-statistical-analysis-of-microbiome-data-in-r/
 # "Test the homogeneity of within-group multivariate dispersions on the basis of any resemblance measure."
-# If PERMANOVA is significant, while 
 
 # temp <- with(metadata.df, betadisper(vegdist(t(genus_clr.m), method = "euclidean"), group = Remote_Community))
 
@@ -660,7 +659,7 @@ for (myvar in discrete_variables){
   for (community in unique(metadata.df$Remote_Community)){
     
     metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
-    metadata_subset.df <- subset(metadata_subset.df, Remote_Community = community)
+    metadata_subset.df <- subset(metadata_subset.df, Remote_Community == community)
     metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
     metadata_decontaminated_subset.df <- subset(metadata_decontaminated_subset.df, Remote_Community = community)
     
@@ -784,7 +783,7 @@ for (myvar in discrete_variables){
   if (myvar == "Remote_Community") {next}
   for (community in unique(metadata.df$Remote_Community)){
     metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
-    metadata_subset.df <- subset(metadata_subset.df, Remote_Community = community)
+    metadata_subset.df <- subset(metadata_subset.df, Remote_Community == community)
     metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
     metadata_decontaminated_subset.df <- subset(metadata_decontaminated_subset.df, Remote_Community = community)
     

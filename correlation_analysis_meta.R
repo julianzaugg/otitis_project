@@ -1,4 +1,16 @@
 # Correlation for Otitis culture paper. Separate to 16S study.
+detachAllPackages <- function() {
+  
+  basic.packages <- c("package:stats","package:graphics","package:grDevices","package:utils","package:datasets","package:methods","package:base")
+  
+  package.list <- search()[ifelse(unlist(gregexpr("package:",search()))==1,TRUE,FALSE)]
+  
+  package.list <- setdiff(package.list,basic.packages)
+  
+  if (length(package.list)>0)  for (package in package.list) detach(package, character.only=TRUE)
+  
+}
+detachAllPackages()
 
 library(devtools)
 # install_github("zdk123/SpiecEasi")
@@ -34,6 +46,24 @@ data.m <- rbind(data.m, Gold_Star = metadata.df[colnames(data.m),]$Gold_Star)
 data.m <- rbind(data.m, Nose = metadata.df[colnames(data.m),]$Nose)
 rownames(data.m)[rownames(data.m) == "Gold_Star"] <- "Gold Star"
 
+# ------------------------------------------------------------
+feature1 <- "Staphylococcus haemolyticus"
+feature2 <- "Staphylococcus hominis"
+temp <- calculate_feature_correlations(data.m,
+                               feature = feature1,
+                               method = "pearson",adjust = "BH")
+
+temp[feature2,]
+# isSymmetric.matrix(cor(t(data.m)))
+# temp <- calculate_correlation_matrix(data.m,method = "pearson", adjust = "BH")
+# temp$cor_matrix[feature2,feature1]
+# isSymmetric.matrix(round(temp$cor_padj_matrix,10))
+# temp$cor_pval_matrix[feature2,feature1]
+# temp$cor_padj_matrix[feature2,feature1]
+# temp$cor_padj_matrix[feature1,feature2]
+
+# ------------------------------------------------------------
+
 # data.m["N_RSV_B",]
 # data.m["N_FLU_B",]
 # data.m["N_FLU_A",]
@@ -42,10 +72,7 @@ rownames(data.m)[rownames(data.m) == "Gold_Star"] <- "Gold Star"
 # data.m <- data.m[!zv, ]
 
 # ------------------------------------
-# TODO
-## Gold Star kids
-# Network plot; 1 for each value    DONE (Gold 0 and Gold 1)
-# Correlation bar plot; 0 vs 1    DONE (all samples Gold)
+
 
 ## Nose
 # Network plot; 1 for each value – 1,2, and 3 (Nose) DONE
@@ -125,21 +152,7 @@ generate_feature_results(data_n12_combined.m, prefix = "Nose_12_combined/by_feat
 generate_feature_results(data_n0_12_combined.m, prefix = "Nose_0_12_combined/by_feature/Nose_0_12_combined_")
 
 
-# calculate_feature_correlations(data_just_for_feature_analysis_n01.m, feature = "Nose", 
-#                                filename = paste0("culture_paper_analysis/results/special/Nose_feature_correlations.csv"),
-#                                method = "pearson")
-# 
-# feature_plot_filemame <- paste0("culture_paper_analysis/results/special/Nose_feature_correlations.pdf")
-# plot_feature_correlations(data_just_for_feature_analysis_n01.m, feature = "Nose",
-#                           top_n = 25, method = "pearson",filename = feature_plot_filemame,
-#                           plot_width = 25, plot_height = 25)
-# 
-# data_just_for_feature_analysis_n01.m
-# data_just_for_feature_analysis_n02.m
-# data_just_for_feature_analysis_n0_12_combined.m
-
 # Calculate correlation matrix and p-values
-correlation_results <- calculate_correlation_matrix(data.m, method = "pearson", adjust = "BH")
 correlation_results <- calculate_correlation_matrix(data.m, method = "pearson", adjust = "BH")
 
 correlation_results_g0 <- calculate_correlation_matrix(data_g0.m, method = "pearson", adjust = "BH")
@@ -156,38 +169,44 @@ correlation_results_n12_combined <- calculate_correlation_matrix(data_n12_combin
 correlation_results_n0_12_combined <- calculate_correlation_matrix(data_n0_12_combined.m, method = "pearson", adjust = "BH")
 
 cor.m <- correlation_results$cor_matrix
-cor_pval.m <- correlation_results$cor_pval_matrix
+cor_pval.m <- correlation_results$cor_padj_matrix
 
 cor_g0.m <- correlation_results_g0$cor_matrix
-cor_pval_g0.m <- correlation_results_g0$cor_pval_matrix
+cor_pval_g0.m <- correlation_results_g0$cor_padj_matrix
 
 cor_g1.m <- correlation_results_g1$cor_matrix
-cor_pval_g1.m <- correlation_results_g1$cor_pval_matrix
+cor_pval_g1.m <- correlation_results_g1$cor_padj_matrix
+
+# cor_pval2.m <- correlation_results$cor_pval_matrix
+# cor_pval2.m[feature2, feature1]
+# cor_pval.m[feature2, feature1]
+# calculate_feature_correlations(data.m,
+#                                feature = feature1,
+#                                method = "pearson",adjust = "BH")[feature2,]
 
 cor_n0.m <- correlation_results_n0$cor_matrix
-cor_pval_n0.m <- correlation_results_n0$cor_pval_matrix
+cor_pval_n0.m <- correlation_results_n0$cor_padj_matrix
 
 cor_n1.m <- correlation_results_n1$cor_matrix
-cor_pval_n1.m <- correlation_results_n1$cor_pval_matrix
+cor_pval_n1.m <- correlation_results_n1$cor_padj_matrix
 
 cor_n2.m <- correlation_results_n2$cor_matrix
-cor_pval_n2.m <- correlation_results_n2$cor_pval_matrix
-
+cor_pval_n2.m <- correlation_results_n2$cor_padj_matrix
 
 cor_n01.m <- correlation_results_n01$cor_matrix
-cor_pval_n01.m <- correlation_results_n01$cor_pval_matrix
+cor_pval_n01.m <- correlation_results_n01$cor_padj_matrix
 
 cor_n02.m <- correlation_results_n02$cor_matrix
-cor_pval_n02.m <- correlation_results_n02$cor_pval_matrix
+cor_pval_n02.m <- correlation_results_n02$cor_padj_matrix
 
 cor_n12.m <- correlation_results_n12$cor_matrix
-cor_pval_n12.m <- correlation_results_n12$cor_pval_matrix
+cor_pval_n12.m <- correlation_results_n12$cor_padj_matrix
 
 cor_n12_combined.m <- correlation_results_n12_combined$cor_matrix
-cor_pval_n12_combined.m <- correlation_results_n12_combined$cor_pval_matrix
+cor_pval_n12_combined.m <- correlation_results_n12_combined$cor_padj_matrix
 
 cor_n0_12_combined.m <- correlation_results_n0_12_combined$cor_matrix
-cor_pval_n0_12_combined.m <- correlation_results_n0_12_combined$cor_pval_matrix
+cor_pval_n0_12_combined.m <- correlation_results_n0_12_combined$cor_padj_matrix
 
 # ------------------------------------------------------------------------------------
 # Create network plots
@@ -199,14 +218,24 @@ cor_pval_n0_12_combined.m <- correlation_results_n0_12_combined$cor_pval_matrix
 Mcat <- as.data.frame(t(combn(grep("M. cat", rownames(data.m),value =T),2)))
 H_inf <- as.data.frame(t(combn(grep("H. inf", rownames(data.m),value =T),2)))
 Spn <- as.data.frame(t(combn(grep("S. pn", rownames(data.m),value =T),2)))
+# Nose <- as.data.frame(t(combn(grep("Nose", rownames(data.m),value =T),2)))
+# Gold_star <- as.data.frame(t(combn(grep("Gold", rownames(data.m),value =T),2)))
 
-edges_to_remove.df <- rbind(Mcat, H_inf,Spn)
+Nose <- as.data.frame(melt(unique(rownames(data.m), colnames(data.frame))))
+Nose$Nose <- "Nose"
+names(Nose) <- c("V1", "V2")
+
+Gold_star <- as.data.frame(melt(unique(rownames(data.m), colnames(data.frame))))
+Gold_star$Nose <- "Gold Star"
+names(Gold_star) <- c("V1", "V2")
+
+edges_to_remove.df <- rbind(Mcat, H_inf,Spn,Nose,Gold_star)
 
 # Network all samples
 correlation_network.l <- generate_correlation_network(cor_matrix = cor.m,
                                                       p_matrix = cor_pval.m,
                                                       p_value_threshold = 0.05,
-                                                      cor_threshold = 0.4,
+                                                      cor_threshold = 0.3,
                                                       node_size = 4,
                                                       node_colour = "grey20",
                                                       node_fill = "grey20",
@@ -219,13 +248,13 @@ correlation_network.l <- generate_correlation_network(cor_matrix = cor.m,
                                                       network_layout = "fr",
                                                       exclude_to_from_df = edges_to_remove.df,
                                                       filename="culture_paper_analysis/results/All_samples/networks/All_correlation_graph.pdf",
-                                                      myseed = 1, edgetype = "bend",show_p_label = F,file_type = "pdf")
+                                                      myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
 
 # Gold 0
 correlation_network.l <- generate_correlation_network(cor_matrix = cor_g0.m,
                                                       p_matrix = cor_pval_g0.m,
                                                       p_value_threshold = 0.05,
-                                                      cor_threshold = 0.4,
+                                                      cor_threshold = 0.3,
                                                       node_size = 4,
                                                       node_colour = "grey20",
                                                       node_fill = "grey20",
@@ -238,13 +267,14 @@ correlation_network.l <- generate_correlation_network(cor_matrix = cor_g0.m,
                                                       network_layout = "fr",
                                                       exclude_to_from_df = edges_to_remove.df,
                                                       filename="culture_paper_analysis/results/Gold_0/networks/Gold_0_correlation_graph.pdf",
-                                                      myseed = 1, edgetype = "bend",show_p_label = F,file_type = "pdf")
+                                                      myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
 
 # Gold 1
+source("code/helper_functions.R")
 correlation_network.l <- generate_correlation_network(cor_matrix = cor_g1.m,
                                                       p_matrix = cor_pval_g1.m,
                                                       p_value_threshold = 0.05,
-                                                      cor_threshold = 0.4,
+                                                      cor_threshold = 0.3,
                                                       node_size = 4,
                                                       node_colour = "grey20",
                                                       node_fill = "grey20",
@@ -257,13 +287,27 @@ correlation_network.l <- generate_correlation_network(cor_matrix = cor_g1.m,
                                                       network_layout = "fr",
                                                       exclude_to_from_df = edges_to_remove.df,
                                                       filename="culture_paper_analysis/results/Gold_1/networks/Gold_1_correlation_graph.pdf",
-                                                      myseed = 1, edgetype = "bend",show_p_label = F,file_type = "pdf")
+                                                      myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
+# break_length <- length(seq(-1,1,.2))
+# edge_width_min <- .5
+# edge_width_max <- 2.5
+# edge_widths <- abs(c(rev(rev(seq(-edge_width_max, -edge_width_min, length.out = break_length/2))[-1]),
+#                      rev(seq(edge_width_max, edge_width_min, length.out = break_length/2))))
+# edge_widths
+# edge_widths *seq(-1,1,.2)
+
+# "Neisseria subflava"
+# "Streptococcus mitis/oralis"
+# cor_g1.m["Neisseria subflava","Streptococcus mitis/oralis"]
+# cor_g1.m["Streptococcus mitis/oralis", "Neisseria subflava"]
+# cor_pval_g1.m["Neisseria subflava","Streptococcus mitis/oralis"]
+# cor_pval_g1.m["Streptococcus mitis/oralis", "Neisseria subflava"]
 
 # Nose 0
 correlation_network.l <- generate_correlation_network(cor_matrix = cor_n0.m,
                                                       p_matrix = cor_pval_n0.m,
                                                       p_value_threshold = 0.05,
-                                                      cor_threshold = 0.4,
+                                                      cor_threshold = 0.3,
                                                       node_size = 4,
                                                       node_colour = "grey20",
                                                       node_fill = "grey20",
@@ -276,13 +320,13 @@ correlation_network.l <- generate_correlation_network(cor_matrix = cor_n0.m,
                                                       network_layout = "fr",
                                                       exclude_to_from_df = edges_to_remove.df,
                                                       filename="culture_paper_analysis/results/Nose_0/networks/Nose_0_correlation_graph.pdf",
-                                                      myseed = 1, edgetype = "bend",show_p_label = F,file_type = "pdf")
+                                                      myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
 
 # Nose 1
 correlation_network.l <- generate_correlation_network(cor_matrix = cor_n1.m,
                                                       p_matrix = cor_pval_n1.m,
                                                       p_value_threshold = 0.05,
-                                                      cor_threshold = 0.4,
+                                                      cor_threshold = 0.3,
                                                       node_size = 4,
                                                       node_colour = "grey20",
                                                       node_fill = "grey20",
@@ -295,14 +339,14 @@ correlation_network.l <- generate_correlation_network(cor_matrix = cor_n1.m,
                                                       network_layout = "fr",
                                                       exclude_to_from_df = edges_to_remove.df,
                                                       filename="culture_paper_analysis/results/Nose_1/networks/Nose_1_correlation_graph.pdf",
-                                                      myseed = 1, edgetype = "bend",show_p_label = F,file_type = "pdf")
+                                                      myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
 
 # Nose 2
 source("code/helper_functions.R")
 correlation_network.l <- generate_correlation_network(cor_matrix = cor_n2.m,
                                                       p_matrix = cor_pval_n2.m,
                                                       p_value_threshold = .05,
-                                                      cor_threshold = 0.4,
+                                                      cor_threshold = 0.3,
                                                       node_size = 4,
                                                       node_colour = "grey20",
                                                       node_fill = "grey20",
@@ -315,14 +359,14 @@ correlation_network.l <- generate_correlation_network(cor_matrix = cor_n2.m,
                                                       network_layout = "fr",
                                                       exclude_to_from_df = edges_to_remove.df,
                                                       filename="culture_paper_analysis/results/Nose_2/networks/Nose_2_correlation_graph.pdf",
-                                                      myseed = 1, edgetype = "bend",show_p_label = F,file_type = "pdf")
+                                                      myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
 # plot_corrplot(cor_n2.m,label_size = .4)
 
 # Nose 01 samples
 correlation_network.l <- generate_correlation_network(cor_matrix = cor_n01.m,
                                                       p_matrix = cor_pval_n01.m,
                                                       p_value_threshold = .05,
-                                                      cor_threshold = 0.4,
+                                                      cor_threshold = 0.3,
                                                       node_size = 4,
                                                       node_colour = "grey20",
                                                       node_fill = "grey20",
@@ -335,13 +379,13 @@ correlation_network.l <- generate_correlation_network(cor_matrix = cor_n01.m,
                                                       network_layout = "fr",
                                                       exclude_to_from_df = edges_to_remove.df,
                                                       filename="culture_paper_analysis/results/Nose_0_1/networks/Nose_0_1_correlation_graph.pdf",
-                                                      myseed = 1, edgetype = "bend",show_p_label = F,file_type = "pdf")
+                                                      myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
 
 # Nose 02 samples
 correlation_network.l <- generate_correlation_network(cor_matrix = cor_n02.m,
                                                       p_matrix = cor_pval_n02.m,
                                                       p_value_threshold = .05,
-                                                      cor_threshold = 0.4,
+                                                      cor_threshold = 0.3,
                                                       node_size = 4,
                                                       node_colour = "grey20",
                                                       node_fill = "grey20",
@@ -354,13 +398,13 @@ correlation_network.l <- generate_correlation_network(cor_matrix = cor_n02.m,
                                                       network_layout = "fr",
                                                       exclude_to_from_df = edges_to_remove.df,
                                                       filename="culture_paper_analysis/results/Nose_0_2/networks/Nose_0_2_correlation_graph.pdf",
-                                                      myseed = 1, edgetype = "bend",show_p_label = F,file_type = "pdf")
+                                                      myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
 
 # Nose 12 samples
 correlation_network.l <- generate_correlation_network(cor_matrix = cor_n12.m,
                                                       p_matrix = cor_pval_n12.m,
                                                       p_value_threshold = .05,
-                                                      cor_threshold = 0.4,
+                                                      cor_threshold = 0.3,
                                                       node_size = 4,
                                                       node_colour = "grey20",
                                                       node_fill = "grey20",
@@ -373,13 +417,13 @@ correlation_network.l <- generate_correlation_network(cor_matrix = cor_n12.m,
                                                       network_layout = "fr",
                                                       exclude_to_from_df = edges_to_remove.df,
                                                       filename="culture_paper_analysis/results/Nose_1_2/networks/Nose_1_2_correlation_graph.pdf",
-                                                      myseed = 1, edgetype = "bend",show_p_label = F,file_type = "pdf")
+                                                      myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
 
 # Nose 12 combined samples
 correlation_network.l <- generate_correlation_network(cor_matrix = cor_n12_combined.m,
                                                       p_matrix = cor_pval_n12_combined.m,
                                                       p_value_threshold = .05,
-                                                      cor_threshold = 0.4,
+                                                      cor_threshold = 0.3,
                                                       node_size = 4,
                                                       node_colour = "grey20",
                                                       node_fill = "grey20",
@@ -392,13 +436,13 @@ correlation_network.l <- generate_correlation_network(cor_matrix = cor_n12_combi
                                                       network_layout = "fr",
                                                       exclude_to_from_df = edges_to_remove.df,
                                                       filename="culture_paper_analysis/results/Nose_12_combined/networks/Nose_12_combined_correlation_graph.pdf",
-                                                      myseed = 1, edgetype = "bend",show_p_label = F,file_type = "pdf")
+                                                      myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
 
 # Nose 0 and 12 combined samples
 correlation_network.l <- generate_correlation_network(cor_matrix = cor_n0_12_combined.m,
                                                       p_matrix = cor_pval_n0_12_combined.m,
                                                       p_value_threshold = .05,
-                                                      cor_threshold = 0.4,
+                                                      cor_threshold = 0.3,
                                                       node_size = 4,
                                                       node_colour = "grey20",
                                                       node_fill = "grey20",
@@ -411,4 +455,4 @@ correlation_network.l <- generate_correlation_network(cor_matrix = cor_n0_12_com
                                                       network_layout = "fr",
                                                       exclude_to_from_df = edges_to_remove.df,
                                                       filename="culture_paper_analysis/results/Nose_0_12_combined/networks/Nose_0_12_combined_correlation_graph.pdf",
-                                                      myseed = 1, edgetype = "bend",show_p_label = F,file_type = "pdf")
+                                                      myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
