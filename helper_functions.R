@@ -12,6 +12,7 @@
 # install.packages("scales")
 # install.packages("seqinr")
 # install.packages("corrplot")
+# install.packages("svglite")
 
 # if (!requireNamespace("BiocManager", quietly = TRUE))
 # install.packages("BiocManager")
@@ -40,7 +41,7 @@ library(grid)
 library(phyloseq)
 library(seqinr) # For writing fasta files
 library(corrplot)
-
+library(svglite)
 
 
 
@@ -1157,14 +1158,11 @@ calculate_feature_correlations <- function(mydata, feature, method = "pearson", 
   }
   
   feature_data <- t(internal_data.m)[,feature]
-  correlation_results.m <- apply(t(internal_data.m), 2, calculate_stats, feature_data, method);
+  correlation_results.m <- apply(t(internal_data.m), 2, calculate_stats, feature_data, method)
   correlation_results.m <- t(correlation_results.m)
-  # fdr.col <- p.adjust(correlation_results.m[,3], "fdr");
-  pval_adj.col <- p.adjust(correlation_results.m[,3], adjust);
-  # correlation_results.m <- cbind(correlation_results.m,fdr.col, pval_adj.col)
+  pval_adj.col <- p.adjust(correlation_results.m[,3], adjust)
   correlation_results.m <- cbind(correlation_results.m, pval_adj.col)
-  # colnames(correlation_results.m) <- c("correlation", "t-stat", "p-value", "FDR", "pval_adj_BH");
-  colnames(correlation_results.m) <- c("correlation", "t-stat", "p-value", "pval_adj_BH");
+  colnames(correlation_results.m) <- c("correlation", "t-stat", "p-value", "pval_adj");
   ord.inx <- order(correlation_results.m[,3]) # order by p-value
   sig.m <- signif(correlation_results.m[ord.inx,],5); # Round values
   
@@ -1241,11 +1239,11 @@ plot_feature_correlations <- function(mydata, feature, method = "pearson", adjus
   
   for (row in 1:nrow(correlation_result.df)){
     offset <- ifelse(correlation_result.df[row,"correlation"] < 0, -0.1, 0.1)
-    if (correlation_result.df[row,"pval_adj_BH"] <= 0.05 & correlation_result.df[row,"pval_adj_BH"] > 0.01){
+    if (correlation_result.df[row,"pval_adj"] <= 0.05 & correlation_result.df[row,"pval_adj"] > 0.01){
       text(correlation_result.df[row,"correlation"] + offset, row, labels = "*")
-    } else if (correlation_result.df[row,"pval_adj_BH"] <= 0.01 & correlation_result.df[row,"pval_adj_BH"] > 0.001){
+    } else if (correlation_result.df[row,"pval_adj"] <= 0.01 & correlation_result.df[row,"pval_adj"] > 0.001){
       text(correlation_result.df[row,"correlation"] + offset, row, labels = "**")
-    } else if (correlation_result.df[row,"pval_adj_BH"] <= 0.001){
+    } else if (correlation_result.df[row,"pval_adj"] <= 0.001){
       text(correlation_result.df[row,"correlation"] + offset, row, labels = "***")
     }
   }
@@ -1491,7 +1489,9 @@ generate_correlation_network <- function(cor_matrix, p_matrix = NULL, p_value_th
       plot(correlation_graph_plot)
       dev.off()      
     } else if (file_type == "svg"){
-      svg(filename = filename,height = plot_height, width = plot_width)
+      # Cairo::CairoSVG(file = filename,width = plot_width,height = plot_height)
+      # svg(filename = filename,height = plot_height, width = plot_width)
+      svglite(file = filename,height = plot_height, width = plot_width)
       plot(correlation_graph_plot)
       dev.off()
     }

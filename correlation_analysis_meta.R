@@ -46,6 +46,28 @@ data.m <- rbind(data.m, Gold_Star = metadata.df[colnames(data.m),]$Gold_Star)
 data.m <- rbind(data.m, Nose = metadata.df[colnames(data.m),]$Nose)
 rownames(data.m)[rownames(data.m) == "Gold_Star"] <- "Gold Star"
 
+# --------------------------------------------------------------------------------
+# For correlation networks, we want to remove edges between IQR variables for the same species
+# Mcat <- as.data.frame(t(combn(grep("Mcat", rownames(data.m),value =T),2)))
+# H_inf <- as.data.frame(t(combn(grep("H.inf", rownames(data.m),value =T),2)))
+# Spn <- as.data.frame(t(combn(grep("Spn", rownames(data.m),value =T),2)))
+Mcat <- as.data.frame(t(combn(grep("M. cat", rownames(data.m),value =T),2)))
+H_inf <- as.data.frame(t(combn(grep("H. inf", rownames(data.m),value =T),2)))
+Spn <- as.data.frame(t(combn(grep("S. pn", rownames(data.m),value =T),2)))
+# Nose <- as.data.frame(t(combn(grep("Nose", rownames(data.m),value =T),2)))
+# Gold_star <- as.data.frame(t(combn(grep("Gold", rownames(data.m),value =T),2)))
+
+Nose <- as.data.frame(melt(unique(rownames(data.m), colnames(data.frame))))
+Nose$Nose <- "Nose"
+names(Nose) <- c("V1", "V2")
+
+Gold_star <- as.data.frame(melt(unique(rownames(data.m), colnames(data.frame))))
+Gold_star$Nose <- "Gold Star"
+names(Gold_star) <- c("V1", "V2")
+
+edges_to_remove.df <- rbind(Mcat, H_inf,Spn,Nose,Gold_star)
+edges_to_remove.df <- rbind(Mcat, H_inf,Spn,Nose,Gold_star)
+
 # ------------------------------------------------------------
 feature1 <- "Staphylococcus haemolyticus"
 feature2 <- "Staphylococcus hominis"
@@ -81,10 +103,18 @@ temp[feature2,]
 # Correlation bar plot; 1 vs 2, and 1 vs 3 (by feature for each)
 # Correlation bar plot; 0 (asymptomatic) vs 1 (symptomatic) (by feature for 01)
 # ------------------------------------
+calculate_prevalences <- function(mymatrix){
+  apply(mymatrix, 1, function(x) {length(which(x > 0))}) /length(colnames(mymatrix))
+}
+prevalence_threshold = 0.2
+
 # Create additional datasets
+
+# Gold star
 data_g0.m <- data.m[,data.m["Gold Star",] == 0]
 data_g1.m <- data.m[,data.m["Gold Star",] == 1]
 
+# Nose
 data_n0.m <- data.m[,data.m["Nose",] == 0]
 data_n1.m <- data.m[,data.m["Nose",] == 1]
 data_n2.m <- data.m[,data.m["Nose",] == 2]
@@ -100,6 +130,25 @@ data_n0_12_combined.m["Nose",][data_n0_12_combined.m["Nose",] %in% c(1,2)] <- 1
 
 # Nose 1 and 2 samples, but with 1 and 2 combined
 data_n12_combined.m <- data_n0_12_combined.m[,data_n0_12_combined.m["Nose",] == 1]
+
+# round(melt(calculate_prevalences(data_g1.m)) *100, 2)
+# dim(data_n2.m) * .3
+# melt(apply(data.m, 1, sum))
+# melt(apply(data_n2.m, 1, sum))
+# dim(data.m)
+
+# Now that the individual datasets have been created, remove variables that are not prevalent enough
+data.m <- data.m[calculate_prevalences(data.m) > prevalence_threshold,,drop =F]
+data_g0.m <- data_g0.m[calculate_prevalences(data_g0.m) > prevalence_threshold,,drop =F]
+data_g1.m <- data_g1.m[calculate_prevalences(data_g1.m) > prevalence_threshold,,drop =F]
+data_n0.m <- data_n0.m[calculate_prevalences(data_n0.m) > prevalence_threshold,,drop =F]
+data_n1.m <- data_n1.m[calculate_prevalences(data_n1.m) > prevalence_threshold,,drop =F]
+data_n2.m <- data_n2.m[calculate_prevalences(data_n2.m) > prevalence_threshold,,drop =F]
+data_n01.m <- data_n01.m[calculate_prevalences(data_n01.m) > prevalence_threshold,,drop =F]
+data_n02.m <- data_n02.m[calculate_prevalences(data_n02.m) > prevalence_threshold,,drop =F]
+data_n12.m <- data_n12.m[calculate_prevalences(data_n12.m) > prevalence_threshold,,drop =F]
+data_n0_12_combined.m <- data_n0_12_combined.m[calculate_prevalences(data_n0_12_combined.m) > prevalence_threshold,,drop =F]
+data_n12_combined.m <- data_n12_combined.m[calculate_prevalences(data_n12_combined.m) > prevalence_threshold,,drop =F]
 
 
 # Just for correlation bar plots
@@ -211,26 +260,6 @@ cor_pval_n0_12_combined.m <- correlation_results_n0_12_combined$cor_padj_matrix
 # ------------------------------------------------------------------------------------
 # Create network plots
 
-# Want to remove edges between IQR variables for the same species
-# Mcat <- as.data.frame(t(combn(grep("Mcat", rownames(data.m),value =T),2)))
-# H_inf <- as.data.frame(t(combn(grep("H.inf", rownames(data.m),value =T),2)))
-# Spn <- as.data.frame(t(combn(grep("Spn", rownames(data.m),value =T),2)))
-Mcat <- as.data.frame(t(combn(grep("M. cat", rownames(data.m),value =T),2)))
-H_inf <- as.data.frame(t(combn(grep("H. inf", rownames(data.m),value =T),2)))
-Spn <- as.data.frame(t(combn(grep("S. pn", rownames(data.m),value =T),2)))
-# Nose <- as.data.frame(t(combn(grep("Nose", rownames(data.m),value =T),2)))
-# Gold_star <- as.data.frame(t(combn(grep("Gold", rownames(data.m),value =T),2)))
-
-Nose <- as.data.frame(melt(unique(rownames(data.m), colnames(data.frame))))
-Nose$Nose <- "Nose"
-names(Nose) <- c("V1", "V2")
-
-Gold_star <- as.data.frame(melt(unique(rownames(data.m), colnames(data.frame))))
-Gold_star$Nose <- "Gold Star"
-names(Gold_star) <- c("V1", "V2")
-
-edges_to_remove.df <- rbind(Mcat, H_inf,Spn,Nose,Gold_star)
-
 # Network all samples
 correlation_network.l <- generate_correlation_network(cor_matrix = cor.m,
                                                       p_matrix = cor_pval.m,
@@ -288,20 +317,6 @@ correlation_network.l <- generate_correlation_network(cor_matrix = cor_g1.m,
                                                       exclude_to_from_df = edges_to_remove.df,
                                                       filename="culture_paper_analysis/results/Gold_1/networks/Gold_1_correlation_graph.pdf",
                                                       myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
-# break_length <- length(seq(-1,1,.2))
-# edge_width_min <- .5
-# edge_width_max <- 2.5
-# edge_widths <- abs(c(rev(rev(seq(-edge_width_max, -edge_width_min, length.out = break_length/2))[-1]),
-#                      rev(seq(edge_width_max, edge_width_min, length.out = break_length/2))))
-# edge_widths
-# edge_widths *seq(-1,1,.2)
-
-# "Neisseria subflava"
-# "Streptococcus mitis/oralis"
-# cor_g1.m["Neisseria subflava","Streptococcus mitis/oralis"]
-# cor_g1.m["Streptococcus mitis/oralis", "Neisseria subflava"]
-# cor_pval_g1.m["Neisseria subflava","Streptococcus mitis/oralis"]
-# cor_pval_g1.m["Streptococcus mitis/oralis", "Neisseria subflava"]
 
 # Nose 0
 correlation_network.l <- generate_correlation_network(cor_matrix = cor_n0.m,
@@ -456,3 +471,10 @@ correlation_network.l <- generate_correlation_network(cor_matrix = cor_n0_12_com
                                                       exclude_to_from_df = edges_to_remove.df,
                                                       filename="culture_paper_analysis/results/Nose_0_12_combined/networks/Nose_0_12_combined_correlation_graph.pdf",
                                                       myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
+
+
+# TODO make corrplots for each datasets
+# TODO get numbers per dataset
+plot_corrplot(correlation_matrix = cor_g1.m,label_size = .5,
+              p_value_matrix = cor_pval_g1.m,p_value_threshold = 0.05)
+
