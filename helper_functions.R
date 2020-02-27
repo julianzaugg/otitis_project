@@ -1503,40 +1503,107 @@ generate_correlation_network <- function(cor_matrix, p_matrix = NULL, p_value_th
 plot_corrplot <- function(correlation_matrix, p_value_matrix = NULL, 
                           plot_title = "", plot_title_size = .6,plot_height = 10, plot_width = 10,
                           p_value_threshold = 0.05, label_size = 1,
-                          relabeller_function = NULL, filename = NULL){
+                          relabeller_function = NULL, filename = NULL,
+                          insig = "blank", insig_pch = 4, insig_pch_cex = 1, insig_pch_col = "black",
+                          make_insig_na = F,
+                          to_exclude = NULL, method = "circle", outline = T,
+                          label_colour = "black",
+                          pairs_to_na = NULL, # Should be two column dataframe (row column / column row)
+                          order = "hclust", col = NULL, file_type = "pdf"){
   
   cor.m <- correlation_matrix
   cor_pval.m <- p_value_matrix
   
+  # Entries to remove completely
+  if (!is.null(to_exclude)){ 
+    cor.m <- cor.m[!rownames(cor.m) %in% to_exclude, !colnames(cor.m) %in% to_exclude]
+    if (!is.null(p_value_matrix)){
+      cor_pval.m <- cor_pval.m[!rownames(cor_pval.m) %in% to_exclude, !colnames(cor_pval.m) %in% to_exclude]  
+    }
+    
+  }
+  # Entries to make NA. Should be a two column dataframe
+  if (!is.null(pairs_to_na)){
+    if (order == "hclust"){
+      # stop("Cannot use hclust ordering with NA values in matrix")
+      # So before inserting NA values, first order the matrix
+      summary(hclust(dist(cor.m),method = "average"))
+      ord <- hclust(dist(cor.m),method = "average")$order
+      cor.m <- cor.m[ord,ord]
+      if (!is.null(p_value_matrix)){
+        cor_pval.m <- cor_pval.m[ord,ord]
+      }
+      order <- "original"
+    }
+    for (row in 1:nrow(pairs_to_na)){
+      a <- as.character(pairs_to_na[row,1])
+      b <- as.character(pairs_to_na[row,2])
+      if (a %in% rownames(cor.m) & b %in% rownames(cor.m)){
+        cor.m[a, b] <- NA
+        cor.m[b, a] <- NA
+        if (!is.null(p_value_matrix)){
+          cor_pval.m[a, b] <- NA
+          cor_pval.m[b, a] <- NA
+        }
+      }
+    }
+  }
+  
+  if (make_insig_na == T){
+    cor.m[which(cor_pval.m > p_value_threshold)] <- NA
+    cor_pval.m[cor_pval.m > p_value_threshold] <- NA
+  }
+  
   if (!is.null(relabeller_function)){
     colnames(cor.m) <- relabeller_function(colnames(cor.m))
     rownames(cor.m) <- relabeller_function(rownames(cor.m))
-    colnames(cor_pval.m) <- relabeller_function(colnames(cor_pval.m))
-    rownames(cor_pval.m) <- relabeller_function(rownames(cor_pval.m))
+    if (!is.null(p_value_matrix)){
+      colnames(cor_pval.m) <- relabeller_function(colnames(cor_pval.m))
+      rownames(cor_pval.m) <- relabeller_function(rownames(cor_pval.m))
+    }
+  }
+  if (is.null(col)){
+    col <- colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D",
+                                  "#F4A582", "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE",
+                                  "#4393C3", "#2166AC", "#053061")))(200)
   }
   
   if (!is.null(filename)){
-    pdf(file = filename,height = plot_height, width = plot_width)
+    # pdf(file = filename,height = plot_height, width = plot_width)
+    if (file_type == "pdf"){
+      pdf(file = filename, height = plot_height, width = plot_width)
+    } else if (file_type == "svg"){
+      # Cairo::CairoSVG(file = filename,width = plot_width,height = plot_height)
+      # svg(filename = filename,height = plot_height, width = plot_width)
+      svglite(file = filename,height = plot_height, width = plot_width)
+    }
   }
+
   corrplot(corr = cor.m,
-           outline = T,
-           tl.col = "black",
+           method = method,
+           outline = outline,
+           tl.col = label_colour,
            tl.cex = label_size,
+           addgrid.col = "black",
+           # tl.srt = 45,
            # title = plot_title,
-           col = colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D", 
-                                        "#F4A582", "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE", 
-                                        "#4393C3", "#2166AC", "#053061")))(200),
+           col = col,
+           # col = brewer.pal(n = 8, name = "RdYlBu"),
            type = "lower",
            diag = F,
-           order = "hclust",
+           na.label = "square",
+           na.label.col = "grey",
+           order = order,
            hclust.method = "average",
            p.mat = cor_pval.m,
            sig.level = p_value_threshold,
-           insig = "blank",
-           pch = 4,
-           pch.cex = .1,
-           pch.col = "black",
+           # insig = "blank",
+           insig = insig,
+           pch = insig_pch,
+           pch.cex = insig_pch_cex,
+           pch.col = insig_pch_col,
            cl.pos = 'r',
+           
            mar=c(1,0,3,1))
   title(main = plot_title,cex.main = plot_title_size)
   if (!is.null(filename)){

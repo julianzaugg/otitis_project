@@ -22,6 +22,8 @@ library(psych)
 # install.packages("ggraph")
 library(ggraph)
 library(tidygraph)
+library(dplyr)
+library(reshape2)
 
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_16S_project/")
 source("code/helper_functions.R")
@@ -29,6 +31,7 @@ source("code/helper_functions.R")
 for (i in c("Gold_0","Gold_1","Nose_0","Nose_1","Nose_2","All_samples", "Nose_0_1","Nose_0_2","Nose_1_2","Nose_12_combined", "Nose_0_12_combined")){
   dir.create(file.path(paste0("culture_paper_analysis/results/",i, "/by_feature")),recursive = T)
   dir.create(file.path(paste0("culture_paper_analysis/results/",i, "/networks")),recursive = T)
+  dir.create(file.path(paste0("culture_paper_analysis/results/",i, "/corrplots")),recursive = T)
 }
 
 # Load the data
@@ -75,15 +78,6 @@ temp <- calculate_feature_correlations(data.m,
                                feature = feature1,
                                method = "pearson",adjust = "BH")
 
-temp[feature2,]
-# isSymmetric.matrix(cor(t(data.m)))
-# temp <- calculate_correlation_matrix(data.m,method = "pearson", adjust = "BH")
-# temp$cor_matrix[feature2,feature1]
-# isSymmetric.matrix(round(temp$cor_padj_matrix,10))
-# temp$cor_pval_matrix[feature2,feature1]
-# temp$cor_padj_matrix[feature2,feature1]
-# temp$cor_padj_matrix[feature1,feature2]
-
 # ------------------------------------------------------------
 
 # data.m["N_RSV_B",]
@@ -95,7 +89,6 @@ temp[feature2,]
 
 # ------------------------------------
 
-
 ## Nose
 # Network plot; 1 for each value – 1,2, and 3 (Nose) DONE
 # Network plot; 1 for each value of the data transformed into a binary feature… 0=asymptomatic & 1=symptomatic (combination of the 2 & 3 values) DONE
@@ -106,10 +99,29 @@ temp[feature2,]
 calculate_prevalences <- function(mymatrix){
   apply(mymatrix, 1, function(x) {length(which(x > 0))}) /length(colnames(mymatrix))
 }
+
+calculate_counts <- function(mymatrix){
+  apply(mymatrix, 1, function(x) {length(which(x > 0))})
+}
+
+get_data_summary <- function(mymatrix){
+  out <- melt(mymatrix,variable.name = "Variable") %>% 
+    group_by(Var1) %>% 
+    dplyr::summarise(Count_value_0 = sum(value == 0),
+                     Count_value_1 = sum(value == 1),
+                     Count_value_2 = sum(value == 2),
+                     Prevalence_value_0 = round(Count_value_0/n(),3),
+                     Prevalence_value_1 = round(Count_value_1/n(),3),
+                     Prevalence_value_2 = round(Count_value_2/n(),3)
+  ) %>% as.data.frame()
+  # Var1 Value_0 Value_1 Value_2 Value_0_prevalence Value_1_prevalence Value_2_prevalence
+  # names(out) <- c("Variable")
+  out
+}
+
 prevalence_threshold = 0.2
 
 # Create additional datasets
-
 # Gold star
 data_g0.m <- data.m[,data.m["Gold Star",] == 0]
 data_g1.m <- data.m[,data.m["Gold Star",] == 1]
@@ -136,6 +148,19 @@ data_n12_combined.m <- data_n0_12_combined.m[,data_n0_12_combined.m["Nose",] == 
 # melt(apply(data.m, 1, sum))
 # melt(apply(data_n2.m, 1, sum))
 # dim(data.m)
+
+# Summarise each dataset and write to file
+write.csv(x = get_data_summary(data.m),file = "culture_paper_analysis/results/All_samples/All_samples_data_set_summary.csv",quote = F,row.names = F)
+write.csv(x = get_data_summary(data_g0.m),file = "culture_paper_analysis/results/Gold_0/Gold_0_data_set_summary.csv",quote = F,row.names = F)
+write.csv(x = get_data_summary(data_g1.m),file = "culture_paper_analysis/results/Gold_1/Gold_1_data_set_summary.csv",quote = F,row.names = F)
+write.csv(x = get_data_summary(data_n0.m),file = "culture_paper_analysis/results/Nose_0/Nose_0_data_set_summary.csv",quote = F,row.names = F)
+write.csv(x = get_data_summary(data_n1.m),file = "culture_paper_analysis/results/Nose_1/Nose_1_data_set_summary.csv",quote = F,row.names = F)
+write.csv(x = get_data_summary(data_n2.m),file = "culture_paper_analysis/results/Nose_2/Nose_2_data_set_summary.csv",quote = F,row.names = F)
+write.csv(x = get_data_summary(data_n01.m),file = "culture_paper_analysis/results/Nose_0_1/Nose_0_1_data_set_summary.csv",quote = F,row.names = F)
+write.csv(x = get_data_summary(data_n02.m),file = "culture_paper_analysis/results/Nose_0_2/Nose_0_2_data_set_summary.csv",quote = F,row.names = F)
+write.csv(x = get_data_summary(data_n12.m),file = "culture_paper_analysis/results/Nose_1_2/Nose_1_2_data_set_summary.csv",quote = F,row.names = F)
+write.csv(x = get_data_summary(data_n0_12_combined.m),file = "culture_paper_analysis/results/Nose_0_12_combined/Nose_0_12_combined_data_set_summary.csv",quote = F,row.names = F)
+write.csv(x = get_data_summary(data_n12_combined.m),file = "culture_paper_analysis/results/Nose_12_combined/Nose_12_combined_data_set_summary.csv",quote = F,row.names = F)
 
 # Now that the individual datasets have been created, remove variables that are not prevalent enough
 data.m <- data.m[calculate_prevalences(data.m) > prevalence_threshold,,drop =F]
@@ -472,9 +497,148 @@ correlation_network.l <- generate_correlation_network(cor_matrix = cor_n0_12_com
                                                       filename="culture_paper_analysis/results/Nose_0_12_combined/networks/Nose_0_12_combined_correlation_graph.pdf",
                                                       myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
 
+# ----------------------------------------------------------------
+# Corrplots
+source("code/helper_functions.R")
+plot_corrplot(correlation_matrix = cor.m,
+              p_value_matrix = cor_pval.m,
+              method = "color",
+              label_size = 1,
+              p_value_threshold = .05,
+              plot_title_size = .6,plot_height = 10, plot_width = 10,
+              insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
+              to_exclude = c("Nose","Gold Star"),
+              pairs_to_na = edges_to_remove.df,
+              file_type = "pdf",
+              make_insig_na = F,
+              filename = "culture_paper_analysis/results/All_samples/corrplots/All_samples_corrplot.pdf")
 
-# TODO make corrplots for each datasets
-# TODO get numbers per dataset
-plot_corrplot(correlation_matrix = cor_g1.m,label_size = .5,
-              p_value_matrix = cor_pval_g1.m,p_value_threshold = 0.05)
+plot_corrplot(correlation_matrix = cor_g0.m,
+              p_value_matrix = cor_pval_g0.m,
+              method = "color",
+              label_size = 1,
+              p_value_threshold = 0.05,
+              plot_title_size = .6,plot_height = 10, plot_width = 10,
+              insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
+              to_exclude = c("Nose","Gold Star"),
+              pairs_to_na = edges_to_remove.df,
+              file_type = "pdf",
+              make_insig_na = F,
+              filename = "culture_paper_analysis/results/Gold_0/corrplots/Gold_0_corrplot.pdf")
 
+plot_corrplot(correlation_matrix = cor_g1.m,
+              p_value_matrix = cor_pval_g1.m,
+              method = "color",
+              label_size = 1,
+              p_value_threshold = 0.05,
+              plot_title_size = 2,plot_height = 10, plot_width = 10,
+              insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
+              to_exclude = c("Nose","Gold Star"),
+              pairs_to_na = edges_to_remove.df,
+              file_type = "pdf",
+              make_insig_na = T,
+              filename = "culture_paper_analysis/results/Gold_1/corrplots/Gold_1_corrplot.pdf")
+
+plot_corrplot(correlation_matrix = cor_n0.m,
+              p_value_matrix = cor_pval_n0.m,
+              method = "color",
+              label_size = 1,
+              p_value_threshold = 0.05,
+              plot_title_size = .6,plot_height = 10, plot_width = 10,
+              insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
+              to_exclude = c("Nose","Gold Star"),
+              pairs_to_na = edges_to_remove.df,
+              file_type = "pdf",
+              make_insig_na = F,
+              filename = "culture_paper_analysis/results/Nose_0/corrplots/Nose_0_corrplot.pdf")
+
+plot_corrplot(correlation_matrix = cor_n1.m,
+              p_value_matrix = cor_pval_n1.m,
+              method = "color",
+              label_size = 1,
+              p_value_threshold = 0.05,
+              plot_title_size = .6,plot_height = 10, plot_width = 10,
+              insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
+              to_exclude = c("Nose","Gold Star"),
+              pairs_to_na = edges_to_remove.df,
+              file_type = "pdf",
+              make_insig_na = F,
+              filename = "culture_paper_analysis/results/Nose_1/corrplots/Nose_1_corrplot.pdf")
+
+plot_corrplot(correlation_matrix = cor_n2.m,
+              p_value_matrix = cor_pval_n2.m,
+              method = "color",
+              label_size = 1,
+              p_value_threshold = 0.05,
+              plot_title_size = .6,plot_height = 10, plot_width = 10,
+              insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
+              to_exclude = c("Nose","Gold Star"),
+              pairs_to_na = edges_to_remove.df,
+              file_type = "pdf",
+              make_insig_na = F,
+              filename = "culture_paper_analysis/results/Nose_2/corrplots/Nose_2_corrplot.pdf")
+
+plot_corrplot(correlation_matrix = cor_n01.m,
+              p_value_matrix = cor_pval_n01.m,
+              method = "color",
+              label_size = 1,
+              p_value_threshold = 0.05,
+              plot_title_size = .6,plot_height = 10, plot_width = 10,
+              insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
+              to_exclude = c("Nose","Gold Star"),
+              pairs_to_na = edges_to_remove.df,
+              file_type = "pdf",
+              make_insig_na = F,
+              filename = "culture_paper_analysis/results/Nose_0_1/corrplots/Nose_0_1_corrplot.pdf")
+
+plot_corrplot(correlation_matrix = cor_n02.m,
+              p_value_matrix = cor_pval_n02.m,
+              method = "color",
+              label_size = 1,
+              p_value_threshold = 0.05,
+              plot_title_size = .6,plot_height = 10, plot_width = 10,
+              insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
+              to_exclude = c("Nose","Gold Star"),
+              pairs_to_na = edges_to_remove.df,
+              file_type = "pdf",
+              make_insig_na = F,
+              filename = "culture_paper_analysis/results/Nose_0_2/corrplots/Nose_0_2_corrplot.pdf")
+
+plot_corrplot(correlation_matrix = cor_n12.m,
+              p_value_matrix = cor_pval_n12.m,
+              method = "color",
+              label_size = 1,
+              p_value_threshold = 0.05,
+              plot_title_size = .6,plot_height = 10, plot_width = 10,
+              insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
+              to_exclude = c("Nose","Gold Star"),
+              pairs_to_na = edges_to_remove.df,
+              file_type = "pdf",
+              make_insig_na = F,
+              filename = "culture_paper_analysis/results/Nose_1_2/corrplots/Nose_1_2_corrplot.pdf")
+
+plot_corrplot(correlation_matrix = cor_n12_combined.m,
+              p_value_matrix = cor_pval_n12_combined.m,
+              method = "color",
+              label_size = 1,
+              p_value_threshold = 0.05,
+              plot_title_size = .6,plot_height = 10, plot_width = 10,
+              insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
+              to_exclude = c("Nose","Gold Star"),
+              pairs_to_na = edges_to_remove.df,
+              file_type = "pdf",
+              make_insig_na = F,
+              filename = "culture_paper_analysis/results/Nose_12_combined/corrplots/Nose_12_combined_corrplot.pdf")
+
+plot_corrplot(correlation_matrix = cor_n0_12_combined.m,
+              p_value_matrix = cor_pval_n0_12_combined.m,
+              method = "color",
+              label_size = 1,
+              p_value_threshold = 0.05,
+              plot_title_size = .6,plot_height = 10, plot_width = 10,
+              insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
+              to_exclude = c("Nose","Gold Star"),
+              pairs_to_na = edges_to_remove.df,
+              file_type = "pdf",
+              make_insig_na = F,
+              filename = "culture_paper_analysis/results/Nose_0_12_combined/corrplots/Nose_0_12_combined_corrplot.pdf")
