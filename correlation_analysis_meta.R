@@ -509,9 +509,9 @@ plot_corrplot(correlation_matrix = cor.m,
               insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
               to_exclude = c("Nose","Gold Star"),
               pairs_to_na = edges_to_remove.df,
-              file_type = "pdf",
-              make_insig_na = F,
-              filename = "culture_paper_analysis/results/All_samples/corrplots/All_samples_corrplot.pdf")
+              file_type = "svg",
+              make_insig_na = T,
+              filename = "culture_paper_analysis/results/All_samples/corrplots/All_samples_corrplot.svg")
 
 plot_corrplot(correlation_matrix = cor_g0.m,
               p_value_matrix = cor_pval_g0.m,
@@ -522,9 +522,9 @@ plot_corrplot(correlation_matrix = cor_g0.m,
               insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
               to_exclude = c("Nose","Gold Star"),
               pairs_to_na = edges_to_remove.df,
-              file_type = "pdf",
-              make_insig_na = F,
-              filename = "culture_paper_analysis/results/Gold_0/corrplots/Gold_0_corrplot.pdf")
+              file_type = "svg",
+              make_insig_na = T,
+              filename = "culture_paper_analysis/results/Gold_0/corrplots/Gold_0_corrplot.svg")
 
 plot_corrplot(correlation_matrix = cor_g1.m,
               p_value_matrix = cor_pval_g1.m,
@@ -535,9 +535,9 @@ plot_corrplot(correlation_matrix = cor_g1.m,
               insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
               to_exclude = c("Nose","Gold Star"),
               pairs_to_na = edges_to_remove.df,
-              file_type = "pdf",
+              file_type = "svg",
               make_insig_na = T,
-              filename = "culture_paper_analysis/results/Gold_1/corrplots/Gold_1_corrplot.pdf")
+              filename = "culture_paper_analysis/results/Gold_1/corrplots/Gold_1_corrplot.svg")
 
 plot_corrplot(correlation_matrix = cor_n0.m,
               p_value_matrix = cor_pval_n0.m,
@@ -548,9 +548,9 @@ plot_corrplot(correlation_matrix = cor_n0.m,
               insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
               to_exclude = c("Nose","Gold Star"),
               pairs_to_na = edges_to_remove.df,
-              file_type = "pdf",
-              make_insig_na = F,
-              filename = "culture_paper_analysis/results/Nose_0/corrplots/Nose_0_corrplot.pdf")
+              file_type = "svg",
+              make_insig_na = T,
+              filename = "culture_paper_analysis/results/Nose_0/corrplots/Nose_0_corrplot.svg")
 
 plot_corrplot(correlation_matrix = cor_n1.m,
               p_value_matrix = cor_pval_n1.m,
@@ -561,9 +561,9 @@ plot_corrplot(correlation_matrix = cor_n1.m,
               insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
               to_exclude = c("Nose","Gold Star"),
               pairs_to_na = edges_to_remove.df,
-              file_type = "pdf",
-              make_insig_na = F,
-              filename = "culture_paper_analysis/results/Nose_1/corrplots/Nose_1_corrplot.pdf")
+              file_type = "svg",
+              make_insig_na = T,
+              filename = "culture_paper_analysis/results/Nose_1/corrplots/Nose_1_corrplot.svg")
 
 plot_corrplot(correlation_matrix = cor_n2.m,
               p_value_matrix = cor_pval_n2.m,
@@ -574,9 +574,9 @@ plot_corrplot(correlation_matrix = cor_n2.m,
               insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
               to_exclude = c("Nose","Gold Star"),
               pairs_to_na = edges_to_remove.df,
-              file_type = "pdf",
-              make_insig_na = F,
-              filename = "culture_paper_analysis/results/Nose_2/corrplots/Nose_2_corrplot.pdf")
+              file_type = "svg",
+              make_insig_na = T,
+              filename = "culture_paper_analysis/results/Nose_2/corrplots/Nose_2_corrplot.svg")
 
 plot_corrplot(correlation_matrix = cor_n01.m,
               p_value_matrix = cor_pval_n01.m,
@@ -587,9 +587,9 @@ plot_corrplot(correlation_matrix = cor_n01.m,
               insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
               to_exclude = c("Nose","Gold Star"),
               pairs_to_na = edges_to_remove.df,
-              file_type = "pdf",
-              make_insig_na = F,
-              filename = "culture_paper_analysis/results/Nose_0_1/corrplots/Nose_0_1_corrplot.pdf")
+              file_type = "svg",
+              make_insig_na = T,
+              filename = "culture_paper_analysis/results/Nose_0_1/corrplots/Nose_0_1_corrplot.svg")
 
 plot_corrplot(correlation_matrix = cor_n02.m,
               p_value_matrix = cor_pval_n02.m,
@@ -600,9 +600,9 @@ plot_corrplot(correlation_matrix = cor_n02.m,
               insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
               to_exclude = c("Nose","Gold Star"),
               pairs_to_na = edges_to_remove.df,
-              file_type = "pdf",
-              make_insig_na = F,
-              filename = "culture_paper_analysis/results/Nose_0_2/corrplots/Nose_0_2_corrplot.pdf")
+              file_type = "svg",
+              make_insig_na = T,
+              filename = "culture_paper_analysis/results/Nose_0_2/corrplots/Nose_0_2_corrplot.svg")
 
 plot_corrplot(correlation_matrix = cor_n12.m,
               p_value_matrix = cor_pval_n12.m,
@@ -613,9 +613,9 @@ plot_corrplot(correlation_matrix = cor_n12.m,
               insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
               to_exclude = c("Nose","Gold Star"),
               pairs_to_na = edges_to_remove.df,
-              file_type = "pdf",
-              make_insig_na = F,
-              filename = "culture_paper_analysis/results/Nose_1_2/corrplots/Nose_1_2_corrplot.pdf")
+              file_type = "svg",
+              make_insig_na = T,
+              filename = "culture_paper_analysis/results/Nose_1_2/corrplots/Nose_1_2_corrplot.svg")
 
 plot_corrplot(correlation_matrix = cor_n12_combined.m,
               p_value_matrix = cor_pval_n12_combined.m,
@@ -626,9 +626,9 @@ plot_corrplot(correlation_matrix = cor_n12_combined.m,
               insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
               to_exclude = c("Nose","Gold Star"),
               pairs_to_na = edges_to_remove.df,
-              file_type = "pdf",
-              make_insig_na = F,
-              filename = "culture_paper_analysis/results/Nose_12_combined/corrplots/Nose_12_combined_corrplot.pdf")
+              file_type = "svg",
+              make_insig_na = T,
+              filename = "culture_paper_analysis/results/Nose_12_combined/corrplots/Nose_12_combined_corrplot.svg")
 
 plot_corrplot(correlation_matrix = cor_n0_12_combined.m,
               p_value_matrix = cor_pval_n0_12_combined.m,
@@ -639,6 +639,6 @@ plot_corrplot(correlation_matrix = cor_n0_12_combined.m,
               insig = "pch", insig_pch_col = "grey20",plot_title = "", insig_pch = 4,
               to_exclude = c("Nose","Gold Star"),
               pairs_to_na = edges_to_remove.df,
-              file_type = "pdf",
-              make_insig_na = F,
-              filename = "culture_paper_analysis/results/Nose_0_12_combined/corrplots/Nose_0_12_combined_corrplot.pdf")
+              file_type = "svg",
+              make_insig_na = T,
+              filename = "culture_paper_analysis/results/Nose_0_12_combined/corrplots/Nose_0_12_combined_corrplot.svg")
