@@ -157,11 +157,12 @@ generate_taxa_summary <- function(mydata, taxa_column, group_by_columns = NULL){
                      Max_read_count = max(Read_count),
                      Summed_read_count = sum(Read_count),
                      
-                     Mean_relative_abundance = round(mean(Relative_abundance), 5),
+                     Mean_relative_abundance_non_zero = round(mean(Relative_abundance), 5),
+                     Mean_relative_abundance = round(sum(Relative_abundance)/N_total_samples_in_group, 5),
                      Median_relative_abundance = round(median(Relative_abundance), 5),
                      Min_relative_abundance = round(min(Relative_abundance),5),
                      Max_relative_abundance = round(max(Relative_abundance),5),
-                     Summed_relative_abundance = round(sum(Relative_abundance),5),
+                     Summed_relative_abundance = round(sum(Relative_abundance),5)
     ) %>%
     as.data.frame()
   return(taxa_group_summary)
@@ -186,15 +187,15 @@ filter_summary_to_top_n <- function(taxa_summary, grouping_variables, abundance_
 generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palette, limits = NULL, filename = NULL, include_legend = T, add_spider = F, add_ellipse = F,
                          point_alpha = 1, plot_width = 10, plot_height=10, point_size = 0.8, point_line_thickness = 1,
                          label_sites = F, label_species = F,
-                         legend_x = NULL, legend_y = NULL, legend_x_offset = 0, legend_y_offset = 0,title_cex = 1,
-                         legend_cex = 0.6,
+                         legend_x = NULL, legend_y = NULL, legend_x_offset = 0, legend_y_offset = 0,legend_cex = 0.6,
+                         title_cex = 1,
                          plot_spiders = NULL, plot_ellipses = NULL,plot_hulls = NULL, legend_cols = 2, legend_title = NULL,
                          label_ellipse = F, ellipse_label_size = 0.5, ellipse_border_width = 1,variable_colours_available = F, 
-                         plot_title = NULL, use_shapes = F, my_levels = NULL,
+                         plot_title = NULL, use_shapes = F, variable_shapes_available = F, my_levels = NULL,
                          plot_arrows = F, arrow_colour = "black", arrow_alpha = 1,
                          label_arrows=T,arrow_label_size = .5, num_top_species = 5, arrow_scalar = 1,
                          arrow_label_colour = "black", arrow_thickness = .2,arrow_label_font_type = 1,
-                         specie_labeller_function = NULL, arrow_label_offset = 0,
+                         specie_labeller_function = NULL, arrow_label_offset = 0,file_type = "pdf",
                          show_x_label = T,show_y_label = T,plot_x_ticks = T, plot_y_ticks = T,
                          plot_x_tick_labels = T, plot_y_tick_labels = T){
   pca.scores <- try(scores(pca_object, choices=c(1,2,3)))
@@ -249,7 +250,13 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
   # ------------------------------------------------------------------------------------
   
   if (!is.null(filename)){
-    pdf(filename, height=plot_height,width=plot_width)  
+    if (file_type == "pdf"){
+      pdf(file = filename,height = plot_height, width = plot_width)
+    } else if (file_type == "svg"){
+      # Cairo::CairoSVG(file = filename,width = plot_width,height = plot_height)
+      svg(filename = filename,height = plot_height, width = plot_width)
+      # svglite(file = filename,height = plot_height, width = plot_width)
+    }
   }
   
   plot(0,
@@ -262,7 +269,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
        xaxt = "n",
        yaxt = "n",
        # frame.plot = F,
-       frame.plot = T,
+       frame.plot = T
   )
   # xaxt = ifelse(plot_x_ticks, "s","n"),
   # yaxt = ifelse(plot_y_ticks, "s","n"))
@@ -271,7 +278,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
   grid(NULL,NULL, lty = 2, lwd = 1, col = "grey80")
   
   # Add axes 
-  axis(side = 1, labels = ifelse(plot_x_tick_labels, T, F), tck = -0.01,tick = ifelse(plot_x_ticks,T,F),)
+  axis(side = 1, labels = ifelse(plot_x_tick_labels, T, F), tck = -0.01,tick = ifelse(plot_x_ticks,T,F))
   axis(side = 2, labels = ifelse(plot_y_tick_labels, T, F), tck = -0.01, tick = ifelse(plot_x_ticks,T,F))
   # box(which = "plot", lty = "solid")
   
@@ -288,8 +295,16 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
     variable_colours <- setNames(colour_palette[1:length(variable_values)], variable_values)  
   }
   if (use_shapes == T){
-    # variable_shapes <- setNames(c(25,24,23,22,21,8,6,5,4,3,2,1)[1:length(variable_values)],variable_values)
-    variable_shapes <- setNames(rep(c(25,24,23,22,21),length(variable_values))[1:length(variable_values)],variable_values)
+    if (variable_shapes_available == T){
+      shape_col_name <- paste0(variable_to_plot, "_shape")
+      variable_shapes <- setNames(unique(metadata_ordered.df[[shape_col_name]]), 
+                                  as.character(unique(metadata_ordered.df[[variable_to_plot]])))
+      
+    }
+    else{
+      # variable_shapes <- setNames(c(25,24,23,22,21,8,6,5,4,3,2,1)[1:length(variable_values)],variable_values)
+      variable_shapes <- setNames(rep(c(25,24,23,22,21),length(variable_values))[1:length(variable_values)],variable_values)      
+    }
   } else{
     variable_shapes <- setNames(rep(c(21),length(variable_values))[1:length(variable_values)],variable_values)  
   }
@@ -566,7 +581,7 @@ generate_pca <- function(pca_object, mymetadata, variable_to_plot, colour_palett
       # pt.cex = 0.6,
       pt.lwd = point_line_thickness,
       y.intersp =1,
-      x.intersp =1,
+      x.intersp =1
     )  
   }
   
@@ -639,7 +654,7 @@ calculate_PC_abundance_correlations <- function(pca_object, mydata.df, taxa_colu
 
 # Function to create heatmap
 make_heatmap <- function(myheatmap_matrix,
-                         mymetadata,
+                         mymetadata = NULL,
                          filename= NULL,
                          #...,
                          # Dataframe with two columns. First must match row entry, second the new label
@@ -653,7 +668,7 @@ make_heatmap <- function(myheatmap_matrix,
                          plot_width =10,
                          column_title_size = 10,
                          row_title_size = 10,
-                         annotation_name_size = 10,
+                         annotation_bar_name_size = 10,
                          variables = NULL, # Annotations
                          cluster_columns = T,
                          cluster_rows = T,
@@ -675,6 +690,15 @@ make_heatmap <- function(myheatmap_matrix,
                          # and above white
                          cell_fun_value_col_threshold = 15,
                          my_cell_fun = NULL,
+                         show_legend = T,
+                         show_top_annotation = T,
+                         row_name_size = 6,
+                         col_name_size = 6,
+                         col_annotation_label_size = 6,
+                         col_annotation_title_size = 6,
+                         col_annotation_legend_grid_height = .2,
+                         col_annotation_legend_grid_width = .2,
+                         grid_thickness = 1,
                          ...){
   # print(list(...))
   argList<-list(...) # argument list for checking unspecified optional parameters
@@ -684,66 +708,86 @@ make_heatmap <- function(myheatmap_matrix,
   # Assign internal objects
   internal_heatmap_matrix.m <- myheatmap_matrix
   internal_metadata.df <- mymetadata
-  # Order/filter the heatmap matrix to order/entries of metadata
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,rownames(internal_metadata.df),drop = F]
-  # Order the heatmap matrix by the variables
-  internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,do.call(order, internal_metadata.df[,variables,drop=F]),drop =F]
-  # Order the metadata by the variables
-  internal_metadata.df <- internal_metadata.df[do.call(order, internal_metadata.df[,variables,drop=F]),,drop=F]
-  # Create metadata just containing the variables
-  metadata_just_variables <- internal_metadata.df[,variables, drop = F]
-  # Check that rownames match colnames
-  if (!all(rownames(internal_metadata.df) == colnames(internal_heatmap_matrix.m))){
-    stop("Row names in metadata do not match column names in matrix")
-  }
   
-  # Create annotations
-  colour_lists <- list()
-  for (myvar in variables){
-    var_colour_name <- paste0(myvar, "_colour")
-    # Assumes there is a colour column for each variable in the metadata
-    # If there is no colour column, create one and assign from palette
-    # internal_colour_palette_10_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486900","#c655a0","#00d1b6","#ff4431","#aeb85c","#7e7fc8")
-    # internal_colour_palette_10_distinct <- my_colour_palette_20_distinct
-    if (is.null(my_annotation_palette)){
-      internal_colour_palette <- my_colour_palette_206_distinct
-    } else{
-      internal_colour_palette <- my_annotation_palette
+  if (!is.null(internal_metadata.df)){
+    # Order/filter the heatmap matrix to order/entries of metadata
+    internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,rownames(internal_metadata.df),drop = F]
+    
+    if (!is.null(variables)){
+      # Order the heatmap matrix by the variables
+      internal_heatmap_matrix.m <- internal_heatmap_matrix.m[,do.call(order, internal_metadata.df[,variables,drop=F]),drop =F]
+      # Order the metadata by the variables
+      internal_metadata.df <- internal_metadata.df[do.call(order, internal_metadata.df[,variables,drop=F]),,drop=F]
+      # Create metadata just containing the variables
+      metadata_just_variables <- internal_metadata.df[,variables, drop = F]    
     }
-    if (!var_colour_name %in% names(internal_metadata.df)){
-      myvar_values <- factor(as.character(sort(unique(internal_metadata.df[,myvar]))))
-      myvar_colours <- setNames(internal_colour_palette[1:length(myvar_values)], myvar_values)
-      all_variable_colours <- as.character(lapply(as.character(internal_metadata.df[,myvar]), function(x) myvar_colours[x]))
-      internal_metadata.df[,paste0(myvar,"_colour")] <- all_variable_colours
+    # Check that rownames match colnames
+    if (!all(rownames(internal_metadata.df) == colnames(internal_heatmap_matrix.m))){
+      stop("Row names in metadata do not match column names in matrix")
     }
     
-    metadata_subset <- unique(internal_metadata.df[,c(myvar, var_colour_name)])
-    # Order by the variable column
-    metadata_subset <- metadata_subset[order(metadata_subset[,myvar]),]
-    # Factorise the variable column
-    metadata_subset[,myvar] <- factor(metadata_subset[,myvar])
-    metadata_subset <- metadata_subset[!is.na(metadata_subset[,myvar]),]
-    named_colour_list <- setNames(as.character(metadata_subset[, var_colour_name]), as.character(metadata_subset[,myvar]))
-    colour_lists[[myvar]] <- named_colour_list
+    # Create annotations
+    colour_lists <- list()
+    for (myvar in variables){
+      var_colour_name <- paste0(myvar, "_colour")
+      # Assumes there is a colour column for each variable in the metadata
+      # If there is no colour column, create one and assign from palette
+      # internal_colour_palette_10_distinct <- c("#8eec45","#0265e8","#f6a800","#bf6549","#486900","#c655a0","#00d1b6","#ff4431","#aeb85c","#7e7fc8")
+      # internal_colour_palette_10_distinct <- my_colour_palette_20_distinct
+      if (is.null(my_annotation_palette)){
+        internal_colour_palette <- my_colour_palette_206_distinct
+      } else{
+        internal_colour_palette <- my_annotation_palette
+      }
+      if (!var_colour_name %in% names(internal_metadata.df)){
+        myvar_values <- factor(as.character(sort(unique(internal_metadata.df[,myvar]))))
+        myvar_colours <- setNames(internal_colour_palette[1:length(myvar_values)], myvar_values)
+        all_variable_colours <- as.character(lapply(as.character(internal_metadata.df[,myvar]), function(x) myvar_colours[x]))
+        internal_metadata.df[,paste0(myvar,"_colour")] <- all_variable_colours
+      }
+      
+      metadata_subset <- unique(internal_metadata.df[,c(myvar, var_colour_name)])
+      # Order by the variable column
+      metadata_subset <- metadata_subset[order(metadata_subset[,myvar]),]
+      # Factorise the variable column
+      metadata_subset[,myvar] <- factor(metadata_subset[,myvar])
+      metadata_subset <- metadata_subset[!is.na(metadata_subset[,myvar]),]
+      named_colour_list <- setNames(as.character(metadata_subset[, var_colour_name]), as.character(metadata_subset[,myvar]))
+      colour_lists[[myvar]] <- named_colour_list
+    }
+    
+    # Appearance of the column annotations
+    #HeatmapAnnotation
+    if (show_top_annotation == T){
+      if(is.null(variables)){
+        print("No variables specified, cannot add annotations")
+        show_top_annotation <- F
+      } else{
+        ha <- columnAnnotation(df = metadata_just_variables,
+                               # which = "column",
+                               col = colour_lists,
+                               gp = gpar(col = "black",lwd =.2),
+                               gap = unit(.1,"cm"),
+                               show_annotation_name = T,
+                               # annotation_legend_param, # ?color_mapping_legend for options
+                               show_legend = show_legend,
+                               simple_anno_size = simple_anno_size,
+                               annotation_legend_param = list(labels_gp = gpar(fontsize = col_annotation_label_size),
+                                                              title_gp = gpar(fontsize = col_annotation_title_size),
+                                                              grid_height = unit(col_annotation_legend_grid_height,"cm"),
+                                                              grid_width = unit(col_annotation_legend_grid_width,"cm")),
+                               annotation_name_gp = gpar(fontsize = annotation_bar_name_size))      
+      }
+      # HeatmapAnnotation(annotation_)
+      # ?color_mapping_legend
+      
+    }
   }
   
-  # Appearance of the column annotations
-  ha <- HeatmapAnnotation(df = metadata_just_variables,
-                          which = "column",
-                          col = colour_lists,
-                          gp = gpar(col = "black",lwd =.2),
-                          gap = unit(.1,"cm"),
-                          show_annotation_name = T,
-                          # annotation_legend_param, # ?color_mapping_legend for options
-                          show_legend = T,
-                          simple_anno_size = simple_anno_size,
-                          annotation_name_gp = gpar(fontsize = annotation_name_size))
-  
   # TODO - add option for row annotation
-  
   if (is.null(my_palette)){
     if (is.null(palette_choice)) {palette_choice <- "blue"}
-    if (!palette_choice %in% c("blue", "purple","red")) { palette_choice <- "blue"}
+    if (!palette_choice %in% c("blue", "purple","red","dark_bluered","bluered")) { palette_choice <- "blue"}
     if (palette_choice == "blue"){
       my_palette <- colorRampPalette(c("white", "#ffffcc","#cce1b8", "#91cabc", "#61b4c1","#335fa5","#28387a", "#071447"))
     } 
@@ -751,7 +795,11 @@ make_heatmap <- function(myheatmap_matrix,
       my_palette <- colorRampPalette(c("white", "#f9cdac","#f3aca2", "#ee8b97", "#e96a8d","#db5087","#b8428c", "#973490", "#742796","#5e1f88", "#4d1a70", "#3d1459","#2d0f41"))
     } else if (palette_choice == "red"){
       my_palette <- colorRampPalette(c("white", "#fded86","#fde86e", "#f9d063", "#f5b857","#f0a04b","#eb8a40", "#e77235","#e35b2c", "#c74e29","#9d4429","#753c2c","#4c3430"))
-    } 
+    } else if (palette_choice == "dark_bluered"){
+      my_palette <- colorRampPalette(c("#08306B","#FFD92F","#67001F"))
+    } else if (palette_choice == "bluered"){
+      my_palette <- colorRampPalette(c("#17468a","#ffdd47","#99113a"))
+    }
   } else{
     my_palette <- colorRampPalette(my_palette)
   }
@@ -759,7 +807,6 @@ make_heatmap <- function(myheatmap_matrix,
   if (!is.null(my_breaks)){
     internal_breaks <- my_breaks
     col_fun <- circlize::colorRamp2(breaks = internal_breaks, colors = my_palette(length(internal_breaks)))
-    
   } else{
     internal_breaks <- seq(min(internal_heatmap_matrix.m), max(internal_heatmap_matrix.m), length.out = 6)
     col_fun <- circlize::colorRamp2(breaks = internal_breaks, colors = my_palette(length(internal_breaks)))
@@ -780,7 +827,6 @@ make_heatmap <- function(myheatmap_matrix,
     my_row_labels.v <- my_row_labels.v[order(my_row_labels.v)]    
   }
   
-
   # if show values and no function provided
   if (show_cell_values == T & is.null(my_cell_fun)){ 
     my_cell_fun <- function(j, i, x, y, width, height, fill) {
@@ -789,12 +835,45 @@ make_heatmap <- function(myheatmap_matrix,
         grid.text(sprintf("%.2f", internal_heatmap_matrix.m[i, j]), x, y, gp = gpar(fontsize = 6, col = "black"))}
       else if(internal_heatmap_matrix.m[i, j] >= cell_fun_value_col_threshold ) {
         grid.text(sprintf("%.2f", internal_heatmap_matrix.m[i, j]), x, y, gp = gpar(fontsize = 6, col = "white"))
-        }
+      }
     }
   }
+  
+  # Legend appearance
+  if (is.null(legend_labels)){
+    my_labels <- internal_breaks
+  } else{
+    my_labels <- legend_labels
+  }
+  if (discrete_legend == TRUE){
+    hm_legend <- Legend(
+      labels = rev(my_labels),
+      at = internal_breaks,
+      labels_gp = gpar(fontsize = 6),
+      legend_gp = gpar(fill = rev(col_fun(internal_breaks))), # For discrete
+      title_position = "leftcenter-rot",
+      title_gp = gpar(fontsize = 6,fontface = "bold"),
+      title = legend_title,
+      direction = "vertical",
+      border = "black"
+    )
+  } else{
+    hm_legend <- Legend(
+      col_fun = col_fun, # For continuous
+      labels = my_labels,
+      at = internal_breaks,
+      labels_gp = gpar(fontsize = 6),
+      title_position = "leftcenter-rot",
+      title_gp = gpar(fontsize = 6,fontface = "bold"),
+      title = legend_title,
+      direction = "vertical",
+      border = "black"
+    )
+  }
+  
   hm <- Heatmap(matrix = internal_heatmap_matrix.m,
                 
-                top_annotation = ha,
+                # top_annotation = ha,
                 
                 # Colours
                 col = col_fun,
@@ -802,6 +881,7 @@ make_heatmap <- function(myheatmap_matrix,
                 
                 # Sizing
                 show_heatmap_legend = F,
+                heatmap_legend_param = list(hm_legend),
                 row_names_max_width = unit(35,"cm"),
                 row_labels = my_row_labels.v,
                 column_labels = my_col_labels.v,
@@ -832,54 +912,26 @@ make_heatmap <- function(myheatmap_matrix,
                 
                 # Borders
                 border = F,
-                rect_gp = gpar(col = "white", lwd = 1),
+                rect_gp = gpar(col = "white", lwd = grid_thickness),
                 
                 # Text appearance
-                row_names_gp = gpar(fontsize = 6),
-                column_names_gp = gpar(fontsize = 6),
+                row_names_gp = gpar(fontsize = row_name_size),
+                column_names_gp = gpar(fontsize = col_name_size),
                 cell_fun = my_cell_fun,
                 ...
   )
   
-  # Legend appearance
-  if (is.null(legend_labels)){
-    my_labels <- internal_breaks
-  } else{
-    my_labels <- legend_labels
+  if (show_top_annotation == T & exists("ha")){
+    hm <- ha %v% hm
   }
-  if (discrete_legend == TRUE){
-    hm_legend <- Legend(
-      labels = rev(my_labels),
-      at = internal_breaks,
-      labels_gp = gpar(fontsize = 6),
-      legend_gp = gpar(fill = rev(col_fun(internal_breaks))), # For discrete
-      title_position = "leftcenter-rot",
-      title_gp = gpar(fontsize = 6),
-      title = legend_title,
-      direction = "vertical",
-      border = "black"
-    )
-  } else{
-    hm_legend <- Legend(
-      col_fun = col_fun, # For continuous
-      labels = my_labels,
-      at = internal_breaks,
-      labels_gp = gpar(fontsize = 6),
-      title_position = "leftcenter-rot",
-      title_gp = gpar(fontsize = 6),
-      title = legend_title,
-      direction = "vertical",
-      border = "black",
-    )
-  }
-  
   if (!is.null(filename)){
     pdf(filename,height=plot_height,width=plot_width)
-    draw(hm, annotation_legend_list = c(hm_legend))
+    draw(hm, annotation_legend_list = c(hm_legend),merge_legends =T)
     dev.off()    
   }
+  draw(hm, annotation_legend_list = c(hm_legend),merge_legends =T)
   return(list("heatmap" = hm, "legend" = hm_legend))
-
+  
 }
 
 
@@ -1527,7 +1579,9 @@ plot_corrplot <- function(correlation_matrix, p_value_matrix = NULL,
                           insig = "blank", insig_pch = 4, insig_pch_cex = 1, insig_pch_col = "black",
                           make_insig_na = F,
                           to_exclude = NULL, method = "circle", outline = T,
-                          label_colour = "black",
+                          label_colour = "black", 
+                          colour_label_size = 1,
+                          grid_colour = "black",
                           pairs_to_na = NULL, # Should be two column dataframe (row column / column row)
                           order = "hclust", col = NULL, file_type = "pdf"){
   
@@ -1598,13 +1652,13 @@ plot_corrplot <- function(correlation_matrix, p_value_matrix = NULL,
       svglite(file = filename,height = plot_height, width = plot_width)
     }
   }
-
+  
   corrplot(corr = cor.m,
            method = method,
            outline = outline,
            tl.col = label_colour,
            tl.cex = label_size,
-           addgrid.col = "black",
+           addgrid.col = grid_colour,
            # tl.srt = 45,
            # title = plot_title,
            col = col,
@@ -1623,6 +1677,7 @@ plot_corrplot <- function(correlation_matrix, p_value_matrix = NULL,
            pch.cex = insig_pch_cex,
            pch.col = insig_pch_col,
            cl.pos = 'r',
+           cl.cex = colour_label_size,
            
            mar=c(1,0,3,1))
   title(main = plot_title,cex.main = plot_title_size)
@@ -1648,7 +1703,8 @@ generate_significance_boxplots <- function(mydata.df, # Main dataframe
                                            sig_vjust = 0.03, # amount to vertically adjust the significance annotations
                                            sig_tip_length = 0.01, # length of tips on significance lines
                                            sig_linetype = 1, # linetype of significance lines
-                                           sig_colour = "grey20" # colour of significance lines
+                                           sig_colour = "grey20", # colour of significance lines
+                                           sig_line_starting_scale = 1.05
 ){
   # Requires ggplot and ggsignif packages
   
@@ -1674,7 +1730,7 @@ generate_significance_boxplots <- function(mydata.df, # Main dataframe
   }
   
   # Subset significances to the entries for variable of interest variable
-  sig_subset.df <- subset(significances.df, Variable == variable_column) %>% select(Variable, Group_1, Group_2,p_value_column)
+  sig_subset.df <- subset(significances.df, Variable == variable_column) %>% dplyr::select(Variable, Group_1, Group_2,p_value_column)
   
   # Filter to siginificant values
   sig_subset.df <- sig_subset.df[which(sig_subset.df[,p_value_column] < sig_threshold),]
@@ -1740,7 +1796,7 @@ generate_significance_boxplots <- function(mydata.df, # Main dataframe
   # sig_subset.df <- sig_subset.df[order(sig_subset.df$level_index_group_1),]
   # sig_subset.df <- sig_subset.df[order(sig_subset.df$level_index_group_2),]
   sig_subset.df <- sig_subset.df[order(sig_subset.df$level_distance),]
-  scale <- 1.05 # starting scale
+  scale <- sig_line_starting_scale # starting scale
   for (row in 1:nrow(sig_subset.df)){
     sig_subset.df[row, "y_position"] <- max(sig_subset.df[, "y_max"]) * scale
     scale <- scale + sig_line_scaling_percentage # increase scale value
