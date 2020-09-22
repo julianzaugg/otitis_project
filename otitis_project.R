@@ -337,7 +337,10 @@ discrete_variables <- c("Nose","Tympanic_membrane","Season","Community","Gold_St
 for (myvar in discrete_variables){
   myvar_values <- factor(as.character(sort(unique(metadata.df[,myvar]))))
   # myvar_colours <- setNames(my_colour_palette_soft_8[1:length(myvar_values)], myvar_values)
-  myvar_colours <- setNames(my_colour_palette_15[1:length(myvar_values)], myvar_values)
+  # myvar_colours <- setNames(my_colour_palette_15[1:length(myvar_values)], myvar_values)
+  myvar_colours <- setNames(brewer.pal(n = 8, name = "Dark2")[1:length(myvar_values)], myvar_values)
+  # myvar_colours <- setNames(brewer.pal(n = 8, name = "Set2")[1:length(myvar_values)], myvar_values)
+  
   all_variable_colours <- as.character(lapply(as.character(metadata.df[,myvar]), function(x) myvar_colours[x]))
   metadata.df[,paste0(myvar,"_colour")] <- all_variable_colours
 }
@@ -879,9 +882,6 @@ otu_prior_to_removing_low_read_count_samples_rel.m <- otu_rel.m
 dim(otu.m)
 otu.m <- otu.m[,colSums(otu.m) >= 2000]
 dim(otu.m)
-dim(otu.m)
-otu.m <- otu.m[,colSums(otu.m) >= 2000]
-dim(otu.m)
 
 # The might be many rows whose maximum is 0 at this point. Remove them.
 # dim(otu.m)
@@ -1067,8 +1067,8 @@ rownames(otu_rare.df) <- c()
 # Write the final otu counts and abundances to file
 write.table(otu.df, file = "Result_tables/count_tables/OTU_counts.csv", sep = ",", quote = F, col.names = T, row.names = F)
 write.table(otu_rel.df, file = "Result_tables/relative_abundance_tables/OTU_relative_abundances.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(otu_rare.df, file = "Result_tables/count_tables/OTU_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
-write.table(otu_rel_rare.df, file = "Result_tables/relative_abundance_tables/OTU_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# write.table(otu_rare.df, file = "Result_tables/count_tables/OTU_counts_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# write.table(otu_rel_rare.df, file = "Result_tables/relative_abundance_tables/OTU_relative_abundances_rarefied.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
 # NOTE - otu.df, otu.m, otu_rel.df and otu_rel.m are the final, filtered OTU count / relative abundance dataframes and matrices. These can be used
 # elsewhere for a variety of analyses at the OTU level, or, as is shown below, used to calculate abundances at different taxa levels

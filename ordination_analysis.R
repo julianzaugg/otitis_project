@@ -13,8 +13,9 @@ detachAllPackages()
 
 library(vegan)
 library(ggplot2)
-library(ggfortify)
+# library(ggfortify)
 
+source("code/helper_functions.R")
 
 
 ############################################################
@@ -55,32 +56,7 @@ common_theme <- theme(
   plot.title = element_text(size = 8))
 
 ######################## Functions #########################
-# For each rowname (OTU), get the corresponding taxonomy_species
-# Assumes "OTU.ID" and "taxonomy_species" columns in the provided map dataframe
-assign_taxonomy_to_otu <- function(otutable, taxon_map){
-  taxonomies <- c()
-  for (otuid in rownames(otutable)){
-    taxonomies <- c(taxonomies, as.character(taxon_map[taxon_map$OTU.ID == otuid,]$taxonomy_species))
-  }
-  return(taxonomies)
-}
 
-# Function that takes the metadata and a list of variables (column names) and returns those samples (rownames) with NA entries
-get_samples_missing_data <- function(my_metadata, variables){
-  samples_missing_data <- c()
-  for (name in variables) {
-    samples_missing_data <- c(samples_missing_data, rownames(my_metadata[is.na(my_metadata[[name]]),]))
-  }
-  return(unique(samples_missing_data))
-}
-
-bin_my_variable <- function(mydataframe, variable, breaks){
-  temp <- cut(mydataframe[,variable], breaks = breaks,dig.lab = 4)
-  temp <- gsub("\\(", "", temp)
-  temp <- gsub("\\]", "", temp)
-  temp <- gsub(",", "-", temp)
-  return(temp)
-}
 ############################################################
 
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_16S_project/")
@@ -88,21 +64,23 @@ source("code/helper_functions.R")
 
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
-metadata_decontaminated.df <- read.csv("Result_tables/other/processed_metadata_decontaminated.csv", sep =",", header = T)
 
 # Set the Index to be the rowname
 rownames(metadata.df) <- metadata.df$Index
-rownames(metadata_decontaminated.df) <- metadata_decontaminated.df$Index
 
 # Convert variables to factors
-# discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season",
-# "Nose","Otitis_status_OM_6mo", "Remote_Community_Otitis_status", "OM_6mo_Type_OM","Remote_Community_Season")
-discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose","OM_Classification", "Remote_Community_Season",
-                        "Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae",
-                        "Remote_Community_OM_Classification")
+discrete_variables <- c("Nose","Tympanic_membrane","Season","Community","Gold_Star","H.influenzae_culture","H.Influenzae_ND","H.Influenzae_1st_IQR",
+                        "H.Influenzae_2nd_to_3rd_IQR","H.Influenzae_more_than_3rd_IQR","M.catarrhalis_culture","M.catarrhalis_ND",
+                        "M.catarrhalis_1st_IQR","M.catarrhalis_2nd_to_3rd_IQR","M.catarrhalis_more_than_3rdrd_IQR","S.pneumoniae_culture",
+                        "S.pneumoniae_ND","S.pneumoniae_1st_IQR","S.pneumoniae_2nd_to_3rd_IQR","S.pneumoniae_more_than_3rdrd_IQR",
+                        "Corynebacterium_pseudodiphtheriticum","Dolosigranulum_pigrum","N_Adeno","N_WUKI","N_BOCA","N_COV_OC43","N_COV_NL63",
+                        "N_HKU_1","N_ENT","N_hMPV","N_PARA_1","N_PARA_2","N_RSV_A","N_RSV_B","N_HRV","N_FLU_B","N_FLU_A","Virus_any")
 
 metadata.df[discrete_variables] <- lapply(metadata.df[discrete_variables], factor)
-metadata_decontaminated.df[discrete_variables] <- lapply(metadata_decontaminated.df[discrete_variables], factor)
+
+# Need to factorise the colour columns as well
+colour_columns <- names(metadata.df)[grepl("colour", names(metadata.df))]
+metadata.df[colour_columns] <- lapply(metadata.df[colour_columns], factor)
 
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
@@ -111,16 +89,9 @@ otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", head
 otu.m <- as.matrix(read.csv("Result_tables/count_tables/OTU_counts.csv", header =T, row.names = 1))
 genus.m <-  as.matrix(read.csv("Result_tables/count_tables/Genus_counts.csv", header =T, row.names = 1))
 
-otu_decontaminated.m <- as.matrix(read.csv("Result_tables/count_tables/OTU_counts_decontaminated.csv", header =T, row.names = 1))
-genus_decontaminated.m <-  as.matrix(read.csv("Result_tables/count_tables/Genus_counts_decontaminated.csv", header =T, row.names = 1))
-
-colSums(otu.m)
 # Remove samples from the OTU table that are not in the filtered metadata
 otu.m <- otu.m[,colnames(otu.m) %in% c("OTU.ID", as.character(metadata.df$Index))]
 genus.m <- genus.m[,colnames(genus.m) %in% c("OTU.ID", as.character(metadata.df$Index))]
-
-otu_decontaminated.m <- otu_decontaminated.m[,colnames(otu_decontaminated.m) %in% c("OTU.ID", as.character(metadata_decontaminated.df$Index))]
-genus_decontaminated.m <- genus_decontaminated.m[,colnames(genus_decontaminated.m) %in% c("OTU.ID", as.character(metadata_decontaminated.df$Index))]
 
 
 # Remove samples from metadata that are not in the data
@@ -129,40 +100,26 @@ genus_decontaminated.m <- genus_decontaminated.m[,colnames(genus_decontaminated.
 
 # Order the metadata.df by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
-metadata_decontaminated.df <- metadata_decontaminated.df[order(metadata_decontaminated.df$Index),]
 
 # Order the matrices and metadata to be the same order
 metadata.df <- metadata.df[order(rownames(metadata.df)),]
-metadata_decontaminated.df <- metadata_decontaminated.df[order(rownames(metadata_decontaminated.df)),]
-
 otu.m <- otu.m[,order(rownames(metadata.df))]
 genus.m <- genus.m[,order(rownames(metadata.df))]
-otu_decontaminated.m <- otu_decontaminated.m[,order(rownames(metadata_decontaminated.df))]
-genus_decontaminated.m <- genus_decontaminated.m[,order(rownames(metadata_decontaminated.df))]
 
 # CLR transform the otu matrix.
 otu_clr.m <- clr(otu.m)
 genus_clr.m <- clr(genus.m)
-
-otu_clr_decontaminated.m <- clr(otu_decontaminated.m)
-genus_clr_decontaminated.m <- clr(genus_decontaminated.m)
-
-
-# If there are negative values, assign them a value of zero
-# otu_rare_clr_filtered.m[which(otu_rare_clr_filtered.m < 0)] <- 0
-# otu_clr_filtered.m[which(otu_clr_filtered.m < 0)] <- 0
 
 
 # --------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------
 # Ordination analysis
-
 otu_relabeller_function <- function(my_labels){
   taxonomy_strings <- unlist(lapply(my_labels, function(x) {
     as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$taxonomy_genus)
-           }
-    ))
+  }
+  ))
   unlist(lapply(taxonomy_strings, function(x) {
     phylostring <- unlist(strsplit(x, split = ";"))
     paste(phylostring[3], phylostring[6], sep = ";")
@@ -175,9 +132,26 @@ genus_relabeller_function <- function(my_labels){
                 function(x) {
                   phylostring <- unlist(strsplit(x, split = ";"))
                   # paste(phylostring[2],phylostring[3], phylostring[6], sep = ";")
-                  paste(phylostring[3], phylostring[6], sep = ";")
+                  # paste(phylostring[3], phylostring[6], sep = ";")
+                  paste(phylostring[5], phylostring[6], sep = ";")
+                  # paste(phylostring[6], sep = ";")
                 }))
 }
+
+first_resolved_taxonomy <- function(x) {
+  # Get the lowest taxonomy level (or 'first') that has been resolved from a taxonomy string
+  ranks.v <- unlist(strsplit(x, split = ';'))
+  for (i in length(ranks.v):1) {
+    split.v <- unlist(strsplit(ranks.v[i], split = '__'))
+    if (!is.na(split.v[2]) & split.v[2] != "") {
+      if (!grepl(split.v[2], pattern = "Unassigned|uncultured")) {
+        return(ranks.v[i])
+      }
+    }
+  }
+  return(ranks.v[1])
+}
+
 
 # --------------------
 # Generate PCA plots. If CLR transformed values with euclidean distances, these will be the same as
@@ -188,292 +162,159 @@ temp <- betadiver(t(otu_clr.m),method = "e")
 # temp$eig["PCoA2"] / sum(temp$eig)
 # plot(temp)
 
-# Generate ordination objects
+### Generate ordination objects
+# All samples
 otu_pca <- rda(t(otu_clr.m), data = metadata.df)
 genus_pca <- rda(t(genus_clr.m), data = metadata.df)
-otu_decontaminated_pca <- rda(t(otu_clr_decontaminated.m), data = metadata_decontaminated.df)
-genus_decontaminated_pca <- rda(t(genus_clr_decontaminated.m), data = metadata_decontaminated.df)
 
 
-source("code/helper_functions.R")
 # calculate_PC_taxa_contributions(genus_pca)
 otu_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata.csv",header = T)
-otu_data_decontaminated.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata_decontaminated.csv",header = T)
-
 genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv",header = T)
-genus_data_decontaminated.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata_decontaminated.csv",header = T)
 
-temp <- calculate_PC_abundance_correlations(genus_pca, mydata.df = genus_data.df,taxa_column = "taxonomy_genus",variables = discrete_variables)
-temp <- calculate_PC_abundance_correlations(genus_decontaminated_pca, mydata.df = genus_data_decontaminated.df,taxa_column = "taxonomy_genus",variables = discrete_variables)
-temp <- calculate_PC_abundance_correlations(otu_decontaminated_pca, mydata.df = otu_data_decontaminated.df,taxa_column = "OTU.ID",variables = discrete_variables)
-# temp %>% filter(N_Samples > 5)
-# temp <- rda(t(clr(t(rrarefy(t(genus_decontaminated.m[,colSums(genus_decontaminated.m) >= 3000]), 3000)))))
-# temp_meta <- metadata_decontaminated.df[rownames(temp$CA$u),]
-# par(mfrow=c(1, 2))
-# generate_pca(temp,  mymetadata = temp_meta,variable_to_plot = "Nose", colour_palette = my_colour_palette_15)
-# generate_pca(genus_decontaminated_pca,  mymetadata = metadata_decontaminated.df,variable_to_plot = "Nose", colour_palette = my_colour_palette_15)
-generate_pca(otu_pca, mymetadata = metadata.df,
-             plot_height = 5, plot_width = 5,
-             legend_x = -8, legend_y = 4,
-             # legend_x = -2, legend_y = 2,
-             point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-             legend_title = myvar,
-             legend_cex = .5,
-             plot_title = myvar,
-             limits = c(-8,5,-6,5),
-             plot_spiders = F,
-             plot_ellipses = F,
-             plot_hulls = F,
-             use_shapes = T,
-             ellipse_border_width = .5,
-             include_legend = T,
-             label_ellipse = F, ellipse_label_size = .3,
-             colour_palette = my_colour_palette_15,
-             variable_to_plot = "Remote_Community", legend_cols = 1,
-             variable_colours_available = T,
-             num_top_species = 3,
-             plot_arrows = T,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 1,arrow_thickness = .7,
-             label_arrows = T, arrow_label_size = .25, arrow_label_colour = "black", arrow_label_font_type = 1,
-             specie_labeller_function = otu_relabeller_function,arrow_label_offset = 0)
+temp <- calculate_PC_abundance_correlations(genus_pca, mydata.df = genus_data.df,
+                                            taxa_column = "taxonomy_genus",
+                                            variables = discrete_variables)
 
 
+
+generate_pca_plot(pca_object = genus_pca,
+                  my_metadata.df = metadata.df,
+                  # file_type = "pdf",
+                  # filename = paste0("Result_figures/pca_plots/genus/genus_",myvar, "_pca.pdf"),
+                  plot_height = 6,
+                  plot_width = 6,
+                  # plot_title = paste0("Genus PCA: ", myvar),
+                  
+                  variable_colours_available = T,
+                  variable_to_plot = "Community",
+                  point_line_thickness = 0.5,
+                  
+                  use_shapes = T,
+                  plot_spiders = F,
+                  label_sites = F,
+                  # label_spider = T,
+                  plot_hulls = F,
+                  axis_limits = c(-3,4.5,-3,4.5),
+                  
+                  include_legend = T,
+                  legend_columns = 1,
+                  legend_cex = .8,
+                  legend_x = 0,
+                  legend_y = 4.5,
+                  legend_title = gsub("_", " ", myvar),
+                  # legend_fill_colour = "grey",
+                  
+                  plot_arrows = T,
+                  num_top_species = 3,
+                  arrow_colour = "grey20",
+                  arrow_scalar = 1,
+                  arrow_label_colour = "midnightblue",
+                  arrow_label_font_type = 3,
+                  arrow_label_size = .7,
+                  arrow_thickness = 1,
+                  arrow_alpha = .5,
+                  specie_labeller_function = first_resolved_taxonomy,
+                  hide_grid =F
+)
+
+source("code/helper_functions.R")
 for (myvar in discrete_variables){
-  
-  # OTU, normal
-  generate_pca(otu_pca, mymetadata = metadata.df,
-               plot_height = 5, plot_width = 5,
-               legend_x = -8, legend_y = 4,
-               # legend_x = -2, legend_y = 2,
-               point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-               legend_title = myvar,
-               legend_cex = .5,
-               plot_title = myvar,
-               limits = c(-8,5,-6,5),
-               plot_spiders = F,
-               plot_ellipses = F,
-               plot_hulls = F,
-               use_shapes = T,
-               ellipse_border_width = .5,
-               include_legend = T,
-               label_ellipse = F, ellipse_label_size = .3,
-               colour_palette = my_colour_palette_15,
-               variable_to_plot = myvar, legend_cols = 1,
-               variable_colours_available = T,
-               num_top_species = 3,
-               plot_arrows = T,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 1,arrow_thickness = .7,
-               label_arrows = T, arrow_label_size = .25, arrow_label_colour = "black", arrow_label_font_type = 1,
-               specie_labeller_function = otu_relabeller_function,arrow_label_offset = 0,
-               filename = paste0("Result_figures/pca_plots/otu/otu_",myvar, "_pca.pdf"))
-
-  # Genus, normal
-  generate_pca(genus_pca, mymetadata = metadata.df,
-               plot_height = 5, plot_width = 5,
-               legend_x = -4, legend_y = 3,
-               # legend_x = -2, legend_y = 2,
-               point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-               legend_title = myvar,
-               legend_cex = .5,
-               plot_title = myvar,
-               limits = c(-4,6,-4,4),
-               plot_spiders = F,
-               plot_ellipses = F,
-               plot_hulls = F,
-               use_shapes = T,
-               ellipse_border_width = .5,
-               include_legend = T,
-               label_ellipse = F, ellipse_label_size = .3,
-               colour_palette = my_colour_palette_15,
-               variable_to_plot = myvar, legend_cols = 1,
-               variable_colours_available = T,
-               num_top_species = 3,
-               plot_arrows = T,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 1,arrow_thickness = .7,
-               label_arrows = T, arrow_label_size = .25, arrow_label_colour = "black", arrow_label_font_type = 1,
-               specie_labeller_function = genus_relabeller_function,
-               arrow_label_offset = 0,
-               filename = paste0("Result_figures/pca_plots/genus/genus_",myvar, "_pca.pdf"))
-  # OTU, decontaminated
-  generate_pca(otu_decontaminated_pca, mymetadata = metadata_decontaminated.df,
-               plot_height = 5, plot_width = 5,
-               legend_x = -8, legend_y = 4,
-               # legend_x = -2, legend_y = 2,
-               point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-               legend_title = myvar,
-               legend_cex = .5,
-               plot_title = myvar,
-               limits = c(-8,4,-8,4),
-               plot_spiders = F,
-               plot_ellipses = F,
-               plot_hulls = F,
-               use_shapes = T,
-               ellipse_border_width = .5,
-               include_legend = T,
-               label_ellipse = F, ellipse_label_size = .3,
-               colour_palette = my_colour_palette_15,
-               variable_to_plot = myvar, legend_cols = 1,
-               variable_colours_available = T,
-               num_top_species = 3,
-               plot_arrows = T,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 1,arrow_thickness = .7,
-               label_arrows = T, arrow_label_size = .25, arrow_label_colour = "black", arrow_label_font_type = 1,
-               specie_labeller_function = otu_relabeller_function,
-               arrow_label_offset = 0,
-               filename = paste0("Result_figures/pca_plots/otu_decontaminated/otu_decontaminated_",myvar, "_pca.pdf"))
-  # Genus, decontaminated
-  generate_pca(genus_decontaminated_pca, mymetadata = metadata_decontaminated.df,
-               plot_height = 5, plot_width = 5,
-               legend_x = -4, legend_y = 4,
-               # legend_x = -2, legend_y = 2,
-               point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-               legend_title = myvar,
-               legend_cex = .5,
-               plot_title = myvar,
-               limits = c(-4,6,-4,4),
-               plot_spiders = F,
-               plot_ellipses = F,
-               plot_hulls = F,
-               use_shapes = T,
-               ellipse_border_width = .5,
-               include_legend = T,
-               label_ellipse = F, ellipse_label_size = .3,
-               colour_palette = my_colour_palette_15,
-               variable_to_plot = myvar, legend_cols = 1,
-               variable_colours_available = T,
-               num_top_species = 3,
-               plot_arrows = T,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 1,arrow_thickness = .7,
-               label_arrows = T, arrow_label_size = .25, arrow_label_colour = "black", arrow_label_font_type = 1,
-               specie_labeller_function = genus_relabeller_function,
-               arrow_label_offset = 0,
-               filename = paste0("Result_figures/pca_plots/genus_decontaminated/genus_decontaminated_",myvar, "_pca.pdf"))
+  # print(myvar)
+  generate_pca_plot(pca_object = genus_pca,
+                    my_metadata.df = metadata.df,
+                    file_type = "pdf",
+                    filename = paste0("Result_figures/pca_plots/genus/genus_",myvar, "_pca.pdf"),
+                    plot_height = 6,
+                    plot_width = 6,
+                    plot_title = paste0("Genus PCA: ", myvar),
+                    
+                    variable_colours_available = T,
+                    variable_to_plot = myvar,
+                    point_line_thickness = 0.5,
+                    
+                    use_shapes = T,
+                    plot_spiders = F,
+                    label_sites = F,
+                    # label_spider = T,
+                    plot_hulls = F,
+                    axis_limits = c(-3,4.5,-3,4.5),
+                    
+                    include_legend = T,
+                    legend_columns = 1,
+                    legend_cex = .8,
+                    legend_x = 0,
+                    legend_y = 4.5,
+                    legend_title = gsub("_", " ", myvar),
+                    # legend_fill_colour = "grey",
+                    
+                    plot_arrows = T,
+                    num_top_species = 3,
+                    arrow_colour = "grey20",
+                    arrow_scalar = 1,
+                    arrow_label_colour = "midnightblue",
+                    arrow_label_font_type = 3,
+                    arrow_label_size = .7,
+                    arrow_thickness = 1,
+                    arrow_alpha = .5,
+                    specie_labeller_function = first_resolved_taxonomy,
+                    hide_grid =F
+                    )
 }
 
-# TODO Perform PCA on only samples within the same community and generate plots
-source("code/helper_functions.R")
-for (community in unique(metadata.df$Remote_Community)){
-  # Generate community specific metadata
-  metadata_subset.df <- subset(metadata.df, Remote_Community == community)
-  metadata_decontaminated_subset.df <- subset(metadata_decontaminated.df, Remote_Community == community)
+# Perform PCA on only samples within the same community and generate plots
+for (community in unique(metadata.df$Community)){
+  metadata_subset.df <- subset(metadata.df, Community == community)
   
   # Generate ordination objects for the community data
   otu_pca <- rda(t(otu_clr.m[,rownames(metadata_subset.df)]), data = metadata_subset.df)
   genus_pca <- rda(t(genus_clr.m[,rownames(metadata_subset.df)]), data = metadata_subset.df)
-  otu_decontaminated_pca <- rda(t(otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]), data = metadata_decontaminated_subset.df)
-  genus_decontaminated_pca <- rda(t(genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]), data = metadata_decontaminated_subset.df)
   
-  # print(community)
-  # pca_percentages <- (genus_pca$CA$eig/sum(genus_pca$CA$eig)) * 100
-  # pca_percentages2 <- (genus_decontaminated_pca$CA$eig/sum(genus_decontaminated_pca$CA$eig)) * 100
-  # print(pca_percentages)
-  # print(pca_percentages2)
-
   for (myvar in discrete_variables){
-    if (myvar == "Remote_Community") {next}
-    # OTU, normal
-    generate_pca(otu_pca, mymetadata = metadata_subset.df,
-                 plot_height = 5, plot_width = 5,
-                 # legend_x = -8, legend_y = 4,
-                 # legend_x = -2, legend_y = 2,
-                 point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-                 legend_title = myvar,
-                 legend_cex = .5,
-                 title_cex = .5,
-                 plot_title = paste0(myvar,", Remote Community ", community),
-                 # limits = c(-8,5,-6,5),
-                 plot_spiders = F,
-                 plot_ellipses = F,
-                 plot_hulls = F,
-                 use_shapes = T,
-                 ellipse_border_width = .5,
-                 include_legend = T,
-                 label_ellipse = F, ellipse_label_size = .3,
-                 colour_palette = my_colour_palette_15,
-                 variable_to_plot = myvar, legend_cols = 1,
-                 variable_colours_available = T,
-                 num_top_species = 3,
-                 plot_arrows = T,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 1,arrow_thickness = .7,
-                 label_arrows = T, arrow_label_size = .25, arrow_label_colour = "black", arrow_label_font_type = 1,
-                 specie_labeller_function = otu_relabeller_function,arrow_label_offset = 0,
-                 filename = paste0("Result_figures/pca_plots/otu_within_community/otu_",myvar, "_Remote_Community_", community,"_pca.pdf"))
-    
-    # Genus, normal
-    generate_pca(genus_pca, mymetadata = metadata_subset.df,
-                 plot_height = 5, plot_width = 5,
-                 # legend_x = -4, legend_y = 3,
-                 # legend_x = -2, legend_y = 2,
-                 point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-                 legend_title = myvar,
-                 legend_cex = .5,
-                 title_cex = .5,
-                 plot_title = paste0(myvar,", Remote Community ", community),
-                 # limits = c(-4,6,-4,4),
-                 plot_spiders = F,
-                 plot_ellipses = F,
-                 plot_hulls = F,
-                 use_shapes = T,
-                 ellipse_border_width = .5,
-                 include_legend = T,
-                 label_ellipse = F, ellipse_label_size = .3,
-                 colour_palette = my_colour_palette_15,
-                 variable_to_plot = myvar, legend_cols = 1,
-                 variable_colours_available = T,
-                 num_top_species = 3,
-                 plot_arrows = T,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 1,arrow_thickness = .7,
-                 label_arrows = T, arrow_label_size = .25, arrow_label_colour = "black", arrow_label_font_type = 1,
-                 specie_labeller_function = genus_relabeller_function,
-                 arrow_label_offset = 0,
-                 filename = paste0("Result_figures/pca_plots/genus_within_community/genus_",myvar, "_Remote_Community_", community,"_pca.pdf"))
-    # OTU, decontaminated
-    generate_pca(otu_decontaminated_pca, mymetadata = metadata_decontaminated_subset.df,
-                 plot_height = 5, plot_width = 5,
-                 # legend_x = -8, legend_y = 4,
-                 # legend_x = -2, legend_y = 2,
-                 point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-                 legend_title = myvar,
-                 legend_cex = .5,
-                 title_cex = .5,
-                 plot_title = paste0(myvar,", Remote Community ", community),
-                 # limits = c(-8,4,-8,4),
-                 plot_spiders = F,
-                 plot_ellipses = F,
-                 plot_hulls = F,
-                 use_shapes = T,
-                 ellipse_border_width = .5,
-                 include_legend = T,
-                 label_ellipse = F, ellipse_label_size = .3,
-                 colour_palette = my_colour_palette_15,
-                 variable_to_plot = myvar, legend_cols = 1,
-                 variable_colours_available = T,
-                 num_top_species = 3,
-                 plot_arrows = T,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 1,arrow_thickness = .7,
-                 label_arrows = T, arrow_label_size = .25, arrow_label_colour = "black", arrow_label_font_type = 1,
-                 specie_labeller_function = otu_relabeller_function,
-                 arrow_label_offset = 0,
-                 filename = paste0("Result_figures/pca_plots/otu_within_community_decontaminated/otu_decontaminated_",myvar, "_Remote_Community_", community,"_pca.pdf"))
-    # Genus, decontaminated
-    generate_pca(genus_decontaminated_pca, mymetadata = metadata_decontaminated_subset.df,
-                 plot_height = 5, plot_width = 5,
-                 # legend_x = -4, legend_y = 4,
-                 # legend_x = -2, legend_y = 2,
-                 point_size = .7, point_line_thickness = 0.3,point_alpha =.9,
-                 legend_title = myvar,
-                 legend_cex = .5,
-                 title_cex = .5,
-                 plot_title = paste0(myvar,", Remote Community ", community),
-                 # limits = c(-4,6,-4,4),
-                 plot_spiders = F,
-                 plot_ellipses = F,
-                 plot_hulls = F,
-                 use_shapes = T,
-                 ellipse_border_width = .5,
-                 include_legend = T,
-                 label_ellipse = F, ellipse_label_size = .3,
-                 colour_palette = my_colour_palette_15,
-                 variable_to_plot = myvar, legend_cols = 1,
-                 variable_colours_available = T,
-                 num_top_species = 3,
-                 plot_arrows = T,arrow_alpha = .7, arrow_colour = "grey20",arrow_scalar = 1,arrow_thickness = .7,
-                 label_arrows = T, arrow_label_size = .25, arrow_label_colour = "black", arrow_label_font_type = 1,
-                 specie_labeller_function = genus_relabeller_function,
-                 arrow_label_offset = 0,
-                 filename = paste0("Result_figures/pca_plots/genus_within_community_decontaminated/genus_decontaminated_",myvar, "_Remote_Community_", community,"_pca.pdf"))    
+    if (myvar == "Community") {next}
+    # print(myvar)
+    # plot_title = paste0(myvar,", Remote Community ", community),
+    generate_pca_plot(pca_object = genus_pca,
+                      my_metadata.df = metadata_subset.df,
+                      file_type = "pdf",
+                      filename = paste0("Result_figures/pca_plots/genus_within_community/genus_",myvar, "_Community_", community,"_pca.pdf"),
+                      plot_height = 6,
+                      plot_width = 6,
+                      plot_title = paste0("Genus PCA: ", myvar, "; Community: ", community),
+                      title_cex = .7,
+                      
+                      variable_colours_available = T,
+                      variable_to_plot = myvar,
+                      
+                      point_line_thickness = 0.5,
+                      
+                      use_shapes = T,
+                      plot_spiders = F,
+                      label_sites = F,
+                      # label_spider = T,
+                      plot_hulls = F,
+                      axis_limits = c(-6,6,-5,5),
+                      
+                      include_legend = T,
+                      legend_columns = 1,
+                      legend_cex = .8,
+                      legend_x = -6,
+                      legend_y = 5,
+                      legend_title = gsub("_", " ", myvar),
+                      # legend_fill_colour = "grey",
+                      
+                      plot_arrows = T,
+                      num_top_species = 3,
+                      arrow_colour = "grey20",
+                      arrow_scalar = 1,
+                      arrow_label_colour = "midnightblue",
+                      arrow_label_font_type = 3,
+                      arrow_label_size = .7,
+                      arrow_thickness = 1,
+                      arrow_alpha = .5,
+                      specie_labeller_function = first_resolved_taxonomy,
+                      hide_grid =F
+    )
   }
 }
 
@@ -481,33 +322,35 @@ for (community in unique(metadata.df$Remote_Community)){
 
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
 # PERMANOVA tests whether distance differ between groups.
+
+# Permutational Multivariate Analysis of Variance (PERMANOVA) can be used to 
+# determine if the structure of the microbial communities is significantly different between
+# environmental variables. This is done using the adonis function from Vegan with a distance metric, e.g. Bray-Curtis, and a
+# specified number of permutations, e.g. 10,000.
+# The analysis measures the degree each environmental variable affects the community composition and indicates 
+# the significance of that effect on beta diversity (described by p-values and R2 values). 
+# The R2 value corresponds to the proportion of variability observed in the dissimilarity.
+
 
 # Genus, clr euclidean
 print("Centred-log ratio transformed counts - Euclidean distance")
-# otu_clr.m <- clr(otu.m)
-# genus_clr.m <- clr(genus.m)
-# otu_clr_decontaminated.m <- clr(otu_decontaminated.m)
-# genus_clr_decontaminated.m <- clr(genus_decontaminated.m)
 otu_permanova_results <- data.frame()
 genus_permanova_results <- data.frame()
-otu_decontaminated_permanova_results <- data.frame()
-genus_decontaminated_permanova_results <- data.frame()
 
 otu_within_community_permanova_results <- data.frame()
 genus_within_community_permanova_results <- data.frame()
-otu_within_community_decontaminated_permanova_results <- data.frame()
-genus_within_community_decontaminated_permanova_results <- data.frame()
+
+discrete_variables <- c("Nose", "Tympanic_membrane", "Season", "Community","Gold_Star", 
+                        "H.influenzae_culture","M.catarrhalis_culture","S.pneumoniae_culture",
+                        "Dolosigranulum_pigrum","Virus_any")
 
 for (myvar in discrete_variables){
-  print(myvar)
   metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
-  metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
   
   otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
   genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
-  otu_clr_decontaminated_subset.m <- otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
-  genus_clr_decontaminated_subset.m <- genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
   
   otu_permanova_results <- rbind(otu_permanova_results,run_permanova_custom(my_metadata = metadata_subset.df, 
                                                       my_formula = as.formula(paste0("t(otu_clr_subset.m)~", myvar)),
@@ -517,75 +360,35 @@ for (myvar in discrete_variables){
                                                       my_formula = as.formula(paste0("t(genus_clr_subset.m)~", myvar)),
                                                       my_method = "euclidean",label = "CLR",permutations = 9999))
   
-  otu_decontaminated_permanova_results <- rbind(otu_decontaminated_permanova_results, run_permanova_custom(my_metadata = metadata_decontaminated_subset.df, 
-                                                      my_formula = as.formula(paste0("t(otu_clr_decontaminated_subset.m)~", myvar)),
-                                                      my_method = "euclidean",label = "CLR",permutations = 9999))
-  
-  genus_decontaminated_permanova_results <- rbind(genus_decontaminated_permanova_results, run_permanova_custom(my_metadata = metadata_decontaminated_subset.df, 
-                                                        my_formula = as.formula(paste0("t(genus_clr_decontaminated_subset.m)~", myvar)),
-                                                        my_method = "euclidean",label = "CLR",permutations = 9999))
-  if (myvar == "Remote_Community") {next}
-  for (community in unique(metadata.df$Remote_Community)){
+  if (myvar == "Community") {next}
+  for (community in unique(metadata.df$Community)){
     
     metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
-    metadata_subset.df <- subset(metadata_subset.df, Remote_Community = community)
-    metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
-    metadata_decontaminated_subset.df <- subset(metadata_decontaminated_subset.df, Remote_Community = community)
+    metadata_subset.df <- subset(metadata_subset.df, Community = community)
     
     otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
     genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
-    otu_clr_decontaminated_subset.m <- otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
-    genus_clr_decontaminated_subset.m <- genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
     
-    temp <- run_permanova_custom(my_metadata = metadata.df, 
+    temp <- run_permanova_custom(my_metadata = metadata_subset.df, 
                                  my_formula = as.formula(paste0("t(otu_clr_subset.m)~", myvar)),
                                  my_method = "euclidean",label = "CLR",permutations = 9999)
-    temp$Remote_Community <- community
+    temp$Community <- community
     otu_within_community_permanova_results <- rbind(otu_within_community_permanova_results, temp)
     
-    temp <- run_permanova_custom(my_metadata = metadata.df, 
+    temp <- run_permanova_custom(my_metadata = metadata_subset.df, 
                          my_formula = as.formula(paste0("t(genus_clr_subset.m)~", myvar)),
                          my_method = "euclidean",label = "CLR",permutations = 9999)
-    temp$Remote_Community <- community
+    temp$Community <- community
     genus_within_community_permanova_results <- rbind(genus_within_community_permanova_results,temp)
-    
-    temp <- run_permanova_custom(my_metadata = metadata_decontaminated_subset.df, 
-                                 my_formula = as.formula(paste0("t(otu_clr_decontaminated_subset.m)~", myvar)),
-                                 my_method = "euclidean",label = "CLR",permutations = 9999)
-    temp$Remote_Community <- community
-    otu_within_community_decontaminated_permanova_results <- rbind(otu_within_community_decontaminated_permanova_results, temp)
-    
-    temp <- run_permanova_custom(my_metadata = metadata_decontaminated_subset.df, 
-                                 my_formula = as.formula(paste0("t(genus_clr_decontaminated_subset.m)~", myvar)),
-                                 my_method = "euclidean",label = "CLR",permutations = 9999)
-    temp$Remote_Community <- community
-    genus_within_community_decontaminated_permanova_results <- rbind(genus_within_community_decontaminated_permanova_results, temp)
+
   }
 }
 
 write.csv(otu_permanova_results, file = "Result_tables/stats_various/otu_PERMANOVA.csv", row.names = F, quote = F)
 write.csv(genus_permanova_results, file = "Result_tables/stats_various/genus_PERMANOVA.csv", row.names = F, quote = F)
-write.csv(otu_decontaminated_permanova_results, file = "Result_tables/stats_various/otu_decontaminated_PERMANOVA.csv", row.names = F, quote = F)
-write.csv(genus_decontaminated_permanova_results, file = "Result_tables/stats_various/genus_decontaminated_PERMANOVA.csv", row.names = F, quote = F)
 
 write.csv(otu_within_community_permanova_results, file = "Result_tables/stats_various/otu_within_community_PERMANOVA.csv", row.names = F, quote = F)
 write.csv(genus_within_community_permanova_results, file = "Result_tables/stats_various/genus_within_community_PERMANOVA.csv", row.names = F, quote = F)
-write.csv(otu_decontaminated_permanova_results, file = "Result_tables/stats_various/otu_within_community_decontaminated_PERMANOVA.csv", row.names = F, quote = F)
-write.csv(genus_decontaminated_permanova_results, file = "Result_tables/stats_various/genus_within_community_decontaminated_PERMANOVA.csv", row.names = F, quote = F)
-
-# run_permanova_custom(my_metadata = metadata.df, my_formula = as.formula(t(genus_clr.m)~Remote_Community),
-# my_method = "euclidean",label = "CLR")
-
-# myvar <- "Remote_Community"
-# run_permanova_custom(my_metadata = metadata.df, my_formula = as.formula(t(otu_clr.m)~get(myvar)),
-#                      my_method = "euclidean",label = "CLR")
-# 
-# run_permanova_custom(my_metadata = metadata.df, my_formula = as.formula(t(otu_clr.m)~OM_6mo),
-#                      my_method = "euclidean",label = "CLR")
-# 
-# run_permanova_custom(my_metadata = metadata.df, my_formula = as.formula(paste0("t(otu_clr.m)~", myvar)),
-#                      my_method = "euclidean",label = "CLR")
-# write.csv(permanova_results, file = "Result_tables/stats_various/PERMANOVA.csv", row.names = F, quote = F)
 
 
 
@@ -594,11 +397,10 @@ write.csv(genus_decontaminated_permanova_results, file = "Result_tables/stats_va
 # See: https://www.nicholas-ollberding.com/post/introduction-to-the-statistical-analysis-of-microbiome-data-in-r/
 # "Test the homogeneity of within-group multivariate dispersions on the basis of any resemblance measure."
 
-# temp <- with(metadata.df, betadisper(vegdist(t(genus_clr.m), method = "euclidean"), group = Remote_Community))
-
-# temp <- permutest(temp, permutations = 999, parallel = 2)
-# plot(temp, main = "Ordination Centroids and Dispersion Labeled: Aitchison Distance", sub = "")
-# boxplot(temp, main = "", xlab = "")
+temp <- with(metadata.df, betadisper(vegdist(t(genus_clr.m), method = "euclidean"), group = Season))
+plot(temp, main = "Ordination Centroids and Dispersion Labeled: Aitchison Distance", sub = "", label.cex = .2)
+boxplot(temp, main = "", xlab = "")
+vegan::permutest(temp, permutations = 999, parallel = 2)
 # 
 # temp <- run_permdisp_custom(metadata.df, 
 #                     my_data = genus_clr.m,
@@ -608,25 +410,17 @@ write.csv(genus_decontaminated_permanova_results, file = "Result_tables/stats_va
 
 otu_permdisp_results <- data.frame()
 genus_permdisp_results <- data.frame()
-otu_decontaminated_permdisp_results <- data.frame()
-genus_decontaminated_permdisp_results <- data.frame()
 
 otu_within_community_permdisp_results <- data.frame()
 genus_within_community_permdisp_results <- data.frame()
-otu_within_community_decontaminated_permdisp_results <- data.frame()
-genus_within_community_decontaminated_permdisp_results <- data.frame()
 
 
 # source("code/helper_functions.R")
 
 for (myvar in discrete_variables){
   metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
-  metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
-  
   otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
   genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
-  otu_clr_decontaminated_subset.m <- otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
-  genus_clr_decontaminated_subset.m <- genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
   
   otu_permdisp_results <- rbind(otu_permdisp_results, run_permdisp_custom(my_metadata = metadata_subset.df, 
                                                                           my_data = otu_clr_subset.m,
@@ -642,31 +436,15 @@ for (myvar in discrete_variables){
                                                                               permutations = 9999,
                                                                               label = "CLR"))
   
-  otu_decontaminated_permdisp_results <- rbind(otu_decontaminated_permdisp_results, run_permdisp_custom(my_metadata = metadata_decontaminated_subset.df, 
-                                                                                                        my_data = otu_clr_decontaminated_subset.m,
-                                                                                                        my_group = myvar,
-                                                                                                        my_method = "euclidean",
-                                                                                                        permutations = 9999,
-                                                                                                        label = "CLR"))
-  
-  genus_decontaminated_permdisp_results <- rbind(genus_decontaminated_permdisp_results, run_permdisp_custom(my_metadata = metadata_decontaminated_subset.df, 
-                                                                                                            my_data = genus_clr_decontaminated_subset.m,
-                                                                                                            my_group = myvar,
-                                                                                                            my_method = "euclidean",
-                                                                                                            permutations = 9999,
-                                                                                                            label = "CLR"))
-  if (myvar == "Remote_Community") {next}
-  for (community in unique(metadata.df$Remote_Community)){
+  if (myvar == "Community") {next}
+  for (community in unique(metadata.df$Community)){
     
     metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
-    metadata_subset.df <- subset(metadata_subset.df, Remote_Community == community)
-    metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
-    metadata_decontaminated_subset.df <- subset(metadata_decontaminated_subset.df, Remote_Community = community)
+    metadata_subset.df <- subset(metadata_subset.df, Community == community)
     
     otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
     genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
-    otu_clr_decontaminated_subset.m <- otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
-    genus_clr_decontaminated_subset.m <- genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
+
     
     temp <- run_permdisp_custom(my_metadata = metadata_subset.df, 
                                 my_data = otu_clr_subset.m,
@@ -686,39 +464,15 @@ for (myvar in discrete_variables){
     temp$Remote_Community <- community
     genus_within_community_permdisp_results <- rbind(genus_within_community_permdisp_results, temp)
     
-    temp <- run_permdisp_custom(my_metadata = metadata_decontaminated_subset.df, 
-                                my_data = otu_clr_decontaminated_subset.m,
-                                my_group = myvar,
-                                my_method = "euclidean",
-                                permutations = 9999,
-                                label = "CLR")
-    temp$Remote_Community <- community
-    otu_within_community_decontaminated_permdisp_results <- rbind(otu_within_community_decontaminated_permdisp_results, temp)
-    
-    temp <- run_permdisp_custom(my_metadata = metadata_decontaminated_subset.df, 
-                                my_data = genus_clr_decontaminated_subset.m,
-                                my_group = myvar,
-                                my_method = "euclidean",
-                                permutations = 9999,
-                                label = "CLR")
-    temp$Remote_Community <- community
-    genus_within_community_decontaminated_permdisp_results <- rbind(genus_within_community_decontaminated_permdisp_results, temp)
   }
   
 }
-  
 
 write.csv(otu_permdisp_results, file = "Result_tables/stats_various/otu_PERMDISP.csv", row.names = F, quote = F)
 write.csv(genus_permdisp_results, file = "Result_tables/stats_various/genus_PERMDISP.csv", row.names = F, quote = F)
-write.csv(otu_decontaminated_permdisp_results, file = "Result_tables/stats_various/otu_decontaminated_PERMDISP.csv", row.names = F, quote = F)
-write.csv(genus_decontaminated_permdisp_results, file = "Result_tables/stats_various/genus_decontaminated_PERMDISP.csv", row.names = F, quote = F)
 
 write.csv(otu_within_community_permdisp_results, file = "Result_tables/stats_various/otu_within_community_PERMDISP.csv", row.names = F, quote = F)
 write.csv(genus_within_community_permdisp_results, file = "Result_tables/stats_various/genus_within_community_PERMDISP.csv", row.names = F, quote = F)
-write.csv(otu_decontaminated_permdisp_results, file = "Result_tables/stats_various/otu_within_community_decontaminated_PERMDISP.csv", row.names = F, quote = F)
-write.csv(genus_decontaminated_permdisp_results, file = "Result_tables/stats_various/genus_within_community_decontaminated_PERMDISP.csv", row.names = F, quote = F)
-
-
 
 
 # ---------------------------------------------

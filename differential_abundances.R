@@ -1,6 +1,6 @@
 library(DESeq2)
 # library(BiocParallel)
-
+# alternative : ALDEx2, ANCOM, edgeR
 
 
 
@@ -42,69 +42,61 @@ filter_matrix_rows <- function(my_matrix, row_max){
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_16S_project/")
 source("Code/helper_functions.R")
 
-# Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
-# otu_decontaminated.m <- as.matrix(read.table("Result_tables/count_tables/OTU_counts_rarefied.csv", sep =",", header =T, row.names = 1))
-# genus_rare.m <-  as.matrix(read.table("Result_tables/count_tables/Genus_counts_rarefied.csv", sep =",", header =T, row.names = 1))
-
-otu.m <- as.matrix(read.table("Result_tables/count_tables/OTU_counts.csv", sep =",", header =T, row.names = 1))
-genus.m <-  as.matrix(read.table("Result_tables/count_tables/Genus_counts.csv", sep =",", header =T, row.names = 1))
-
-otu_decontaminated.m <- as.matrix(read.table("Result_tables/count_tables/OTU_counts_decontaminated.csv", sep =",", header =T, row.names = 1))
-genus_decontaminated.m <-  as.matrix(read.table("Result_tables/count_tables/Genus_counts_decontaminated.csv", sep =",", header =T, row.names = 1))
-
-# Filter out OTUs/species/genera that do not have at # reads in at least one sample
-# head(melt(sort(colSums(otu_decontaminated.m))))
-# otu_decontaminated.m <- filter_matrix_rows(otu_decontaminated.m,50)
-# head(melt(sort(colSums(otu_decontaminated.m))))
-# genus_rare.m <- filter_matrix_rows(genus_rare.m,0)
-
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
 
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
-metadata_decontaminated.df <- read.csv("Result_tables/other/processed_metadata_decontaminated.csv", sep =",", header = T)
 
 # Define the discrete variables
-# discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season","Nose", 
-#                         "Otitis_status_OM_6mo","Remote_Community_Otitis_status","OM_6mo_Type_OM","Remote_Community_Season")
-discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose","OM_Classification", "Remote_Community_Season",
-                        "Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae",
-                        "Remote_Community_OM_Classification")
+discrete_variables <- c("Nose","Tympanic_membrane","Season","Community","Gold_Star","H.influenzae_culture","H.Influenzae_ND","H.Influenzae_1st_IQR",
+                        "H.Influenzae_2nd_to_3rd_IQR","H.Influenzae_more_than_3rd_IQR","M.catarrhalis_culture","M.catarrhalis_ND",
+                        "M.catarrhalis_1st_IQR","M.catarrhalis_2nd_to_3rd_IQR","M.catarrhalis_more_than_3rdrd_IQR","S.pneumoniae_culture",
+                        "S.pneumoniae_ND","S.pneumoniae_1st_IQR","S.pneumoniae_2nd_to_3rd_IQR","S.pneumoniae_more_than_3rdrd_IQR",
+                        "Corynebacterium_pseudodiphtheriticum","Dolosigranulum_pigrum","N_Adeno","N_WUKI","N_BOCA","N_COV_OC43","N_COV_NL63",
+                        "N_HKU_1","N_ENT","N_hMPV","N_PARA_1","N_PARA_2","N_RSV_A","N_RSV_B","N_HRV","N_FLU_B","N_FLU_A","Virus_any")
+
+# Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
+otu.m <- as.matrix(read.table("Result_tables/count_tables/OTU_counts.csv", sep =",", header =T, row.names = 1))
+genus.m <- as.matrix(read.table("Result_tables/count_tables/Genus_counts.csv", sep =",", header =T, row.names = 1))
+
+# Filter out features/taxa that do not have at # reads in at least one sample
+head(melt(sort(colSums(otu.m))))
+head(melt(sort(colSums(genus.m))))
+dim(otu.m)
+dim(genus.m)
+head(melt(sort(apply(genus.m, 1, max))), 10)
+otu.m <- filter_matrix_rows(otu.m,50)
+genus.m <- filter_matrix_rows(genus.m,50)
+dim(otu.m)
+dim(genus.m)
+head(melt(sort(apply(genus.m, 1, max))),10)
+# Prevalence
+# prevalence = 0.1
+# rownames(genus.m)[apply(genus.m, 1, function(x) {length(which(x > 0))}) /length(colnames(genus.m)) >= prevalence]
+
 
 # Only keep columns (samples) in the metadata
-# otu_decontaminated.m <- otu_decontaminated.m[,colnames(otu_decontaminated.m) %in% as.character(metadata_decontaminated.df$Index)]
-# genus_rare.m <- genus_rare.m[,colnames(genus_rare.m) %in% as.character(metadata_decontaminated.df$Index)]
 otu.m <- otu.m[,colnames(otu.m) %in% as.character(metadata.df$Index)]
 genus.m <- genus.m[,colnames(genus.m) %in% as.character(metadata.df$Index)]
 
-otu_decontaminated.m <- otu_decontaminated.m[,colnames(otu_decontaminated.m) %in% as.character(metadata_decontaminated.df$Index)]
-genus_decontaminated.m <- genus_decontaminated.m[,colnames(genus_decontaminated.m) %in% as.character(metadata_decontaminated.df$Index)]
-
-# Order the metadata_decontaminated.df by the index value
+# Order the metadata by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
-metadata_decontaminated.df <- metadata_decontaminated.df[order(metadata_decontaminated.df$Index),]
-
-# Since we likely removed samples from the count matrix
-# in the main script, remove them from the metadata_decontaminated.df here
-# samples_removed <- metadata_decontaminated.df$Index[!metadata_decontaminated.df$Index %in% colnames(otu_decontaminated.m)]
-# metadata_decontaminated.df <- metadata_decontaminated.df[! metadata_decontaminated.df$Index %in% samples_removed,]
 
 # Rownames should match the sample columns in the otu table
 rownames(metadata.df) <- metadata.df$Index
-rownames(metadata_decontaminated.df) <- metadata_decontaminated.df$Index
 
 # Order the otu_tables the same order as the metadata
 otu.m <- otu.m[,rownames(metadata.df)]
 genus.m <- genus.m[,rownames(metadata.df)]
 
-otu_decontaminated.m <- otu_decontaminated.m[,rownames(metadata_decontaminated.df)]
-genus_decontaminated.m <- genus_decontaminated.m[,rownames(metadata_decontaminated.df)]
+# Ensure names of the otu / genus count matrices match the order of the metadata.df!
+# Assumes number of samples in metadata.df and count data are the same
+all(colnames(otu.m) == metadata.df$Index) # Should be 'True'
+all(colnames(otu.m) == rownames(metadata.df)) # Should be 'True'
 
-dim(otu_decontaminated.m)
-dim(genus_decontaminated.m)
-dim(metadata_decontaminated.df)
-
+# Convert variables to factors
+metadata.df[discrete_variables] <- lapply(metadata.df[discrete_variables], factor)
 
 # ---------------------------------------------------------------------------------------------------------
 # Perform differential abundance calculations at the OTU level and genus level, 
@@ -114,22 +106,13 @@ dim(metadata_decontaminated.df)
 # how the counts for each OTU/genus depend on the variables defined in the 'colData'. See help(DESeqDataSetFromMatrix) for more information.
 # The first column of the metadata_decontaminated.df ('colData') must match the ordering of the columns of the countData
 
-# Ensure names of the otu / genus count matrices match the order of the metadata_decontaminated.df!
-# Assumes number of samples in metadata_decontaminated.df and count data are the same
-all(colnames(otu_decontaminated.m) == metadata_decontaminated.df$Index) # Should be 'True'
-all(colnames(otu_decontaminated.m) == rownames(metadata_decontaminated.df)) # Should be 'True'
-
-
-
-# Convert variables to factors
-metadata.df[discrete_variables] <- lapply(metadata.df[discrete_variables], factor)
-metadata_decontaminated.df[discrete_variables] <- lapply(metadata_decontaminated.df[discrete_variables], factor)
-
-
 compare_groups_deseq <- function(mydata.m, mymetadata.df, myvariables, assign_taxonomy = T){
   # Compare groups for all variables
   combined_results_ordered.df <- data.frame()
+  
   for (myvar in myvariables){
+    print(paste0("Processing ", myvar))
+    
     # Get all non-NA entries in the metadata
     mymetadata_filtered.df <- mymetadata.df[!is.na(mymetadata.df[,myvar]),]
     
@@ -138,12 +121,32 @@ compare_groups_deseq <- function(mydata.m, mymetadata.df, myvariables, assign_ta
     
     # Extract corresponding entries from data
     mydata_filtered.m <- mydata.m[,rownames(mymetadata_filtered.df)]
-
+    
+    # If the number of samples is 1 or there is only one unique variable
+    if (dim(mymetadata_filtered.df)[2] == 1 | length(unique(mymetadata_filtered.df[,myvar])) == 1){
+      print("Only one sample or only one unique group")
+      break
+    }
+    if (dim(mymetadata_filtered.df)[1] == 0 | dim(mydata_filtered.m)[2] == 0){
+      print("No samples after filtering")
+      break
+    }
+    
+    # If the column and rownames do not match, entries are missing
+    if (!all(rownames(mymetadata_filtered.df) == colnames(mydata_filtered.m))){
+      print("Colnames and metadata names don't match!!!")
+      break
+    }
+    
     # Run DESeq
     dds <- DESeqDataSetFromMatrix(countData = mydata_filtered.m, colData = mymetadata_filtered.df, design = as.formula(paste0("~", myvar)))
+    
     geoMeans <- apply(counts(dds), 1, gm_mean)
     dds <- estimateSizeFactors(dds, geoMeans = geoMeans)
-    dds <- try(DESeq(dds, test = "Wald", fitType = "parametric", parallel = T))
+    dds <- try(DESeq(dds, test = "Wald", fitType = "parametric", parallel = F))
+    if(inherits(dds, "try-error")) {
+      next
+    }
     group_combinations <- combn(sort(unique(mymetadata_filtered.df[,myvar])),2)
     
     for (i in 1:ncol(group_combinations)){
@@ -159,14 +162,16 @@ compare_groups_deseq <- function(mydata.m, mymetadata.df, myvariables, assign_ta
       n_group_2 <- dim(subset(mymetadata_filtered.df, get(myvar) == group_2))[1]
       
       # Extract results for contrasted groups
-      resMFSource <- results(dds, contrast = c(myvar,group_1,group_2), alpha=0.01, independentFiltering = F, cooksCutoff = F,parallel = T)
+      print(paste0(myvar, ": ", group_1, " vs ", group_2))
+      resMFSource <- results(dds, contrast = c(myvar,group_1,group_2), alpha=0.05, independentFiltering = F, cooksCutoff = F,parallel = T)
+      # print(resMFSource)
       resMFSource$Group_1 <- group_1
       resMFSource$Group_2 <- group_2
       resMFSource$Variable <- myvar
       resMFSource$N_Group_1 <- n_group_1
       resMFSource$N_Group_2 <- n_group_2
       
-      # Assign the taxonomy to the results
+      # Assign the taxonomy to the results. Assumes feature.
       if (assign_taxonomy == T){
         resMFSource$Taxonomy <- assign_taxonomy_to_otu(resMFSource, otu_taxonomy_map.df)   
         # Convert to dataframe
@@ -176,64 +181,105 @@ compare_groups_deseq <- function(mydata.m, mymetadata.df, myvariables, assign_ta
         resMFSource <- m2df(resMFSource, "Taxonomy")
       }
       # print(resMFSource)
-      resMFSource <- filter_and_sort_dds_results(resMFSource, 0.01)
+      resMFSource <- filter_and_sort_dds_results(resMFSource, 0.05)
       combined_results_ordered.df <- rbind(combined_results_ordered.df, resMFSource)
     }
   }
   combined_results_ordered.df
 }
-otu_group_comparison.df <- compare_groups_deseq(mydata.m = otu.m, mymetadata.df = metadata.df, myvariables = discrete_variables, assign_taxonomy = T)
-genus_group_comparison.df <- compare_groups_deseq(mydata.m = genus.m, mymetadata.df = metadata.df, myvariables = discrete_variables, assign_taxonomy = F)
-otu_decontaminated_group_comparison.df <- compare_groups_deseq(mydata.m = otu_decontaminated.m, mymetadata.df = metadata_decontaminated.df, myvariables = discrete_variables, assign_taxonomy = T)
-genus_decontaminated_group_comparison.df <- compare_groups_deseq(mydata.m = genus_decontaminated.m, mymetadata.df = metadata_decontaminated.df, myvariables = discrete_variables, assign_taxonomy = F)
-
-write.csv(x =otu_group_comparison.df,file ="Result_tables/DESeq_results/OTU_deseq.csv",quote = F, row.names =F)
-write.csv(x =genus_group_comparison.df,file ="Result_tables/DESeq_results/Genus_deseq.csv",quote = F, row.names =F)
-write.csv(x =otu_decontaminated_group_comparison.df,file ="Result_tables/DESeq_results/OTU_deseq_decontaminated.csv",quote = F, row.names =F)
-write.csv(x =genus_decontaminated_group_comparison.df,file ="Result_tables/DESeq_results/Genus_deseq_decontaminated.csv",quote = F, row.names =F)
-
 
 compare_groups_deseq_within_group <- function(mydata.m, mymetadata.df, myvariables, within_group_variable, assign_taxonomy = F){
   combined_results.df <- data.frame()
+  reduced_variables <- myvariables[which(!myvariables == within_group_variable)]
   for (myvar_value in unique(metadata.df[,within_group_variable])){
+    print(paste0("Processing ", myvar_value))
     temp <- compare_groups_deseq(mydata.m = mydata.m, 
                                  mymetadata.df = subset(mymetadata.df, get(within_group_variable) == myvar_value), 
-                                 myvariables = myvariables, 
+                                 myvariables = reduced_variables, 
                                  assign_taxonomy = assign_taxonomy)
+    if (dim(temp)[1] == 0){
+      next
+    }
     temp[,within_group_variable] <- myvar_value
     combined_results.df <- rbind(combined_results.df, temp)
   }
   combined_results.df
 }
 
-reduced_variables <- discrete_variables[which(!discrete_variables == "Remote_Community")]
+otu_group_comparison.df <- compare_groups_deseq(mydata.m = otu.m, mymetadata.df = metadata.df, myvariables = discrete_variables, assign_taxonomy = T)
+genus_group_comparison.df <- compare_groups_deseq(mydata.m = genus.m, mymetadata.df = metadata.df, myvariables = discrete_variables, assign_taxonomy = F)
+
+write.csv(x = otu_group_comparison.df,file ="Result_tables/DESeq_results/OTU_deseq.csv",quote = F, row.names =F)
+write.csv(x = genus_group_comparison.df,file ="Result_tables/DESeq_results/Genus_deseq.csv",quote = F, row.names =F)
+
+
+reduced_variables <- discrete_variables[which(!discrete_variables == "Community")]
 otu_group_comparison_within_community.df <- compare_groups_deseq_within_group(mydata.m = otu.m, 
-                                                                                mymetadata.df = metadata.df, 
-                                                                                myvariables = reduced_variables, 
-                                                                                within_group_variable = "Remote_Community", 
-                                                                                assign_taxonomy = T)
+                                                                              mymetadata.df = metadata.df, 
+                                                                              myvariables = reduced_variables, 
+                                                                              within_group_variable = "Community", 
+                                                                              assign_taxonomy = T)
 
 genus_group_comparison_within_community.df <- compare_groups_deseq_within_group(mydata.m = genus.m, 
                                                                                 mymetadata.df = metadata.df, 
                                                                                 myvariables = reduced_variables, 
-                                                                                within_group_variable = "Remote_Community", 
+                                                                                within_group_variable = "Community", 
                                                                                 assign_taxonomy = F)
 
-otu_decontaminated_group_comparison_within_community.df <- compare_groups_deseq_within_group(mydata.m = otu_decontaminated.m, 
-                                                                                             mymetadata.df = metadata_decontaminated.df, 
-                                                                                             myvariables = reduced_variables, 
-                                                                                             within_group_variable = "Remote_Community", 
-                                                                                             assign_taxonomy = T)
-
-genus_decontaminated_group_comparison_within_community.df <- compare_groups_deseq_within_group(mydata.m = genus_decontaminated.m, 
-                                                                                               mymetadata.df = metadata_decontaminated.df, 
-                                                                                               myvariables = reduced_variables, 
-                                                                                               within_group_variable = "Remote_Community", 
-                                                                                               assign_taxonomy = F)
 write.csv(x =otu_group_comparison_within_community.df,file ="Result_tables/DESeq_results/OTU_deseq_within_community.csv",quote = F, row.names =F)
 write.csv(x =genus_group_comparison_within_community.df,file ="Result_tables/DESeq_results/Genus_deseq_within_community.csv",quote = F, row.names =F)
-write.csv(x =otu_decontaminated_group_comparison_within_community.df,file ="Result_tables/DESeq_results/OTU_deseq_within_community_decontaminated.csv",quote = F, row.names =F)
-write.csv(x =genus_decontaminated_group_comparison_within_community.df,file ="Result_tables/DESeq_results/Genus_deseq_within_community_decontaminated.csv",quote = F, row.names =F)
+
+
+# ------------------------------------------------------------------------
+# ------------------------------------------------------------------------
+genus_deseq.df <- read.csv("Result_tables/DESeq_results/Genus_deseq.csv", header =T)
+unique(genus_deseq.df$Variable)
+# genus_deseq.df <- subset(genus_deseq.df,  Variable %in% c("Community", "Gold_Star",
+                                        # "H.influenzae_culture", "M.catarrhalis_culture","S.pneumoniae_culture"))
+genus_deseq.df <- subset(genus_deseq.df,  Variable %in% c("Community", "Gold_Star"))
+significant_taxa.v <- unique(genus_deseq.df$Taxonomy)
+
+genus.m <- as.matrix(read.table("Result_tables/relative_abundance_tables/Genus_relative_abundances.csv", sep =",", header =T, row.names = 1))
+genus.m <- genus.m[,colnames(genus.m) %in% as.character(metadata.df$Index)]
+genus.m <- genus.m[,rownames(metadata.df)]
+heatmap.m <- genus.m[significant_taxa.v,]
+source("code/helper_functions.R")
+make_heatmap(myheatmap_matrix = log(heatmap.m+0.000000001*100), 
+             mymetadata = metadata.df,
+             variables = c("Gold_Star"),
+             cluster_columns = F)
+
+make_heatmap(myheatmap_matrix = heatmap.m*100, 
+             mymetadata = metadata.df,
+             grid_thickness = 1,
+             grid_colour = "grey",
+             variables = c("Community", "Gold_Star"),
+             column_title = "Sample",
+             row_title = "Genus",
+             plot_height = 4,
+             plot_width = 20,
+             cluster_columns = T,
+             cluster_rows = T,
+             show_column_dend = F,
+             show_row_dend = F,
+             column_title_size = 10,
+             row_title_size = 10,
+             annotation_bar_name_size = 6,
+             # annotation_name_size = 6,
+             my_annotation_palette = my_colour_palette_15,
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100, "> 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             discrete_legend = T,
+             legend_title = "Relative abundance %",
+             palette_choice = 'purple',
+             # my_palette = c("white", "green", "red"),
+             row_dend_width = unit(3, "cm"),
+             simple_anno_size = unit(.25, "cm"))
+
+
+
+
+
 
 # ------------------------------------------------------------------------
 # ------------------------------------------------------------------------
@@ -241,11 +287,9 @@ write.csv(x =genus_decontaminated_group_comparison_within_community.df,file ="Re
 
 # Genus level, within community
 genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv",header = T)
-genus_data_decontaminated.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata_decontaminated.csv",header = T)
 
 # significant_taxa.v <- subset(genus_decontaminated_group_comparison_within_community.df, Variable == "Nose")$Taxonomy
 significant_taxa.v <- genus_group_comparison_within_community.df$Taxonomy
-significant_taxa_decontaminated.v <- genus_decontaminated_group_comparison_within_community.df$Taxonomy
 
 # Generate matrix for heatmap
 heatmap.m <- genus_data.df[c("Sample", "taxonomy_genus","Relative_abundance")]
@@ -253,12 +297,6 @@ heatmap.m <- heatmap.m[heatmap.m$taxonomy_genus %in% significant_taxa.v,]
 heatmap.m <- heatmap.m %>% spread(Sample, Relative_abundance,fill = 0)
 heatmap.m <- df2matrix(heatmap.m)
 heatmap_metadata.df <- metadata.df[colnames(heatmap.m),]
-
-heatmap_decontaminated.m <- genus_data_decontaminated.df[c("Sample", "taxonomy_genus","Relative_abundance")]
-heatmap_decontaminated.m <- heatmap_decontaminated.m[heatmap_decontaminated.m$taxonomy_genus %in% significant_taxa_decontaminated.v,]
-heatmap_decontaminated.m <- heatmap_decontaminated.m %>% spread(Sample, Relative_abundance,fill = 0)
-heatmap_decontaminated.m <- df2matrix(heatmap_decontaminated.m)
-heatmap_metadata_decontaminated.df <- metadata_decontaminated.df[colnames(heatmap_decontaminated.m),]
 
 source("code/helper_functions.R")
 make_heatmap(myheatmap_matrix = heatmap.m*100, 
@@ -288,40 +326,11 @@ make_heatmap(myheatmap_matrix = heatmap.m*100,
 )
 
 
-make_heatmap(myheatmap_matrix = heatmap_decontaminated.m*100, 
-             mymetadata = heatmap_metadata_decontaminated.df,
-             filename = paste0("Result_figures/DESeq_plots/Sample_DESeq_genus_relative_abundance_within_community_heatmap_decontaminated.pdf"),
-             variables = grep("_Season", discrete_variables, value =T,invert = T),
-             # variables = c("Remote_Community", "Nose"),
-             column_title = "Sample",
-             row_title = "Genus",
-             plot_height = 4,
-             plot_width = 20,
-             cluster_columns = F,
-             cluster_rows = T,
-             column_title_size = 10,
-             row_title_size = 10,
-             annotation_name_size = 6,
-             my_annotation_palette = my_colour_palette_15,
-             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
-             discrete_legend = T,
-             legend_title = "Mean relative abundance %",
-             palette_choice = 'purple',
-             row_dend_width = unit(3, "cm"),
-             simple_anno_size = unit(.25, "cm"),
-             show_cell_values = F,
-             cell_fun_value_col_threshold = 15
-)
-
-
 # Feature level, within community
 otu_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata.csv",header = T)
-otu_data_decontaminated.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata_decontaminated.csv",header = T)
 
 significant_taxa.v <- otu_group_comparison_within_community.df$OTU
 # significant_taxa.v <- subset(otu_group_comparison_within_community.df, Variable == "Gold_Star")$OTU
-significant_taxa_decontaminated.v <- otu_decontaminated_group_comparison_within_community.df$OTU
 # significant_taxa_decontaminated.v <- subset(otu_decontaminated_group_comparison_within_community.df, Variable == "Gold_Star")$OTU
 
 # Generate matrix for heatmap
@@ -330,12 +339,6 @@ heatmap.m <- heatmap.m[heatmap.m$OTU %in% significant_taxa.v,]
 heatmap.m <- heatmap.m %>% spread(Sample, Relative_abundance,fill = 0)
 heatmap.m <- df2matrix(heatmap.m)
 heatmap_metadata.df <- metadata.df[colnames(heatmap.m),]
-
-heatmap_decontaminated.m <- otu_data_decontaminated.df[c("Sample", "OTU.ID","Relative_abundance")]
-heatmap_decontaminated.m <- heatmap_decontaminated.m[heatmap_decontaminated.m$OTU %in% significant_taxa_decontaminated.v,]
-heatmap_decontaminated.m <- heatmap_decontaminated.m %>% spread(Sample, Relative_abundance,fill = 0)
-heatmap_decontaminated.m <- df2matrix(heatmap_decontaminated.m)
-heatmap_metadata_decontaminated.df <- metadata_decontaminated.df[colnames(heatmap_decontaminated.m),]
 
 make_heatmap(myheatmap_matrix = heatmap.m*100, 
              mymetadata = heatmap_metadata.df,
@@ -364,38 +367,11 @@ make_heatmap(myheatmap_matrix = heatmap.m*100,
 )
 
 
-make_heatmap(myheatmap_matrix = heatmap_decontaminated.m*100, 
-             mymetadata = heatmap_metadata_decontaminated.df,
-             filename = paste0("Result_figures/DESeq_plots/Sample_DESeq_OTU_relative_abundance_within_community_heatmap_decontaminated.pdf"),
-             variables = grep("_Season", discrete_variables, value =T,invert = T),
-             # variables = c("Remote_Community", "Gold_Star"),
-             column_title = "Sample",
-             row_title = "Sequence variant",
-             plot_height = 20,
-             plot_width = 20,
-             cluster_columns = F,
-             cluster_rows = T,
-             column_title_size = 10,
-             row_title_size = 10,
-             annotation_name_size = 6,
-             my_annotation_palette = my_colour_palette_15,
-             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
-             discrete_legend = T,
-             legend_title = "Mean relative abundance %",
-             palette_choice = 'purple',
-             row_dend_width = unit(3, "cm"),
-             simple_anno_size = unit(.25, "cm"),
-             show_cell_values = F,
-             cell_fun_value_col_threshold = 15
-)
-
 
 # ----
 # Genus level
 
 significant_taxa.v <- genus_group_comparison.df$Taxonomy
-significant_taxa_decontaminated.v <- genus_decontaminated_group_comparison.df$Taxonomy
 # significant_taxa_decontaminated.v <- subset(genus_decontaminated_group_comparison.df, Variable == "Remote_Community")$Taxonomy
 
 # Generate matrix for heatmap
@@ -405,43 +381,10 @@ heatmap.m <- heatmap.m %>% spread(Sample, Relative_abundance,fill = 0)
 heatmap.m <- df2matrix(heatmap.m)
 heatmap_metadata.df <- metadata.df[colnames(heatmap.m),]
 
-heatmap_decontaminated.m <- genus_data_decontaminated.df[c("Sample", "taxonomy_genus","Relative_abundance")]
-heatmap_decontaminated.m <- heatmap_decontaminated.m[heatmap_decontaminated.m$taxonomy_genus %in% significant_taxa_decontaminated.v,]
-heatmap_decontaminated.m <- heatmap_decontaminated.m %>% spread(Sample, Relative_abundance,fill = 0)
-heatmap_decontaminated.m <- df2matrix(heatmap_decontaminated.m)
-heatmap_metadata_decontaminated.df <- metadata_decontaminated.df[colnames(heatmap_decontaminated.m),]
-
 source("code/helper_functions.R")
 make_heatmap(myheatmap_matrix = heatmap.m*100, 
              mymetadata = heatmap_metadata.df,
              filename = paste0("Result_figures/DESeq_plots/Sample_DESeq_genus_relative_abundance_heatmap.pdf"),
-             variables = grep("_Season", discrete_variables, value =T,invert = T),
-             # variables = c("Remote_Community", "Nose"),
-             column_title = "Sample",
-             row_title = "Genus",
-             plot_height = 4,
-             plot_width = 20,
-             cluster_columns = F,
-             cluster_rows = T,
-             column_title_size = 10,
-             row_title_size = 10,
-             annotation_name_size = 6,
-             my_annotation_palette = my_colour_palette_15,
-             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
-             discrete_legend = T,
-             legend_title = "Mean relative abundance %",
-             palette_choice = 'purple',
-             row_dend_width = unit(3, "cm"),
-             simple_anno_size = unit(.25, "cm"),
-             show_cell_values = F,
-             cell_fun_value_col_threshold = 15
-)
-
-
-make_heatmap(myheatmap_matrix = heatmap_decontaminated.m*100, 
-             mymetadata = heatmap_metadata_decontaminated.df,
-             filename = paste0("Result_figures/DESeq_plots/Sample_DESeq_genus_relative_abundance_heatmap_decontaminated.pdf"),
              variables = grep("_Season", discrete_variables, value =T,invert = T),
              # variables = c("Remote_Community", "Nose"),
              column_title = "Sample",
@@ -479,12 +422,6 @@ heatmap.m <- heatmap.m %>% spread(Sample, Relative_abundance,fill = 0)
 heatmap.m <- df2matrix(heatmap.m)
 heatmap_metadata.df <- metadata.df[colnames(heatmap.m),]
 
-heatmap_decontaminated.m <- otu_data_decontaminated.df[c("Sample", "OTU.ID","Relative_abundance")]
-heatmap_decontaminated.m <- heatmap_decontaminated.m[heatmap_decontaminated.m$OTU %in% significant_taxa_decontaminated.v,]
-heatmap_decontaminated.m <- heatmap_decontaminated.m %>% spread(Sample, Relative_abundance,fill = 0)
-heatmap_decontaminated.m <- df2matrix(heatmap_decontaminated.m)
-heatmap_metadata_decontaminated.df <- metadata_decontaminated.df[colnames(heatmap_decontaminated.m),]
-
 row_labels.df <- subset(otu_taxonomy_map.df, OTU.ID %in% rownames(heatmap.m))[,c("OTU.ID", "taxonomy_genus")]
 row_labels.df$label <- with(row_labels.df, paste0(OTU.ID, " : ", taxonomy_genus))
 row_labels.df$taxonomy_genus <- NULL
@@ -492,37 +429,6 @@ row_labels.df$taxonomy_genus <- NULL
 make_heatmap(myheatmap_matrix = heatmap.m*100, 
              mymetadata = heatmap_metadata.df,
              filename = paste0("Result_figures/DESeq_plots/Sample_DESeq_OTU_relative_abundance_heatmap.pdf"),
-             variables = grep("_Season", discrete_variables, value =T,invert = T),
-             # variables = c("Remote_Community", "Gold_Star"),
-             column_title = "Sample",
-             row_title = "Sequence variant",
-             plot_height = 13,
-             plot_width = 20,
-             cluster_columns = F,
-             cluster_rows = T,
-             column_title_size = 10,
-             row_title_size = 10,
-             annotation_name_size = 6,
-             my_annotation_palette = my_colour_palette_15,
-             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
-             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
-             discrete_legend = T,
-             legend_title = "Mean relative abundance %",
-             palette_choice = 'purple',
-             row_dend_width = unit(3, "cm"),
-             simple_anno_size = unit(.25, "cm"),
-             show_cell_values = F,
-             cell_fun_value_col_threshold = 15,
-             my_row_labels = row_labels.df
-)
-
-row_labels.df <- subset(otu_taxonomy_map.df, OTU.ID %in% rownames(heatmap_decontaminated.m))[,c("OTU.ID", "taxonomy_genus")]
-row_labels.df$label <- with(row_labels.df, paste0(OTU.ID, " : ", taxonomy_genus))
-row_labels.df$taxonomy_genus <- NULL
-
-make_heatmap(myheatmap_matrix = heatmap_decontaminated.m*100, 
-             mymetadata = heatmap_metadata_decontaminated.df,
-             filename = paste0("Result_figures/DESeq_plots/Sample_DESeq_OTU_relative_abundance_heatmap_decontaminated.pdf"),
              variables = grep("_Season", discrete_variables, value =T,invert = T),
              # variables = c("Remote_Community", "Gold_Star"),
              column_title = "Sample",

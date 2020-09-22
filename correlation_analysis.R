@@ -16,105 +16,101 @@ source("code/helper_functions.R")
 
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T, row.names = "Sequence_file_ID_clean")
-metadata_decontaminated.df <- read.csv("Result_tables/other/processed_metadata_decontaminated.csv", sep =",", header = T,row.names = "Sequence_file_ID_clean")
 
 # Load feature taxonomy map
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
 rownames(otu_taxonomy_map.df) <- otu_taxonomy_map.df$OTU.ID
 
 # Load count matrices
-otu_decontaminated.m <-  as.matrix(read.table("Result_tables/count_tables/OTU_counts_decontaminated.csv", sep =",", header =T, row.names = 1))
-genus_decontaminated.m <-  as.matrix(read.table("Result_tables/count_tables/Genus_counts_decontaminated.csv", sep =",", header =T, row.names = 1))
+otu.m <-  as.matrix(read.table("Result_tables/count_tables/OTU_counts.csv", sep =",", header =T, row.names = 1))
+genus.m <-  as.matrix(read.table("Result_tables/count_tables/Genus_counts.csv", sep =",", header =T, row.names = 1))
 
 # Load combined data (counts, abundances and metadata)
-otu_data_decontaminated.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata_decontaminated.csv", header = T)
-genus_data_decontaminated.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata_decontaminated.csv", header = T)
+otu_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata.csv", header = T)
+genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv", header = T)
 
-discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose","OM_Classification", "Remote_Community_Season",
-                        "Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae",
-                        "Remote_Community_OM_Classification")
-discrete_variables_to_add_with_counts <- c("Remote_Community","Gold_Star","OM_6mo",
-                                           "Season","Nose","OM_Classification")
+discrete_variables <- c("Community","Gold_Star","Season","Nose","Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae")
+discrete_variables_to_add_with_counts <- c("Community","Gold_Star","Season","Nose")
 
 # Generate taxonomy summaries
-otu_decontaminated_taxa_summary.df <- generate_taxa_summary(mydata = otu_data_decontaminated.df, taxa_column = "OTU.ID")
-genus_decontaminated_taxa_summary.df <- generate_taxa_summary(mydata = genus_data_decontaminated.df, taxa_column = "taxonomy_genus")
-genus_decontaminated_taxa_summary_nose.df <- generate_taxa_summary(mydata = genus_data_decontaminated.df, taxa_column = "taxonomy_genus", group_by_columns = c("Nose"))
-genus_decontaminated_taxa_summary_gold_star.df <- generate_taxa_summary(mydata = genus_data_decontaminated.df, taxa_column = "taxonomy_genus", group_by_columns = c("Gold_Star"))
-# nose_taxa_summary.df <- generate_taxa_summary(mydata = genus_data_decontaminated.df, taxa_column = "taxonomy_genus", group_by_columns = c("Sample","Nose"))
-# write.csv(genus_decontaminated_taxa_summary.df,file = "genus_nose_summary.csv", quote = F, row.names = F)
+otu_taxa_summary.df <- generate_taxa_summary(mydata = otu_data.df, taxa_column = "OTU.ID")
+genus_taxa_summary.df <- generate_taxa_summary(mydata = genus_data.df, taxa_column = "taxonomy_genus")
+genus_taxa_summary_nose.df <- generate_taxa_summary(mydata = genus_data.df, taxa_column = "taxonomy_genus", group_by_columns = c("Nose"))
+genus_taxa_summary_gold_star.df <- generate_taxa_summary(mydata = genus_data.df, taxa_column = "taxonomy_genus", group_by_columns = c("Gold_Star"))
+# nose_taxa_summary.df <- generate_taxa_summary(mydata = genus_data.df, taxa_column = "taxonomy_genus", group_by_columns = c("Sample","Nose"))
+# write.csv(genus_taxa_summary.df,file = "genus_nose_summary.csv", quote = F, row.names = F)
 # write.csv(nose_taxa_summary.df,file = "genus_nose_summary_per_sample.csv", quote = F, row.names = F)
 
 # Filter taxa summaries by prevalence
-otu_decontaminated_taxa_summary_filtered.df <- otu_decontaminated_taxa_summary.df %>% filter(Percent_group_samples > 20)
-genus_decontaminated_taxa_summary_filtered.df <- genus_decontaminated_taxa_summary.df %>% filter(Percent_group_samples > 20)
-genus_decontaminated_taxa_summary_nose_filtered.df <- genus_decontaminated_taxa_summary_nose.df %>% filter(Percent_group_samples > 20)
-genus_decontaminated_taxa_summary_gold_star_filtered.df <- genus_decontaminated_taxa_summary_gold_star.df %>% filter(Percent_group_samples > 20)
+otu_taxa_summary_filtered.df <- otu_taxa_summary.df %>% filter(Percent_group_samples > 20)
+genus_taxa_summary_filtered.df <- genus_taxa_summary.df %>% filter(Percent_group_samples > 20)
+genus_taxa_summary_nose_filtered.df <- genus_taxa_summary_nose.df %>% filter(Percent_group_samples > 20)
+genus_taxa_summary_gold_star_filtered.df <- genus_taxa_summary_gold_star.df %>% filter(Percent_group_samples > 20)
 
 # Transform read counts
-otu_decontaminated_clr.m <-  clr(otu_decontaminated.m)
-genus_decontaminated_clr.m <-  clr(genus_decontaminated.m)
+otu_clr.m <-  clr(otu.m)
+genus_clr.m <-  clr(genus.m)
 
 # Add metadata to count matrix (optional)
-otu_decontaminated_clr_with_meta.m <- rbind(otu_decontaminated_clr.m, t(metadata_decontaminated.df[colnames(otu_decontaminated_clr.m),discrete_variables_to_add_with_counts]))
-genus_decontaminated_clr_with_meta.m <- rbind(genus_decontaminated_clr.m, t(metadata_decontaminated.df[colnames(genus_decontaminated_clr.m),discrete_variables_to_add_with_counts]))
+otu_clr_with_meta.m <- rbind(otu_clr.m, t(metadata.df[colnames(otu_clr.m),discrete_variables_to_add_with_counts]))
+genus_clr_with_meta.m <- rbind(genus_clr.m, t(metadata.df[colnames(genus_clr.m),discrete_variables_to_add_with_counts]))
 
 # Filter to samples in groups of interest
 
 # Filter taxa, e.g to taxa above a certain prevalence
-otu_decontaminated_filtered.m <- otu_decontaminated.m[unique(otu_decontaminated_taxa_summary_filtered.df$OTU.ID),]
-otu_decontaminated_clr_filtered.m <- otu_decontaminated_clr.m[unique(otu_decontaminated_taxa_summary_filtered.df$OTU.ID),]
+otu_filtered.m <- otu.m[unique(otu_taxa_summary_filtered.df$OTU.ID),]
+otu_clr_filtered.m <- otu_clr.m[unique(otu_taxa_summary_filtered.df$OTU.ID),]
 
-genus_decontaminated_filtered.m <- genus_decontaminated.m[unique(genus_decontaminated_taxa_summary_filtered.df$taxonomy_genus),]
-genus_decontaminated_clr_filtered.m <- genus_decontaminated_clr.m[unique(genus_decontaminated_taxa_summary_filtered.df$taxonomy_genus),]
+genus_filtered.m <- genus.m[unique(genus_taxa_summary_filtered.df$taxonomy_genus),]
+genus_clr_filtered.m <- genus_clr.m[unique(genus_taxa_summary_filtered.df$taxonomy_genus),]
 
-genus_decontaminated_clr_filtered_nose.m <- genus_decontaminated_clr.m[unique(genus_decontaminated_taxa_summary_nose_filtered.df$taxonomy_genus),]
-genus_decontaminated_clr_filtered_gold_star.m <- genus_decontaminated_clr.m[unique(genus_decontaminated_taxa_summary_gold_star_filtered.df$taxonomy_genus),]
+genus_clr_filtered_nose.m <- genus_clr.m[unique(genus_taxa_summary_nose_filtered.df$taxonomy_genus),]
+genus_clr_filtered_gold_star.m <- genus_clr.m[unique(genus_taxa_summary_gold_star_filtered.df$taxonomy_genus),]
 
 # --------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------
 # Run Fastspar externally on the raw counts (not the filtered matrices above) and then load the results.
-otu_decontaminated_fastspar_cor.m <- as.matrix(read.table("Additional_results/OTU_decontaminated_correlation_fastspar.tsv",
+otu_fastspar_cor.m <- as.matrix(read.table("Additional_results/OTU_correlation_fastspar.tsv",
                                                             sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
-otu_decontaminated_fastspar_pval.m <- as.matrix(read.table("Additional_results/OTU_decontaminated_pvalues_fastspar.tsv",
+otu_fastspar_pval.m <- as.matrix(read.table("Additional_results/OTU_pvalues_fastspar.tsv",
                                                              sep ="\t",header = T,row.names = 1,comment.char = "",check.names = F))
 
-otu_decontaminated_fastspar_cor_filtered.m  <- otu_decontaminated_fastspar_cor.m[otu_decontaminated_taxa_summary_filtered.df$OTU.ID,
-                                                                                 otu_decontaminated_taxa_summary_filtered.df$OTU.ID]
+otu_fastspar_cor_filtered.m  <- otu_fastspar_cor.m[otu_taxa_summary_filtered.df$OTU.ID,
+                                                                                 otu_taxa_summary_filtered.df$OTU.ID]
 
-otu_decontaminated_fastspar_pval_filtered.m  <- otu_decontaminated_fastspar_pval.m[otu_decontaminated_taxa_summary_filtered.df$OTU.ID,
-                                                                                   otu_decontaminated_taxa_summary_filtered.df$OTU.ID]
+otu_fastspar_pval_filtered.m  <- otu_fastspar_pval.m[otu_taxa_summary_filtered.df$OTU.ID,
+                                                                                   otu_taxa_summary_filtered.df$OTU.ID]
 
-genus_decontaminated_fastspar_cor.m <- as.matrix(read.table("Additional_results/Genus_decontaminated_correlation_fastspar.tsv",
+genus_fastspar_cor.m <- as.matrix(read.table("Additional_results/Genus_correlation_fastspar.tsv",
                                               sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
-genus_decontaminated_fastspar_pval.m <- as.matrix(read.table("Additional_results/Genus_decontaminated_pvalues_fastspar.tsv",
+genus_fastspar_pval.m <- as.matrix(read.table("Additional_results/Genus_pvalues_fastspar.tsv",
                                               sep ="\t",header = T,row.names = 1,comment.char = "",check.names = F))
 
 
 
-genus_decontaminated_fastspar_cor_filtered.m  <- genus_decontaminated_fastspar_cor.m[genus_decontaminated_taxa_summary_filtered.df$taxonomy_genus,
-                                                                                     genus_decontaminated_taxa_summary_filtered.df$taxonomy_genus]
+genus_fastspar_cor_filtered.m  <- genus_fastspar_cor.m[genus_taxa_summary_filtered.df$taxonomy_genus,
+                                                                                     genus_taxa_summary_filtered.df$taxonomy_genus]
 
-genus_decontaminated_fastspar_pval_filtered.m  <- genus_decontaminated_fastspar_pval.m[genus_decontaminated_taxa_summary_filtered.df$taxonomy_genus,
-                                                                                     genus_decontaminated_taxa_summary_filtered.df$taxonomy_genus]
+genus_fastspar_pval_filtered.m  <- genus_fastspar_pval.m[genus_taxa_summary_filtered.df$taxonomy_genus,
+                                                                                     genus_taxa_summary_filtered.df$taxonomy_genus]
 
 
-genus_decontaminated_fastspar_cor_nose_filtered.m  <- genus_decontaminated_fastspar_cor.m[genus_decontaminated_taxa_summary_nose_filtered.df$taxonomy_genus,
-                                                                                          genus_decontaminated_taxa_summary_nose_filtered.df$taxonomy_genus]
+genus_fastspar_cor_nose_filtered.m  <- genus_fastspar_cor.m[genus_taxa_summary_nose_filtered.df$taxonomy_genus,
+                                                                                          genus_taxa_summary_nose_filtered.df$taxonomy_genus]
 
 # rownames(metadata.df[metadata.df$Nose == "0",])
 # rownames(metadata.df[metadata.df$Nose == "1",])
 # rownames(metadata.df[metadata.df$Gold_Star == "0",])
 # rownames(metadata.df[metadata.df$Gold_Star == "1",])
 
-genus_decontaminated_fastspar_pval_nose_filtered.m  <- genus_decontaminated_fastspar_pval.m[genus_decontaminated_taxa_summary_nose_filtered.df$taxonomy_genus,
-                                                                                            genus_decontaminated_taxa_summary_nose_filtered.df$taxonomy_genus]
+genus_fastspar_pval_nose_filtered.m  <- genus_fastspar_pval.m[genus_taxa_summary_nose_filtered.df$taxonomy_genus,
+                                                                                            genus_taxa_summary_nose_filtered.df$taxonomy_genus]
 
-genus_decontaminated_fastspar_cor_gold_star_filtered.m  <- genus_decontaminated_fastspar_cor.m[genus_decontaminated_taxa_summary_gold_star_filtered.df$taxonomy_genus,
-                                                                                     genus_decontaminated_taxa_summary_gold_star_filtered.df$taxonomy_genus]
+genus_fastspar_cor_gold_star_filtered.m  <- genus_fastspar_cor.m[genus_taxa_summary_gold_star_filtered.df$taxonomy_genus,
+                                                                                     genus_taxa_summary_gold_star_filtered.df$taxonomy_genus]
 
-genus_decontaminated_fastspar_pval_gold_star_filtered.m  <- genus_decontaminated_fastspar_pval.m[genus_decontaminated_taxa_summary_gold_star_filtered.df$taxonomy_genus,
-                                                                                       genus_decontaminated_taxa_summary_gold_star_filtered.df$taxonomy_genus]
+genus_fastspar_pval_gold_star_filtered.m  <- genus_fastspar_pval.m[genus_taxa_summary_gold_star_filtered.df$taxonomy_genus,
+                                                                                       genus_taxa_summary_gold_star_filtered.df$taxonomy_genus]
 
 # -------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------
@@ -130,17 +126,17 @@ genus_relabeller_function <- function(my_labels){
 }
 
 # relabel column and row names to shorter form (have to be unique!)
-# colnames(genus_decontaminated_fastspar_cor_filtered.m) <- genus_relabeller_function(colnames(genus_decontaminated_fastspar_cor_filtered.m))
-# rownames(genus_decontaminated_fastspar_cor_filtered.m) <- genus_relabeller_function(rownames(genus_decontaminated_fastspar_cor_filtered.m))
-# genus_correlation_network.l <- generate_correlation_network(genus_decontaminated_fastspar_cor_filtered.m,
+# colnames(genus_fastspar_cor_filtered.m) <- genus_relabeller_function(colnames(genus_fastspar_cor_filtered.m))
+# rownames(genus_fastspar_cor_filtered.m) <- genus_relabeller_function(rownames(genus_fastspar_cor_filtered.m))
+# genus_correlation_network.l <- generate_correlation_network(genus_fastspar_cor_filtered.m,
                                                             # relabeller_function = genus_relabeller_function,
                                                             # cor_threshold = 0.1)
 
-length(as.character(unlist(lapply(rownames(otu_decontaminated_fastspar_cor_filtered.m), function(x) otu_taxonomy_map.df[x,]$taxonomy_species))))
-unique(as.character(unlist(lapply(rownames(otu_decontaminated_fastspar_cor_filtered.m), function(x) otu_taxonomy_map.df[x,]$taxonomy_species))))
+length(as.character(unlist(lapply(rownames(otu_fastspar_cor_filtered.m), function(x) otu_taxonomy_map.df[x,]$taxonomy_species))))
+unique(as.character(unlist(lapply(rownames(otu_fastspar_cor_filtered.m), function(x) otu_taxonomy_map.df[x,]$taxonomy_species))))
 
-otu_correlation_network.l <- generate_correlation_network(cor_matrix = otu_decontaminated_fastspar_cor_filtered.m,
-                                                            p_matrix = otu_decontaminated_fastspar_pval_filtered.m,
+otu_correlation_network.l <- generate_correlation_network(cor_matrix = otu_fastspar_cor_filtered.m,
+                                                            p_matrix = otu_fastspar_pval_filtered.m,
                                                             p_value_threshold = 0.05,
                                                             cor_threshold = 0.4,
                                                             node_size = 4,
@@ -151,14 +147,14 @@ otu_correlation_network.l <- generate_correlation_network(cor_matrix = otu_decon
                                                             plot_height = 8,
                                                             plot_width = 8,
                                                             plot_title = "",
-                                                            filename="Result_figures/correlation_analysis/networks/otu_decontaminated_filtered_fastspar_cor_network.pdf")
+                                                            filename="Result_figures/correlation_analysis/networks/otu_filtered_fastspar_cor_network.pdf")
 network_features.v <- (otu_correlation_network.l$network_data %>% activate(nodes) %>% as.data.frame())$name
 otu_taxonomy_map.df[network_features.v,]$taxonomy_species
 
 # genus_correlation_network.l$network_plot
-# generate_correlation_network(genus_decontaminated_fastspar_cor_filtered.m)
-genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_decontaminated_fastspar_cor_filtered.m,
-                                                            p_matrix = genus_decontaminated_fastspar_pval_filtered.m,
+# generate_correlation_network(genus_fastspar_cor_filtered.m)
+genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_fastspar_cor_filtered.m,
+                                                            p_matrix = genus_fastspar_pval_filtered.m,
                                                             relabeller_function = genus_relabeller_function,
                                                             p_value_threshold = 0.05,
                                                             cor_threshold = 0.4,
@@ -173,15 +169,15 @@ genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_d
                                                             edge_width_max = 2.5,
                                                             network_layout = "fr",
                                                             exclude_to_from_df = edges_to_remove.df,
-                                                            filename="Result_figures/correlation_analysis/networks/genus_decontaminated_filtered_fastspar_cor_network.pdf",
+                                                            filename="Result_figures/correlation_analysis/networks/genus_filtered_fastspar_cor_network.pdf",
                                                             myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
 
 genus_correlation_network.l$network_plot
 
 
 
-# genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_decontaminated_fastspar_cor_gold_star_filtered.m,
-#                                                             p_matrix = genus_decontaminated_fastspar_pval_gold_star_filtered.m,
+# genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_fastspar_cor_gold_star_filtered.m,
+#                                                             p_matrix = genus_fastspar_pval_gold_star_filtered.m,
 #                                                             p_value_threshold = 0.05,
 #                                                             cor_threshold = 0.4,
 #                                                             relabeller_function = genus_relabeller_function,
@@ -193,10 +189,10 @@ genus_correlation_network.l$network_plot
 #                                                             plot_height = 8,
 #                                                             plot_width = 8,
 #                                                             plot_title = "",
-#                                                             filename="Result_figures/correlation_analysis/networks/genus_decontaminated_gold_star_filtered_fastspar_cor_network.pdf")
+#                                                             filename="Result_figures/correlation_analysis/networks/genus_gold_star_filtered_fastspar_cor_network.pdf")
 # genus_correlation_network.l$network_plot
-# genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_decontaminated_fastspar_cor_nose_filtered.m,
-#                                                             p_matrix = genus_decontaminated_fastspar_pval_nose_filtered.m,
+# genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_fastspar_cor_nose_filtered.m,
+#                                                             p_matrix = genus_fastspar_pval_nose_filtered.m,
 #                                                             p_value_threshold = 0.05,
 #                                                             cor_threshold = 0.4,
 #                                                             relabeller_function = genus_relabeller_function,
@@ -208,40 +204,40 @@ genus_correlation_network.l$network_plot
 #                                                             plot_height = 8,
 #                                                             plot_width = 8,
 #                                                             plot_title = "",
-#                                                             filename="Result_figures/correlation_analysis/networks/genus_decontaminated_nose_filtered_fastspar_cor_network.pdf")
+#                                                             filename="Result_figures/correlation_analysis/networks/genus_nose_filtered_fastspar_cor_network.pdf")
 
 # -------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------
 # Corrplots
-# plot_corrplot(correlation_matrix = otu_decontaminated_fastspar_cor_filtered.m,
-#               p_value_matrix = otu_decontaminated_fastspar_pval_filtered.m,
+# plot_corrplot(correlation_matrix = otu_fastspar_cor_filtered.m,
+#               p_value_matrix = otu_fastspar_pval_filtered.m,
 #               p_value_threshold = 0.05,
 #               label_size = .3,
 #               plot_title_size = 1,
 #               # relabeller_function = genus_relabeller_function,
 #               plot_title = "FastSpar correlations between all features,\n20% prevalence all samples, p-value < 0.05",
-#               filename = "Result_other/correlation_analysis/corrplots/otu_decontaminated_filtered_fastspar_corrplot.pdf")
+#               filename = "Result_other/correlation_analysis/corrplots/otu_filtered_fastspar_corrplot.pdf")
 
-plot_corrplot(correlation_matrix = genus_decontaminated_fastspar_cor_filtered.m,
-              p_value_matrix = genus_decontaminated_fastspar_pval_filtered.m,
+plot_corrplot(correlation_matrix = genus_fastspar_cor_filtered.m,
+              p_value_matrix = genus_fastspar_pval_filtered.m,
               p_value_threshold = 0.05,
               label_size = .3,
               plot_title_size = 1,
               relabeller_function = genus_relabeller_function,
               plot_title = "FastSpar correlations between all genera,\n20% prevalence all samples, p-value < 0.05",
-              filename = "Result_figures/correlation_analysis/corrplots/genus_decontaminated_filtered_fastspar_corrplot.pdf")
+              filename = "Result_figures/correlation_analysis/corrplots/genus_filtered_fastspar_corrplot.pdf")
 
-plot_corrplot(correlation_matrix = genus_decontaminated_fastspar_cor_nose_filtered.m,
-              p_value_matrix = genus_decontaminated_fastspar_pval_nose_filtered.m,
+plot_corrplot(correlation_matrix = genus_fastspar_cor_nose_filtered.m,
+              p_value_matrix = genus_fastspar_pval_nose_filtered.m,
               p_value_threshold = 0.05,
               label_size = .3,
               plot_title_size = 1,
               relabeller_function = genus_relabeller_function,
               plot_title = "FastSpar correlations between all genera,\n20% prevalence samples within each Nose group, p-value < 0.05",
-              filename = "Result_figures/correlation_analysis/corrplots/genus_decontaminated_filtered_nose_fastspar_corrplot.pdf")
+              filename = "Result_figures/correlation_analysis/corrplots/genus_filtered_nose_fastspar_corrplot.pdf")
 
-plot_corrplot(correlation_matrix = genus_decontaminated_fastspar_cor_gold_star_filtered.m,
-              p_value_matrix = genus_decontaminated_fastspar_pval_gold_star_filtered.m,
+plot_corrplot(correlation_matrix = genus_fastspar_cor_gold_star_filtered.m,
+              p_value_matrix = genus_fastspar_pval_gold_star_filtered.m,
               p_value_threshold = 0.05,
               label_size = .3,
               plot_title_size = 1,
@@ -249,7 +245,7 @@ plot_corrplot(correlation_matrix = genus_decontaminated_fastspar_cor_gold_star_f
               plot_height = 10,
               plot_width = 10,
               plot_title = "FastSpar correlations between all genera,\n20% prevalence samples within each Gold Star group, p-value < 0.05",
-              filename = "Result_figures/correlation_analysis/corrplots/genus_decontaminated_gold_star_filtered_fastspar_corrplot.pdf")
+              filename = "Result_figures/correlation_analysis/corrplots/genus_gold_star_filtered_fastspar_corrplot.pdf")
 
 # -------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------
@@ -257,17 +253,17 @@ plot_corrplot(correlation_matrix = genus_decontaminated_fastspar_cor_gold_star_f
 myfeature <- "d__Bacteria;p__Proteobacteria;c__Gammaproteobacteria;o__Cardiobacteriales;f__Cardiobacteriaceae;g__Dichelobacter"
 
 source("code/helper_functions.R")
-plot_feature_correlations_external(cor_matrix = genus_decontaminated_fastspar_cor_filtered.m,
-                                   p_value_matrix = genus_decontaminated_fastspar_pval_filtered.m,
+plot_feature_correlations_external(cor_matrix = genus_fastspar_cor_filtered.m,
+                                   p_value_matrix = genus_fastspar_pval_filtered.m,
                                    feature = myfeature,
                                    top_n = 25,
                                    plot_width = 10, plot_height = 10)
 
 
-for (feature in colnames(genus_decontaminated_fastspar_cor_filtered.m)){
+for (feature in colnames(genus_fastspar_cor_filtered.m)){
   filename <- paste0("Result_figures/correlation_analysis/by_feature/",gsub(";", "_", genus_relabeller_function(feature)), ".pdf")
-  plot_feature_correlations_external(cor_matrix = genus_decontaminated_fastspar_cor_filtered.m,
-                                     p_value_matrix = genus_decontaminated_fastspar_pval_filtered.m,
+  plot_feature_correlations_external(cor_matrix = genus_fastspar_cor_filtered.m,
+                                     p_value_matrix = genus_fastspar_pval_filtered.m,
                                      feature = feature,
                                      top_n = 25,
                                      filename = filename,
@@ -279,21 +275,27 @@ for (feature in colnames(genus_decontaminated_fastspar_cor_filtered.m)){
 # -------------------------------------------------------------------------------------------------
 # Correlation distributions, feature level
 
+data(amgut1.filt)
+depths <- rowSums(amgut1.filt)
+amgut1.filt.n  <- t(apply(amgut1.filt, 1, norm_to_total))
+amgut1.filt.cs <- round(amgut1.filt.n * min(depths))
+d <- ncol(amgut1.filt.cs)
+n <- nrow(amgut1.filt.cs)
+e <- d
 
-
-# spiec_genus <- spiec.easi(t(genus_decontaminated.m), method='mb', lambda.min.ratio=1e-2,
+# spiec_genus <- spiec.easi(t(genus.m), method='mb', lambda.min.ratio=1e-2,
 #                           nlambda=20, pulsar.params=list(rep.num=50))
 # 
 # 
-# d <- ncol(t(genus_decontaminated.m))
-# n <- nrow(t(genus_decontaminated.m))
+# d <- ncol(t(genus.m))
+# n <- nrow(t(genus.m))
 # e <- d
 # graph <- SpiecEasi::make_graph('cluster', d, e)
 # 
 # huge::huge.roc(spiec_genus$est$path, graph, verbose=FALSE)
 # stars.pr(getOptMerge(spiec_genus), graph, verbose=FALSE)
 # 
-# spiec_genus <- spiec.easi(t(genus_decontaminated.m), method='mb', lambda.min.ratio=1e-2,
+# spiec_genus <- spiec.easi(t(genus.m), method='mb', lambda.min.ratio=1e-2,
 #                             nlambda=20, pulsar.params=list(rep.num=50)) 
 
 
