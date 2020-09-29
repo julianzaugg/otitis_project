@@ -10,12 +10,38 @@ library(psych)
 library(ggraph)
 library(tidygraph)
 
+otu_relabeller_function <- function(my_labels){
+  taxonomy_strings <- unlist(lapply(my_labels, function(x) {
+    as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$taxonomy_genus)
+  }
+  ))
+  unlist(lapply(taxonomy_strings, function(x) {
+    phylostring <- unlist(strsplit(x, split = ";"))
+    paste(phylostring[3], phylostring[6], sep = ";")
+  }))
+}
+
+genus_relabeller_function <- function(my_labels){
+  unlist(lapply(my_labels, 
+                function(x) {
+                  phylostring <- unlist(strsplit(x, split = ";"))
+                  # paste(phylostring[2],phylostring[3], phylostring[6], sep = ";")
+                  # paste(phylostring[3], phylostring[6], sep = ";")
+                  paste(phylostring[3], phylostring[5], phylostring[6], sep = ";")
+                }))
+}
+
 
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_16S_project/")
 source("code/helper_functions.R")
 
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T, row.names = "Sequence_file_ID_clean")
+
+
+# Define descrete variables
+discrete_variables <- c("Community","Gold_Star","Tympanic_membrane","Otitis_Status", "Season","Nose","Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae","N_HRV")
+discrete_variables_to_add_with_counts <- c("Community","Gold_Star","Season","Nose")
 
 # Load feature taxonomy map
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
@@ -26,11 +52,120 @@ otu.m <-  as.matrix(read.table("Result_tables/count_tables/OTU_counts.csv", sep 
 genus.m <-  as.matrix(read.table("Result_tables/count_tables/Genus_counts.csv", sep =",", header =T, row.names = 1))
 
 # Load combined data (counts, abundances and metadata)
-otu_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata.csv", header = T)
-genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv", header = T)
+# otu_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata.csv", header = T)
+# genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv", header = T)
 
-discrete_variables <- c("Community","Gold_Star","Season","Nose","Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae")
-discrete_variables_to_add_with_counts <- c("Community","Gold_Star","Season","Nose")
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+otu_fastspar_cor.m <- as.matrix(read.table("Additional_results/fastspar/OTU_correlation.tsv",
+                                             sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+otu_fastspar_pval.m <- as.matrix(read.table("Additional_results/fastspar/OTU_pvalues.tsv",
+                                              sep ="\t",header = T,row.names = 1,comment.char = "",check.names = F))
+
+
+# combined_otu_labeller <- function(x){
+#   print(as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$taxonomy_species))
+#   first_resolved_taxonomy(as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$taxonomy_species))
+# }
+# rownames(otu_fastspar_pval.m) %in% otu_taxonomy_map.df$OTU.ID
+# plot_corrplot(correlation_matrix = otu_fastspar_cor.m,
+#               p_value_matrix = otu_fastspar_pval.m,
+#               p_value_threshold = 0.01,
+#               
+#               relabeller_function = otu_relabeller_function)
+source("code/helper_functions.R")
+otu_correlation_network.l <- generate_correlation_network(cor_matrix = otu_fastspar_cor.m,
+                                                            p_matrix = otu_fastspar_pval.m,
+                                                            relabeller_function = otu_relabeller_function,
+                                                            p_value_threshold = 0.05,
+                                                            cor_threshold = 0.5,
+                                                            node_size = 4,
+                                                            node_colour = "grey20",
+                                                            node_fill = "grey20",
+                                                            label_colour = "black",
+                                                            label_size = 3,
+                                                            plot_height = 10,
+                                                            plot_width = 10,
+                                                            edge_width_min = .5,
+                                                            edge_width_max = 2.5,
+                                                            network_layout = "fr",
+                                                            # exclude_to_from_df = edges_to_remove.df,
+                                                            # filename="Result_figures/correlation_analysis/networks/genus_filtered_fastspar_cor_network.pdf",
+                                                            myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
+
+otu_correlation_network.l$network_plot
+
+
+genus_fastspar_cor.m <- as.matrix(read.table("Additional_results/fastspar/Genus_correlation.tsv",
+                                             sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+genus_fastspar_pval.m <- as.matrix(read.table("Additional_results/fastspar/Genus_pvalues.tsv",
+                                              sep ="\t",header = T,row.names = 1,comment.char = "",check.names = F))
+source("code/helper_functions.R")
+
+
+temp_cor <- genus_fastspar_cor.m
+diag(temp_cor) <- NA
+dim(temp_cor)
+dim(genus_fastspar_cor.m)
+cor_retain <- rownames(temp_cor[apply(temp_cor, 1,function(x) max(x,na.rm = T)) >= 0.5,])
+temp_cor <- temp_cor[cor_retain,cor_retain]
+
+genus_fastspar_pval.m <- genus_fastspar_pval.m[cor_retain,cor_retain]
+p_retain <- rownames(genus_fastspar_pval.m[apply(genus_fastspar_pval.m,1,function(x)min(x,na.rm=T)) <= 0.05,])
+genus_fastspar_pval.m <- genus_fastspar_pval.m[p_retain,p_retain]
+genus_fastspar_cor.m <- genus_fastspar_cor.m[rownames(genus_fastspar_pval.m),rownames(genus_fastspar_pval.m)]
+
+# pdf("out.pdf",width = 10, height = 10)
+# corrplot(genus_fastspar_cor.m,p.mat = genus_fastspar_pval.m,sig.level = 0.05,tl.cex = .3,mar=c(0,0,0,0),type = "lower",tl.col = "black")
+# dev.off()
+dim(genus_fastspar_cor.m)
+dim(genus_fastspar_pval.m)
+source("code/helper_functions.R")
+plot_corrplot(correlation_matrix = genus_fastspar_cor.m,
+              p_value_matrix = genus_fastspar_pval.m,
+              p_value_threshold = .01,
+              relabeller_function = genus_relabeller_function,
+              label_size = .8,
+              make_insig_na = T,
+              order = "original",
+              file_type = "pdf",
+              filename = "out.pdf",
+              plot_height = 10,
+              plot_width = 10)
+dev.off()
+genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_fastspar_cor.m,
+                                                            p_matrix = genus_fastspar_pval.m,
+                                                            relabeller_function = first_resolved_taxonomy,
+                                                            p_value_threshold = 0.05,
+                                                            cor_threshold = 0.5,
+                                                            node_size = 4,
+                                                            node_colour = "grey20",
+                                                            node_fill = "grey20",
+                                                            label_colour = "black",
+                                                            label_size = 3,
+                                                            plot_height = 10,
+                                                            plot_width = 10,
+                                                            edge_width_min = .5,
+                                                            edge_width_max = 2.5,
+                                                            network_layout = "fr",
+                                                            # exclude_to_from_df = edges_to_remove.df,
+                                                            # filename="Result_figures/correlation_analysis/networks/genus_filtered_fastspar_cor_network.pdf",
+                                                            myseed = 1, edgetype = "link",show_p_label = F,file_type = "pdf")
+
+genus_correlation_network.l$network_plot
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Generate taxonomy summaries
 otu_taxa_summary.df <- generate_taxa_summary(mydata = otu_data.df, taxa_column = "OTU.ID")
@@ -115,15 +250,6 @@ genus_fastspar_pval_gold_star_filtered.m  <- genus_fastspar_pval.m[genus_taxa_su
 # -------------------------------------------------------------------------------------------------
 # -------------------------------------------------------------------------------------------------
 # Generate correlation network plots
-genus_relabeller_function <- function(my_labels){
-  unlist(lapply(my_labels, 
-                function(x) {
-                  phylostring <- unlist(strsplit(x, split = ";"))
-                  # paste(phylostring[2],phylostring[3], phylostring[6], sep = ";")
-                  # paste(phylostring[3], phylostring[6], sep = ";")
-                  paste(phylostring[3], phylostring[5], phylostring[6], sep = ";")
-                }))
-}
 
 # relabel column and row names to shorter form (have to be unique!)
 # colnames(genus_fastspar_cor_filtered.m) <- genus_relabeller_function(colnames(genus_fastspar_cor_filtered.m))

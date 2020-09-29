@@ -116,7 +116,7 @@ dir.create(file.path("./Result_tables", "other"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "count_tables"), showWarnings = FALSE)
 dir.create(file.path("./Result_tables", "relative_abundance_tables"), showWarnings = FALSE)
 
-# dir.create(file.path("./Result_tables/diversity_analysis/otu"),showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_tables/diversity_analysis/otu"),showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_tables/diversity_analysis/genus"),showWarnings = FALSE, recursive = T)
 
 # dir.create(file.path("./Result_tables/diversity_analysis/variable_summaries"),recursive = T)
@@ -143,12 +143,9 @@ dir.create(file.path("./Result_figures", "heatmaps"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "exploratory_analysis"), showWarnings = FALSE)
 dir.create(file.path("./Result_figures", "DESeq_plots"), showWarnings = FALSE)
 
-# dir.create(file.path("./Result_figures/pca_plots", "otu_within_community"), showWarnings = FALSE,recursive = T)
-dir.create(file.path("./Result_figures/pca_plots", "genus_within_community"), showWarnings = FALSE,recursive = T)
-
-# dir.create(file.path("./Result_figures/pca_plots", "otu"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/pca_plots", "otu"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_figures/pca_plots", "genus"), showWarnings = FALSE,recursive = T)
-# dir.create(file.path("./Result_figures/pca_plots", "otu_within_community"), showWarnings = FALSE,recursive = T)
+dir.create(file.path("./Result_figures/pca_plots", "otu_within_community"), showWarnings = FALSE,recursive = T)
 dir.create(file.path("./Result_figures/pca_plots", "genus_within_community"), showWarnings = FALSE,recursive = T)
 
 dir.create(file.path("./Result_other", "sequences"), showWarnings = FALSE,recursive = T)
@@ -233,6 +230,9 @@ rownames(metadata.df) <- metadata.df$Index
 # Make empty cells NA
 metadata.df[metadata.df == ''] <- NA
 
+# Remove unwanted columns
+metadata.df <- metadata.df[,!names(metadata.df) %in% c("N_Adeno","N_WUKI","N_BOCA","N_COV_OC43","N_COV_NL63","N_HKU_1","N_ENT","N_hMPV","N_PARA_1","N_PARA_2","N_RSV_A","N_RSV_B","N_FLU_B","N_FLU_A","Virus_any")]
+# names(metadata.df)
 # ------------------------
 # Create customised variable combinations
 
@@ -244,6 +244,13 @@ metadata.df$Community_Gold_Star <- with(metadata.df, paste0(Community, "_", Gold
 metadata.df$Community_Gold_Star[grepl("NA", metadata.df$Community_Gold_Star)] <- NA
 metadata.df$Community_Gold_Star <- factor(metadata.df$Community_Gold_Star)
 
+metadata.df$Tympanic_membrane_Gold_Star <- with(metadata.df, paste0(Tympanic_membrane, "_", Gold_Star))
+metadata.df$Tympanic_membrane_Gold_Star[grepl("NA", metadata.df$Tympanic_membrane_Gold_Star)] <- NA
+metadata.df$Tympanic_membrane_Gold_Star <- factor(metadata.df$Tympanic_membrane_Gold_Star)
+
+metadata.df$Otitis_Status_Gold_Star <- with(metadata.df, paste0(Otitis_Status, "_", Gold_Star))
+metadata.df$Otitis_Status_Gold_Star[grepl("NA", metadata.df$Otitis_Status_Gold_Star)] <- NA
+metadata.df$Otitis_Status_Gold_Star <- factor(metadata.df$Otitis_Status_Gold_Star)
 
 # Retain copy of metadata prior to filtering samples
 metadata_unfiltered.df <- metadata.df
@@ -326,12 +333,13 @@ project_otu_table_unfiltered.df <- project_otu_table.df
                         # "Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae",
                         # "Community_OM_Classification")
 
-discrete_variables <- c("Nose","Tympanic_membrane","Season","Community","Gold_Star","H.influenzae_culture","H.Influenzae_ND","H.Influenzae_1st_IQR",
+discrete_variables <- c("Nose","Tympanic_membrane","Tympanic_membrane_Gold_Star", "Otitis_Status","Otitis_Status_Gold_Star", "Season","Community","Gold_Star","H.influenzae_culture","H.Influenzae_ND","H.Influenzae_1st_IQR",
                         "H.Influenzae_2nd_to_3rd_IQR","H.Influenzae_more_than_3rd_IQR","M.catarrhalis_culture","M.catarrhalis_ND",
-                        "M.catarrhalis_1st_IQR","M.catarrhalis_2nd_to_3rd_IQR","M.catarrhalis_more_than_3rdrd_IQR","S.pneumoniae_culture",
-                        "S.pneumoniae_ND","S.pneumoniae_1st_IQR","S.pneumoniae_2nd_to_3rd_IQR","S.pneumoniae_more_than_3rdrd_IQR",
-                        "Corynebacterium_pseudodiphtheriticum","Dolosigranulum_pigrum","N_Adeno","N_WUKI","N_BOCA","N_COV_OC43","N_COV_NL63",
-                        "N_HKU_1","N_ENT","N_hMPV","N_PARA_1","N_PARA_2","N_RSV_A","N_RSV_B","N_HRV","N_FLU_B","N_FLU_A","Virus_any")
+                        "M.catarrhalis_1st_IQR","M.catarrhalis_2nd_to_3rd_IQR","M.catarrhalis_more_than_3rd_IQR","S.pneumoniae_culture",
+                        "S.pneumoniae_ND","S.pneumoniae_1st_IQR","S.pneumoniae_2nd_to_3rd_IQR","S.pneumoniae_more_than_3rd_IQR",
+                        "Corynebacterium_pseudodiphtheriticum","Dolosigranulum_pigrum","N_HRV")
+                        
+                        # c("N_Adeno","N_WUKI","N_BOCA","N_COV_OC43","N_COV_NL63","N_HKU_1","N_ENT","N_hMPV","N_PARA_1","N_PARA_2","N_RSV_A","N_RSV_B","N_HRV","N_FLU_B","N_FLU_A","Virus_any")
 
 
 for (myvar in discrete_variables){
