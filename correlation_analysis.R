@@ -38,25 +38,267 @@ source("code/helper_functions.R")
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T, row.names = "Sequence_file_ID_clean")
 
-
-# Define descrete variables
-discrete_variables <- c("Community","Gold_Star","Tympanic_membrane","Otitis_Status", "Season","Nose","Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae","N_HRV")
-discrete_variables_to_add_with_counts <- c("Community","Gold_Star","Season","Nose")
-
 # Load feature taxonomy map
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
 rownames(otu_taxonomy_map.df) <- otu_taxonomy_map.df$OTU.ID
 
+# Define descrete variables
+discrete_variables <- c("Nose","Tympanic_membrane", "Otitis_Status",
+                        "Season","Community","Gold_Star",
+                        "H.influenzae_culture","M.catarrhalis_culture","S.pneumoniae_culture",
+                        "Otitis_Status__Gold_Star", "Tympanic_membrane__Gold_Star",
+                        "Community__Season","Community__Gold_Star","Community__Otitis_Status",
+                        "H.Influenzae_qPCR", "M.catarrhalis_qPCR", "S.pneumoniae_qPCR",
+                        "Corynebacterium_pseudodiphtheriticum","Dolosigranulum_pigrum","N_HRV")
+discrete_variables_to_add_with_counts <- c("Community","Gold_Star","Season","Nose")
+
+
 # Load count matrices
-otu.m <-  as.matrix(read.table("Result_tables/count_tables/OTU_counts.csv", sep =",", header =T, row.names = 1))
-genus.m <-  as.matrix(read.table("Result_tables/count_tables/Genus_counts.csv", sep =",", header =T, row.names = 1))
+otu.df <- read.csv("Result_tables/count_tables/OTU_counts.csv", header =T)
+genus.df <- read.csv("Result_tables/count_tables/Genus_counts.csv", header =T)
+otu.m <- df2matrix(otu.df)
+genus.m <- df2matrix(genus.df)
 
 # Load combined data (counts, abundances and metadata)
 # otu_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata.csv", header = T)
 # genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv", header = T)
 
-# --------------------------------------------------------------------------------
-# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
+# Generate fastspar inputs, only required for group subsets
+
+# prepare_input_variables <- c("Community", "Nose", "Otitis_Status", "Community__Gold_Star")
+# 
+# for (variable in prepare_input_variables){
+#   for (group in as.character(unique(metadata.df[,variable]))){
+#     sample_list <- as.character(subset(metadata.df, get(variable) == group)$Index)
+#     if (length(sample_list) < 4){
+#       print(paste0("Variable ", variable, ", group ", group, " has less than 2 samples, skipping"))
+#       next()
+#     }
+#     otu_subset_data.df <- otu.df[,c("OTU.ID", sample_list)]
+#     genus_subset_data.df <- genus.df[,c("taxonomy_genus", sample_list)]
+#     # print(dim(otu_subset_data.df))
+#     # print(dim(genus_subset_data.df))
+#     otu_subset_data.df <- otu_subset_data.df[otu_subset_data.df$OTU.ID %in% rownames(df2matrix(otu_subset_data.df)[which(apply(df2matrix(otu_subset_data.df), 1, sum) >= 50),]),]
+#     genus_subset_data.df <- genus_subset_data.df[genus_subset_data.df$taxonomy_genus %in% rownames(df2matrix(genus_subset_data.df)[which(apply(df2matrix(genus_subset_data.df), 1, sum) >= 50),]),]
+#     # print(dim(otu_subset_data.df))
+#     # print(dim(genus_subset_data.df))
+#     names(otu_subset_data.df)[1] <- "#OTU ID"
+#     names(genus_subset_data.df)[1] <- "#OTU ID"
+#     
+#     write.table(x = otu_subset_data.df, file = paste0("Result_tables/fastspar_inputs/", variable, "/", variable, "___",gsub("/|\\s", "_",group), "___otu_counts_fastspar.tsv"), sep = "\t", quote = F, row.names = F)
+#     write.table(x = genus_subset_data.df, file = paste0("Result_tables/fastspar_inputs/", variable, "/", variable, "___",gsub("/|\\s", "_",group), "___genus_counts_fastspar.tsv"), sep = "\t", quote = F, row.names = F)
+#   }
+# }
+
+# --------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
+genus_cor_files <- list.files("Additional_results/fastspar/")[grepl("___genus___correlation.tsv", list.files("Additional_results/fastspar/"))]
+for (cor_file in genus_cor_files){
+  genus_fastspar_cor.m <- as.matrix(read.table(paste0("Additional_results/fastspar/",cor_file),
+                                               sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+  genus_fastspar_pval.m <- as.matrix(read.table(paste0("Additional_results/fastspar/",gsub("___correlation.tsv", "___pvalues.tsv",cor_file)),
+                                                sep ="\t",header = T,row.names = 1,comment.char = "",check.names = F))
+  file_name_split <- strsplit(cor_file, split = "___")[[1]]
+  variable <- file_name_split[1]
+  group <- file_name_split[2]
+  print(variable)
+  genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_fastspar_cor.m,
+                                                              p_matrix = genus_fastspar_pval.m,
+                                                              relabeller_function = first_resolved_taxonomy,
+                                                              
+                                                              p_value_threshold = 0.05,
+                                                              cor_threshold = 0.5,
+                                                              node_size = 4,
+                                                              node_colour = "grey20",
+                                                              node_fill = "grey20",
+                                                              label_colour = "black",
+                                                              label_size = 3,
+                                                              plot_height = 10,
+                                                              plot_width = 10,
+                                                              edge_width_min = .5,
+                                                              edge_width_max = 2.5,
+                                                              network_layout = "fr",
+                                                              # exclude_to_from_df = edges_to_remove.df,
+                                                              plot_title = paste0(variable, ": ", group, "; Genus correlation"),
+                                                              filename= paste0("Result_figures/correlation_analysis/networks/",variable,"___",group,"___genus_correlation_network.pdf"),
+                                                              myseed = 1,
+                                                              edgetype = "link",
+                                                              show_p_label = F,
+                                                              file_type = "pdf")
+}
+
+
+
+
+
+
+
+
+
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
+# GENUS, Community___Remote
+genus_fastspar_cor.m <- as.matrix(read.table("Additional_results/fastspar/Community___Remote___genus___correlation.tsv",
+                                           sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+genus_fastspar_pval.m <- as.matrix(read.table("Additional_results/fastspar/Community___Remote___genus___pvalues.tsv",
+                                            sep ="\t",header = T,row.names = 1,comment.char = "",check.names = F))
+
+genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_fastspar_cor.m,
+                                                          p_matrix = genus_fastspar_pval.m,
+                                                          relabeller_function = first_resolved_taxonomy,
+                                                          
+                                                          p_value_threshold = 0.05,
+                                                          cor_threshold = 0.4,
+                                                          node_size = 4,
+                                                          node_colour = "grey20",
+                                                          node_fill = "grey20",
+                                                          label_colour = "black",
+                                                          label_size = 3,
+                                                          plot_height = 10,
+                                                          plot_width = 10,
+                                                          edge_width_min = .5,
+                                                          edge_width_max = 2.5,
+                                                          network_layout = "fr",
+                                                          # exclude_to_from_df = edges_to_remove.df,
+                                                          plot_title = "Community: Remote; Genus correlation",
+                                                          filename="Result_figures/correlation_analysis/networks/Community___Remote___genus_correlation_network.pdf",
+                                                          myseed = 1, 
+                                                          edgetype = "link",
+                                                          show_p_label = F,
+                                                          file_type = "pdf")
+genus_correlation_network.l$network_plot
+
+# plot_feature_correlations_external(cor_matrix = genus_fastspar_cor.m,
+#                                    feature = "d__Bacteria;p__Bacteroidota;c__Bacteroidia;o__Flavobacteriales;f__Weeksellaceae;g__Ornithobacterium",
+#                                    p_value_matrix = genus_fastspar_pval.m,
+#                                    top_n = 10)
+
+source("code/helper_functions.R")
+heatmap(genus_fastspar_cor.m)
+plot_corrplot(correlation_matrix = genus_fastspar_cor.m,
+              p_value_matrix = genus_fastspar_pval.m,
+              p_value_threshold = .05,
+              relabeller_function = first_resolved_taxonomy,
+              label_size = .5,
+              make_insig_na = F,
+              order = "original",
+              file_type = "pdf",
+              # filename = "out.pdf",
+              plot_height = 10,
+              plot_width = 10)
+
+# --------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
+# GENUS, Community___Rural
+genus_fastspar_cor.m <- as.matrix(read.table("Additional_results/fastspar/Community___Rural___genus___correlation.tsv",
+                                             sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+genus_fastspar_pval.m <- as.matrix(read.table("Additional_results/fastspar/Community___Rural___genus___pvalues.tsv",
+                                              sep ="\t",header = T,row.names = 1,comment.char = "",check.names = F))
+
+# dim(subset(metadata.df, Community == "Remote"))
+# dim(subset(metadata.df, Community == "Rural"))
+genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_fastspar_cor.m,
+                                                            p_matrix = genus_fastspar_pval.m,
+                                                            relabeller_function = first_resolved_taxonomy,
+                                                            
+                                                            p_value_threshold = 0.05,
+                                                            cor_threshold = 0.4,
+                                                            node_size = 4,
+                                                            node_colour = "grey20",
+                                                            node_fill = "grey20",
+                                                            label_colour = "black",
+                                                            label_size = 3,
+                                                            plot_height = 10,
+                                                            plot_width = 10,
+                                                            edge_width_min = .5,
+                                                            edge_width_max = 2.5,
+                                                            network_layout = "fr",
+                                                            # exclude_to_from_df = edges_to_remove.df,
+                                                            plot_title = "Community: Rural; Genus correlation",
+                                                            filename="Result_figures/correlation_analysis/networks/Community___Rural___genus_correlation_network.pdf",
+                                                            myseed = 1, 
+                                                            edgetype = "link",
+                                                            show_p_label = F,
+                                                            file_type = "pdf")
+
+# --------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
+# GENUS, Community__Gold_Star___Remote__Healthy
+genus_fastspar_cor.m <- as.matrix(read.table("Additional_results/fastspar/Community__Gold_Star___Remote__Healthy___genus___correlation.tsv",
+                                             sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+genus_fastspar_pval.m <- as.matrix(read.table("Additional_results/fastspar/Community__Gold_Star___Remote__Healthy___genus___pvalues.tsv",
+                                              sep ="\t",header = T,row.names = 1,comment.char = "",check.names = F))
+
+# dim(subset(metadata.df, Community == "Remote"))
+# dim(subset(metadata.df, Community == "Rural"))
+genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_fastspar_cor.m,
+                                                            p_matrix = genus_fastspar_pval.m,
+                                                            relabeller_function = first_resolved_taxonomy,
+                                                            
+                                                            p_value_threshold = 0.05,
+                                                            cor_threshold = 0.4,
+                                                            node_size = 4,
+                                                            node_colour = "grey20",
+                                                            node_fill = "grey20",
+                                                            label_colour = "black",
+                                                            label_size = 3,
+                                                            plot_height = 10,
+                                                            plot_width = 10,
+                                                            edge_width_min = .5,
+                                                            edge_width_max = 2.5,
+                                                            network_layout = "fr",
+                                                            # exclude_to_from_df = edges_to_remove.df,
+                                                            plot_title = "Community__Gold_Star: Remote__Healthy; Genus correlation",
+                                                            filename="Result_figures/correlation_analysis/networks/Community_Gold_Star___Remote__Healthy___genus_correlation_network.pdf",
+                                                            myseed = 1, 
+                                                            edgetype = "link",
+                                                            show_p_label = F,
+                                                            file_type = "pdf")
+
+# --------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
+# GENUS, Community__Gold_Star___Remote__Hx_Current_OM_URTI
+genus_fastspar_cor.m <- as.matrix(read.table("Additional_results/fastspar/Community__Gold_Star___Remote__Hx_Current_OM_URTI___genus___correlation.tsv",
+                                             sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+genus_fastspar_pval.m <- as.matrix(read.table("Additional_results/fastspar/Community__Gold_Star___Remote__Hx_Current_OM_URTI___genus___pvalues.tsv",
+                                              sep ="\t",header = T,row.names = 1,comment.char = "",check.names = F))
+
+# dim(subset(metadata.df, Community == "Remote"))
+# dim(subset(metadata.df, Community == "Rural"))
+genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_fastspar_cor.m,
+                                                            p_matrix = genus_fastspar_pval.m,
+                                                            relabeller_function = first_resolved_taxonomy,
+                                                            
+                                                            p_value_threshold = 0.05,
+                                                            cor_threshold = 0.4,
+                                                            node_size = 4,
+                                                            node_colour = "grey20",
+                                                            node_fill = "grey20",
+                                                            label_colour = "black",
+                                                            label_size = 3,
+                                                            plot_height = 10,
+                                                            plot_width = 10,
+                                                            edge_width_min = .5,
+                                                            edge_width_max = 2.5,
+                                                            network_layout = "fr",
+                                                            # exclude_to_from_df = edges_to_remove.df,
+                                                            plot_title = "Community__Gold_Star: Remote__Hx_Current_OM_URTI; Genus correlation",
+                                                            filename="Result_figures/correlation_analysis/networks/Community_Gold_Star___Remote__Hx_Current_OM_URTI_genus_correlation_network.pdf",
+                                                            myseed = 1, 
+                                                            edgetype = "link",
+                                                            show_p_label = F,
+                                                            file_type = "pdf")
+
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------------------
 otu_fastspar_cor.m <- as.matrix(read.table("Additional_results/fastspar/OTU_correlation.tsv",
                                              sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
 otu_fastspar_pval.m <- as.matrix(read.table("Additional_results/fastspar/OTU_pvalues.tsv",

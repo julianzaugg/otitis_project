@@ -52,12 +52,18 @@ genus_rel.m <- as.matrix(read.table("Result_tables/relative_abundance_tables/Gen
 otu_deseq.df <- read.csv("Result_tables/DESeq_results/OTU_deseq.csv", header =T)
 genus_deseq.df <- read.csv("Result_tables/DESeq_results/Genus_deseq.csv", header =T)
 
-variables_of_interest <- c("Community", "Gold_Star","Tympanic_membrane", "Nose","Tympanic_membrane_Gold_Star", 
-                           "Otitis_Status", "Otitis_Status_Gold_Star")
+otu_within_community_otitis_status_deseq.df <- read.csv("Result_tables/DESeq_results/OTU_deseq_within_Community__Otitis_Status.csv", header =T)
+genus_within_community_otitis_status_deseq.df <- read.csv("Result_tables/DESeq_results/Genus_deseq_within_Community__Otitis_Status.csv", header =T)
+
+variables_of_interest <- c("Community", "Gold_Star","Tympanic_membrane", "Nose","Tympanic_membrane__Gold_Star", 
+                           "Otitis_Status", "Otitis_Status__Gold_Star")
 
 # Filter to variables of interest
 otu_deseq.df <- subset(otu_deseq.df, Variable %in% variables_of_interest)
 genus_deseq.df <- subset(genus_deseq.df, Variable %in% variables_of_interest)
+
+otu_within_community_otitis_status_deseq.df <- subset(otu_within_community_otitis_status_deseq.df, Variable %in% variables_of_interest)
+genus_within_community_otitis_status_deseq.df <- subset(genus_within_community_otitis_status_deseq.df, Variable %in% variables_of_interest)
 
 # Get the genus/features that are significant
 signficant_otu.v <- unique(otu_deseq.df$OTU)
@@ -66,8 +72,9 @@ signficant_otu_gold_star.v <- unique(subset(otu_deseq.df, Variable == "Gold_Star
 signficant_otu_tympanic_membrane.v <- unique(subset(otu_deseq.df, Variable == "Tympanic_membrane")$OTU)
 signficant_otu_nose.v <- unique(subset(otu_deseq.df, Variable == "Nose")$OTU)
 signficant_otu_otitis_status.v <- unique(subset(otu_deseq.df, Variable == "Otitis_Status")$OTU)
-signficant_otu_tympanic_membrane_gold_star.v <- unique(subset(otu_deseq.df, Variable == "Tympanic_membrane_Gold_Star")$OTU)
-signficant_otu_otitis_status_gold_star.v <- unique(subset(otu_deseq.df, Variable == "Otitis_Status_Gold_Star")$OTU)
+signficant_otu_tympanic_membrane_gold_star.v <- unique(subset(otu_deseq.df, Variable == "Tympanic_membrane__Gold_Star")$OTU)
+signficant_otu_otitis_status_gold_star.v <- unique(subset(otu_deseq.df, Variable == "Otitis_Status__Gold_Star")$OTU)
+signficant_otu_within_community_otitis_status.v <- unique(otu_within_community_otitis_status_deseq.df$OTU)
 
 signficant_genus.v <- unique(genus_deseq.df$Taxonomy)
 signficant_genus_community.v <- unique(subset(genus_deseq.df, Variable == "Community")$Taxonomy)
@@ -75,8 +82,9 @@ signficant_genus_gold_star.v <- unique(subset(genus_deseq.df, Variable == "Gold_
 signficant_genus_tympanic_membrane.v <- unique(subset(genus_deseq.df, Variable == "Tympanic_membrane")$Taxonomy)
 signficant_genus_nose.v <- unique(subset(genus_deseq.df, Variable == "Nose")$Taxonomy)
 signficant_genus_otitis_status.v <- unique(subset(genus_deseq.df, Variable == "Otitis_Status")$Taxonomy)
-signficant_genus_tympanic_membrane_gold_star.v <- unique(subset(genus_deseq.df, Variable == "Tympanic_membrane_Gold_Star")$Taxonomy)
-signficant_genus_otitis_status_gold_star.v <- unique(subset(genus_deseq.df, Variable == "Otitis_Status_Gold_Star")$Taxonomy)
+signficant_genus_tympanic_membrane_gold_star.v <- unique(subset(genus_deseq.df, Variable == "Tympanic_membrane__Gold_Star")$Taxonomy)
+signficant_genus_otitis_status_gold_star.v <- unique(subset(genus_deseq.df, Variable == "Otitis_Status__Gold_Star")$Taxonomy)
+signficant_genus_within_community_otitis_status.v <- unique(genus_within_community_otitis_status_deseq.df$Taxonomy)
 
 # Create abundance matrix for all significant features/taxa
 otu_rel_all_sig.m <- otu_rel.m[signficant_otu.v,] * 100
@@ -87,6 +95,7 @@ otu_rel_nose_sig.m <- otu_rel.m[signficant_otu_nose.v,] * 100
 otu_rel_otitis_status_sig.m <- otu_rel.m[signficant_otu_otitis_status.v,] * 100
 otu_rel_tympanic_membrane_gold_star_sig.m <- otu_rel.m[signficant_otu_tympanic_membrane_gold_star.v,] * 100
 otu_rel_otitis_status_gold_star.m <- otu_rel.m[signficant_otu_otitis_status_gold_star.v,] * 100
+otu_rel_within_community_otitis_status.m <- otu_rel.m[signficant_otu_within_community_otitis_status.v,] * 100
 
 genus_rel_all_sig.m <- genus_rel.m[signficant_genus.v,] * 100
 genus_rel_community_sig.m <- genus_rel.m[signficant_genus_community.v,] * 100
@@ -96,7 +105,7 @@ genus_rel_nose_sig.m <- genus_rel.m[signficant_genus_nose.v,] * 100
 genus_rel_otitis_status_sig.m <- genus_rel.m[signficant_genus_otitis_status.v,] * 100
 genus_rel_tympanic_membrane_gold_star_sig.m <- genus_rel.m[signficant_genus_tympanic_membrane_gold_star.v,] * 100
 genus_rel_otitis_status_gold_star.m <- genus_rel.m[signficant_genus_otitis_status_gold_star.v,] * 100
-
+genus_rel_within_community_otitis_status.m <- genus_rel.m[signficant_genus_within_community_otitis_status.v,] * 100
 
 # ------------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------------------
@@ -111,7 +120,7 @@ make_heatmap(myheatmap_matrix = otu_rel_all_sig.m,
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/all_significant_features_heatmap.pdf"),
              
-             variables = c("Community", "Gold_Star","Tympanic_membrane", "Nose"),
+             variables = c("Community", "Gold_Star","Tympanic_membrane","Otitis_Status", "Nose"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
@@ -145,7 +154,7 @@ new_row_labels.df <- data.frame(rownames(otu_rel_community_sig.m),
 make_heatmap(myheatmap_matrix = otu_rel_community_sig.m, 
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/community_significant_features_heatmap.pdf"),
-             variables = c("Community", "Gold_Star","Tympanic_membrane", "Nose"),
+             variables = c("Community"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
@@ -177,7 +186,7 @@ new_row_labels.df <- data.frame(rownames(otu_rel_gold_star_sig.m),
 make_heatmap(myheatmap_matrix = otu_rel_gold_star_sig.m, 
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/gold_star_significant_features_heatmap.pdf"),
-             variables = c("Gold_Star", "Community","Tympanic_membrane", "Nose"),
+             variables = c("Gold_Star"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
@@ -209,7 +218,7 @@ new_row_labels.df <- data.frame(rownames(otu_rel_tympanic_membrane_sig.m),
 make_heatmap(myheatmap_matrix = otu_rel_tympanic_membrane_sig.m, 
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/tympanic_membrane_significant_features_heatmap.pdf"),
-             variables = c("Tympanic_membrane","Community", "Gold_Star", "Nose"),
+             variables = c("Tympanic_membrane"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
@@ -244,7 +253,7 @@ rownames(metadata.df) %in% colnames(otu_rel_nose_sig.m)
 make_heatmap(myheatmap_matrix = otu_rel_nose_sig.m, 
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/nose_significant_features_heatmap.pdf"),
-             variables = c("Nose","Community", "Tympanic_membrane", "Gold_Star"),
+             variables = c("Nose"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
@@ -281,7 +290,7 @@ new_row_labels.df <- data.frame(rownames(otu_rel_otitis_status_sig.m),
 make_heatmap(myheatmap_matrix = otu_rel_otitis_status_sig.m, 
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/otitis_status_significant_features_heatmap.pdf"),
-             variables = c("Otitis_Status","Community", "Nose", "Gold_Star"),
+             variables = c("Otitis_Status"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
@@ -315,7 +324,7 @@ new_row_labels.df <- data.frame(rownames(otu_rel_tympanic_membrane_gold_star_sig
 make_heatmap(myheatmap_matrix = otu_rel_tympanic_membrane_gold_star_sig.m, 
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/tympanic_membrane_gold_star_significant_features_heatmap.pdf"),
-             variables = c("Tympanic_membrane_Gold_Star","Community", "Nose"),
+             variables = c("Tympanic_membrane__Gold_Star"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
@@ -352,7 +361,7 @@ new_row_labels.df <- data.frame(rownames(otu_rel_otitis_status_gold_star.m),
 make_heatmap(myheatmap_matrix = otu_rel_otitis_status_gold_star.m, 
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/otitis_status_gold_star_significant_features_heatmap.pdf"),
-             variables = c("Otitis_Status_Gold_Star","Community", "Nose"),
+             variables = c("Otitis_Status__Gold_Star"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
@@ -377,6 +386,42 @@ make_heatmap(myheatmap_matrix = otu_rel_otitis_status_gold_star.m,
              annotation_bar_name_size = 6,
 )
 
+# ------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
+# Features - Within community otitis status
+new_row_labels.df <- data.frame(rownames(otu_rel_within_community_otitis_status.m), 
+                                paste0(otu_relabeller_function(rownames(otu_rel_within_community_otitis_status.m)), "    ", 
+                                       rownames(otu_rel_within_community_otitis_status.m)))
+
+make_heatmap(myheatmap_matrix = otu_rel_within_community_otitis_status.m, 
+             mymetadata = metadata.df,
+             filename = paste0("Result_figures/DESeq_plots/within_community_otitis_status_significant_features_heatmap.pdf"),
+             variables = c("Community__Otitis_Status","Tympanic_membrane__Gold_Star", "Nose"),
+             my_row_labels = new_row_labels.df,
+             cluster_columns = F,
+             cluster_rows = F,
+             plot_height =15,
+             plot_width = 20,
+             simple_anno_size = unit(.5,"cm"),
+             grid_colour = "grey",
+             
+             col_name_size = 10,
+             # row_name_size = 10,
+             
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             discrete_legend = T,
+             legend_title = "Relative abundance %",
+             # my_palette = c("white","red"),
+             palette_choice = 'purple',
+             show_column_dend = F,
+             show_row_dend = F,
+             column_title_size = 10,
+             row_title_size = 10,
+             annotation_bar_name_size = 6,
+)
+
+
 
 # ------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------
@@ -389,7 +434,7 @@ make_heatmap(myheatmap_matrix = genus_rel_all_sig.m,
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/all_significant_genus_heatmap.pdf"),
              
-             variables = c("Community", "Gold_Star","Tympanic_membrane", "Nose"),
+             variables = c("Community", "Gold_Star","Tympanic_membrane","Otitis_Status", "Nose"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
@@ -421,11 +466,11 @@ new_row_labels.df <- data.frame(rownames(genus_rel_community_sig.m),
 make_heatmap(myheatmap_matrix = genus_rel_community_sig.m, 
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/community_significant_genus_heatmap.pdf"),
-             variables = c("Community", "Gold_Star","Tympanic_membrane", "Nose"),
+             variables = c("Community"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
-             plot_height = 2.5,
+             plot_height = 2,
              plot_width = 20,
              simple_anno_size = unit(.5,"cm"),
              grid_colour = "grey",
@@ -453,7 +498,7 @@ new_row_labels.df <- data.frame(rownames(genus_rel_gold_star_sig.m),
 make_heatmap(myheatmap_matrix = genus_rel_gold_star_sig.m, 
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/gold_star_significant_genus_heatmap.pdf"),
-             variables = c("Gold_Star", "Community","Tympanic_membrane", "Nose"),
+             variables = c("Gold_Star"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
@@ -485,11 +530,11 @@ new_row_labels.df <- data.frame(rownames(genus_rel_tympanic_membrane_sig.m),
 make_heatmap(myheatmap_matrix = genus_rel_tympanic_membrane_sig.m, 
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/tympanic_membrane_significant_genus_heatmap.pdf"),
-             variables = c("Tympanic_membrane","Community", "Gold_Star", "Nose"),
+             variables = c("Tympanic_membrane"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
-             plot_height = 2.5,
+             plot_height = 2,
              plot_width = 20,
              simple_anno_size = unit(.5,"cm"),
              grid_colour = "grey",
@@ -517,11 +562,11 @@ new_row_labels.df <- data.frame(rownames(genus_rel_nose_sig.m),
 make_heatmap(myheatmap_matrix = genus_rel_nose_sig.m, 
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/nose_significant_genus_heatmap.pdf"),
-             variables = c("Nose","Community", "Tympanic_membrane", "Gold_Star"),
+             variables = c("Nose"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
-             plot_height = 2.5,
+             plot_height = 2,
              plot_width = 20,
              simple_anno_size = unit(.5,"cm"),
              grid_colour = "grey",
@@ -549,11 +594,11 @@ new_row_labels.df <- data.frame(rownames(genus_rel_otitis_status_sig.m),
 make_heatmap(myheatmap_matrix = genus_rel_otitis_status_sig.m, 
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/otitis_status_significant_genus_heatmap.pdf"),
-             variables = c("Otitis_Status","Community", "Nose", "Gold_Star"),
+             variables = c("Otitis_Status"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
-             plot_height = 3 ,
+             plot_height = 2.5,
              plot_width = 20,
              simple_anno_size = unit(.5,"cm"),
              grid_colour = "grey",
@@ -582,7 +627,7 @@ new_row_labels.df <- data.frame(rownames(genus_rel_tympanic_membrane_gold_star_s
 make_heatmap(myheatmap_matrix = genus_rel_tympanic_membrane_gold_star_sig.m, 
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/tympanic_membrane_gold_star_significant_genus_heatmap.pdf"),
-             variables = c("Tympanic_membrane_Gold_Star","Community", "Nose"),
+             variables = c("Tympanic_membrane__Gold_Star"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
@@ -614,11 +659,11 @@ new_row_labels.df <- data.frame(rownames(genus_rel_otitis_status_gold_star.m),
 make_heatmap(myheatmap_matrix = genus_rel_otitis_status_gold_star.m, 
              mymetadata = metadata.df,
              filename = paste0("Result_figures/DESeq_plots/otitis_status_gold_star_significant_genus_heatmap.pdf"),
-             variables = c("Otitis_Status_Gold_Star","Community", "Nose"),
+             variables = c("Otitis_Status__Gold_Star"),
              my_row_labels = new_row_labels.df,
              cluster_columns = F,
              cluster_rows = F,
-             plot_height =2.8,
+             plot_height =2.5,
              plot_width = 20,
              simple_anno_size = unit(.5,"cm"),
              grid_colour = "grey",
@@ -638,6 +683,40 @@ make_heatmap(myheatmap_matrix = genus_rel_otitis_status_gold_star.m,
              row_title_size = 10,
              annotation_bar_name_size = 6,
 )
+# ------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------
+# Genus - Within community otitis status
+new_row_labels.df <- data.frame(rownames(genus_rel_within_community_otitis_status.m), 
+                                as.character(lapply(rownames(genus_rel_within_community_otitis_status.m), first_resolved_taxonomy)))
+make_heatmap(myheatmap_matrix = genus_rel_within_community_otitis_status.m, 
+             mymetadata = metadata.df,
+             filename = paste0("Result_figures/DESeq_plots/within_community_otitis_status_significant_genus_heatmap.pdf"),
+             variables = c("Community__Otitis_Status", "Nose"),
+             my_row_labels = new_row_labels.df,
+             cluster_columns = F,
+             cluster_rows = F,
+             plot_height =2.5,
+             plot_width = 20,
+             simple_anno_size = unit(.5,"cm"),
+             grid_colour = "grey",
+             
+             col_name_size = 10,
+             # row_name_size = 10,
+             
+             legend_labels = c(c(0, 0.001, 0.005,0.05, seq(.1,.5,.1))*100, "> 60"),
+             my_breaks = c(0, 0.001, 0.005,0.05, seq(.1,.6,.1))*100,
+             discrete_legend = T,
+             legend_title = "Relative abundance %",
+             # my_palette = c("white","red"),
+             palette_choice = 'purple',
+             show_column_dend = F,
+             show_row_dend = F,
+             column_title_size = 10,
+             row_title_size = 10,
+             annotation_bar_name_size = 6,
+)
+
+
 
 
 

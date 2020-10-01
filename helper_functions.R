@@ -2317,11 +2317,13 @@ plot_corrplot <- function(correlation_matrix,
   }
   
   if (!is.null(relabeller_function)){
-    colnames(cor.m) <- relabeller_function(colnames(cor.m))
-    rownames(cor.m) <- relabeller_function(rownames(cor.m))
+    colnames(cor.m) <- lapply(colnames(cor.m), relabeller_function)
+    rownames(cor.m) <- lapply(colnames(cor.m), relabeller_function)
     if (!is.null(p_value_matrix)){
-      colnames(cor_pval.m) <- relabeller_function(colnames(cor_pval.m))
-      rownames(cor_pval.m) <- relabeller_function(rownames(cor_pval.m))
+      colnames(cor_pval.m) <- lapply(colnames(cor_pval.m), relabeller_function)
+      rownames(cor_pval.m) <- lapply(rownames(cor_pval.m), relabeller_function)
+      # colnames(cor_pval.m) <- relabeller_function(colnames(cor_pval.m))
+      # rownames(cor_pval.m) <- relabeller_function(rownames(cor_pval.m))
     }
   }
   if (is.null(col)){

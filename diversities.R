@@ -78,21 +78,22 @@ metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", 
 rownames(metadata.df) <- metadata.df$Index
 
 # Define the discrete variables
-discrete_variables <- c("Nose","Tympanic_membrane","Tympanic_membrane_Gold_Star","Otitis_Status", "Season","Community","Gold_Star","H.influenzae_culture","H.Influenzae_ND","H.Influenzae_1st_IQR",
-                        "H.Influenzae_2nd_to_3rd_IQR","H.Influenzae_more_than_3rd_IQR","M.catarrhalis_culture","M.catarrhalis_ND",
-                        "M.catarrhalis_1st_IQR","M.catarrhalis_2nd_to_3rd_IQR","M.catarrhalis_more_than_3rdrd_IQR","S.pneumoniae_culture",
-                        "S.pneumoniae_ND","S.pneumoniae_1st_IQR","S.pneumoniae_2nd_to_3rd_IQR","S.pneumoniae_more_than_3rdrd_IQR",
+discrete_variables <- c("Nose","Tympanic_membrane", "Otitis_Status",
+                        "Season","Community","Gold_Star",
+                        "H.influenzae_culture","M.catarrhalis_culture","S.pneumoniae_culture",
+                        "Otitis_Status__Gold_Star", "Tympanic_membrane__Gold_Star",
+                        "Community__Season","Community__Gold_Star","Community__Otitis_Status",
+                        "H.Influenzae_qPCR", "M.catarrhalis_qPCR", "S.pneumoniae_qPCR",
                         "Corynebacterium_pseudodiphtheriticum","Dolosigranulum_pigrum","N_HRV")
                         # "N_Adeno","N_WUKI","N_BOCA","N_COV_OC43","N_COV_NL63",
                         # "N_HKU_1","N_ENT","N_hMPV","N_PARA_1","N_PARA_2","N_RSV_A","N_RSV_B","N_HRV","N_FLU_B","N_FLU_A","Virus_any")
 
-metadata.df$Tympanic_membrane[metadata.df$Tympanic_membrane == "Unable to visualise/ Not examined"] <- NA
+metadata.df$Tympanic_membrane[metadata.df$Tympanic_membrane == "Unable to visualise/Not examined"] <- NA
 # Combined with Community
 for (x in discrete_variables){
-  if (x != "Community"){
-    metadata.df[,paste0(x,'__Community')] <-  with(metadata.df, paste0(get(x), "__",Community))  
+  if (!grepl("Community", x) & !grepl("__", x)){
+    metadata.df[,paste0(x,'__Community')] <-  with(metadata.df, paste0(get(x), "__",Community))
   }
-  
 }
 discrete_variables <- c(discrete_variables, grep(".*__Community", colnames(metadata.df), value =T))
 
@@ -181,6 +182,13 @@ for (variable in discrete_variables){
                                                                                                         variable))
   }
 }
+# Remove entries that are not (near) significant
+threshold <- 0.1
+otu_alpha_mann_significances.df <- otu_alpha_mann_significances.df[apply(otu_alpha_mann_significances.df[,c("Shannon_MannW_padj", "Simpson_MannW_padj", "Chao1_MannW_padj")],1,min) <= threshold,]
+genus_alpha_mann_significances.df <- genus_alpha_mann_significances.df[apply(genus_alpha_mann_significances.df[,c("Shannon_MannW_padj", "Simpson_MannW_padj", "Chao1_MannW_padj")],1,min) <= threshold,]
+
+otu_alpha_dunn_significances_multiple.df <- otu_alpha_dunn_significances_multiple.df[apply(otu_alpha_dunn_significances_multiple.df[,c("Shannon_Dunn_padj", "Simpson_Dunn_padj", "Chao1_Dunn_padj")], 1, min) <= threshold,]
+genus_alpha_dunn_significances_multiple.df <- genus_alpha_dunn_significances_multiple.df[apply(genus_alpha_dunn_significances_multiple.df[,c("Shannon_Dunn_padj", "Simpson_Dunn_padj", "Chao1_Dunn_padj")], 1, min) <= threshold,]
 
 # Write per-sample diversities to file
 write.csv(otu_rare_alpha.df,

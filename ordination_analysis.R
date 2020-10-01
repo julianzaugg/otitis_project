@@ -69,15 +69,21 @@ metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", 
 rownames(metadata.df) <- metadata.df$Index
 
 # Convert variables to factors
-discrete_variables <- c("Nose","Tympanic_membrane","Tympanic_membrane_Gold_Star", "Otitis_Status", "Otitis_Status_Gold_Star", "Season","Community","Gold_Star","H.influenzae_culture","H.Influenzae_ND","H.Influenzae_1st_IQR",
-                        "H.Influenzae_2nd_to_3rd_IQR","H.Influenzae_more_than_3rd_IQR","M.catarrhalis_culture","M.catarrhalis_ND",
-                        "M.catarrhalis_1st_IQR","M.catarrhalis_2nd_to_3rd_IQR","M.catarrhalis_more_than_3rd_IQR","S.pneumoniae_culture",
-                        "S.pneumoniae_ND","S.pneumoniae_1st_IQR","S.pneumoniae_2nd_to_3rd_IQR","S.pneumoniae_more_than_3rd_IQR",
+discrete_variables <- c("Nose","Tympanic_membrane", "Otitis_Status",
+                        "Season","Community","Gold_Star",
+                        "H.influenzae_culture","M.catarrhalis_culture","S.pneumoniae_culture",
+                        "Otitis_Status__Gold_Star", "Tympanic_membrane__Gold_Star",
+                        "Community__Season","Community__Gold_Star","Community__Otitis_Status",
+                        "H.Influenzae_qPCR", "M.catarrhalis_qPCR", "S.pneumoniae_qPCR",
                         "Corynebacterium_pseudodiphtheriticum","Dolosigranulum_pigrum","N_HRV")
+# "H.Influenzae_ND","H.Influenzae_1st_IQR",
+# "H.Influenzae_2nd_to_3rd_IQR","H.Influenzae_more_than_3rd_IQR","M.catarrhalis_ND",
+# "M.catarrhalis_1st_IQR","M.catarrhalis_2nd_to_3rd_IQR","M.catarrhalis_more_than_3rd_IQR",
+# "S.pneumoniae_ND","S.pneumoniae_1st_IQR","S.pneumoniae_2nd_to_3rd_IQR","S.pneumoniae_more_than_3rd_IQR",
                         # "N_Adeno","N_WUKI","N_BOCA","N_COV_OC43","N_COV_NL63",
                         # "N_HKU_1","N_ENT","N_hMPV","N_PARA_1","N_PARA_2","N_RSV_A","N_RSV_B","N_HRV","N_FLU_B","N_FLU_A","Virus_any")
 
-metadata.df$Tympanic_membrane[metadata.df$Tympanic_membrane == "Unable to visualise/ Not examined"] <- NA
+metadata.df$Tympanic_membrane[metadata.df$Tympanic_membrane == "Unable to visualise/Not examined"] <- NA
 metadata.df[discrete_variables] <- lapply(metadata.df[discrete_variables], factor)
 
 # Need to factorise the colour columns as well
@@ -210,7 +216,8 @@ generate_pca_plot(pca_object = genus_pca,
                   legend_cex = .8,
                   legend_x = 0,
                   legend_y = 4.5,
-                  legend_title = gsub("_", " ", myvar),
+                  # legend_title = gsub("_", " ", myvar),
+                  legend_title = myvar,
                   # legend_fill_colour = "grey",
                   
                   plot_arrows = T,
@@ -228,7 +235,7 @@ generate_pca_plot(pca_object = genus_pca,
 
 source("code/helper_functions.R")
 for (myvar in discrete_variables){
-  
+  print(myvar)
   generate_pca_plot(pca_object = otu_pca,
                     my_metadata.df = metadata.df,
                     file_type = "pdf",
@@ -249,14 +256,15 @@ for (myvar in discrete_variables){
                     
                     label_sites = F,
                     # label_spider = T,
-                    axis_limits = c(-6,4.5,-6,4.5),
+                    axis_limits = c(-6,4.5,-6,6.5),
                     
                     include_legend = T,
                     legend_columns = 1,
-                    legend_cex = .7,
-                    legend_x = 0,
-                    legend_y = 4.5,
-                    legend_title = gsub("_", " ", myvar),
+                    legend_cex = .6,
+                    legend_x = -6,
+                    legend_y = 6.5,
+                    # legend_title = gsub("_", " ", myvar),
+                    legend_title = myvar,
                     # legend_fill_colour = "grey",
                     
                     plot_arrows = T,
@@ -293,14 +301,15 @@ for (myvar in discrete_variables){
                     hull_alpha = .5,
                     label_sites = F,
                     # label_spider = T,
-                    axis_limits = c(-4,4.5,-4,4.5),
+                    axis_limits = c(-4,4.5,-4,6),
                     
                     include_legend = T,
                     legend_columns = 1,
-                    legend_cex = .7,
-                    legend_x = 0,
-                    legend_y = 4.5,
-                    legend_title = gsub("_", " ", myvar),
+                    legend_cex = .6,
+                    legend_x = -4,
+                    legend_y = 6,
+                    # legend_title = gsub("_", " ", myvar),
+                    legend_title = myvar,
                     # legend_fill_colour = "grey",
                     
                     plot_arrows = T,
@@ -354,10 +363,11 @@ for (community in unique(metadata.df$Community)){
                       
                       include_legend = T,
                       legend_columns = 1,
-                      legend_cex = .7,
+                      legend_cex = .6,
                       legend_x = -7,
                       legend_y = 8,
-                      legend_title = gsub("_", " ", myvar),
+                      # legend_title = gsub("_", " ", myvar),
+                      legend_title = myvar,
                       # legend_fill_colour = "grey",
                       
                       plot_arrows = T,
@@ -395,14 +405,15 @@ for (community in unique(metadata.df$Community)){
                       # label_spider = T,
                       plot_hulls = T,
                       hull_alpha = .5,
-                      axis_limits = c(-6,6,-5,5),
+                      axis_limits = c(-8,6,-5,6.5),
                       
                       include_legend = T,
                       legend_columns = 1,
-                      legend_cex = .7,
-                      legend_x = -6,
-                      legend_y = 5,
-                      legend_title = gsub("_", " ", myvar),
+                      legend_cex = .6,
+                      legend_x = -8,
+                      legend_y = 6.5,
+                      # legend_title = gsub("_", " ", myvar),
+                      legend_title = myvar,
                       # legend_fill_colour = "grey",
                       
                       plot_arrows = T,
@@ -445,9 +456,9 @@ genus_permanova_results <- data.frame()
 otu_within_community_permanova_results <- data.frame()
 genus_within_community_permanova_results <- data.frame()
 
-discrete_variables <- c("Nose", "Tympanic_membrane","Tympanic_membrane_Gold_Star", "Otitis_Status", "Season", "Community","Gold_Star", 
-                        "H.influenzae_culture","M.catarrhalis_culture","S.pneumoniae_culture", "N_HRV",
-                        "Dolosigranulum_pigrum")
+# discrete_variables <- c("Nose", "Tympanic_membrane","Tympanic_membrane_Gold_Star", "Otitis_Status", "Season", "Community","Gold_Star", 
+#                         "H.influenzae_culture","M.catarrhalis_culture","S.pneumoniae_culture", "N_HRV",
+#                         "Dolosigranulum_pigrum")
 
 for (myvar in discrete_variables){
   metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]

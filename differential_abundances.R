@@ -52,14 +52,19 @@ otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", head
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
 
 # Define the discrete variables
-discrete_variables <- c("Nose","Tympanic_membrane","Tympanic_membrane_Gold_Star", "Otitis_Status","Otitis_Status_Gold_Star", "Season","Community","Gold_Star","H.influenzae_culture","H.Influenzae_ND","H.Influenzae_1st_IQR",
-                        "H.Influenzae_2nd_to_3rd_IQR","H.Influenzae_more_than_3rd_IQR","M.catarrhalis_culture","M.catarrhalis_ND",
-                        "M.catarrhalis_1st_IQR","M.catarrhalis_2nd_to_3rd_IQR","M.catarrhalis_more_than_3rd_IQR","S.pneumoniae_culture",
-                        "S.pneumoniae_ND","S.pneumoniae_1st_IQR","S.pneumoniae_2nd_to_3rd_IQR","S.pneumoniae_more_than_3rd_IQR",
+discrete_variables <- c("Nose","Tympanic_membrane", "Otitis_Status",
+                        "Season","Community","Gold_Star",
+                        "H.influenzae_culture","M.catarrhalis_culture","S.pneumoniae_culture",
+                        "Otitis_Status__Gold_Star", "Tympanic_membrane__Gold_Star",
+                        "Community__Season","Community__Gold_Star","Community__Otitis_Status",
+                        "H.Influenzae_qPCR", "M.catarrhalis_qPCR", "S.pneumoniae_qPCR",
                         "Corynebacterium_pseudodiphtheriticum","Dolosigranulum_pigrum","N_HRV")
                         # "N_Adeno","N_WUKI","N_BOCA","N_COV_OC43","N_COV_NL63",
                         # "N_HKU_1","N_ENT","N_hMPV","N_PARA_1","N_PARA_2","N_RSV_A","N_RSV_B","N_HRV","N_FLU_B","N_FLU_A","Virus_any")
-metadata.df$Tympanic_membrane[metadata.df$Tympanic_membrane == "Unable to visualise/ Not examined"] <- NA
+# "H.Influenzae_ND","H.Influenzae_1st_IQR","H.Influenzae_2nd_to_3rd_IQR","H.Influenzae_more_than_3rd_IQR",
+# "M.catarrhalis_ND","M.catarrhalis_1st_IQR","M.catarrhalis_2nd_to_3rd_IQR","M.catarrhalis_more_than_3rd_IQR",
+# "S.pneumoniae_ND","S.pneumoniae_1st_IQR","S.pneumoniae_2nd_to_3rd_IQR","S.pneumoniae_more_than_3rd_IQR",
+metadata.df$Tympanic_membrane[metadata.df$Tympanic_membrane == "Unable to visualise/Not examined"] <- NA
 
 # Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
 otu.m <- as.matrix(read.table("Result_tables/count_tables/OTU_counts.csv", sep =",", header =T, row.names = 1))
@@ -130,17 +135,17 @@ compare_groups_deseq <- function(mydata.m, mymetadata.df, myvariables, assign_ta
     # If the number of samples is 1 or there is only one unique variable
     if (dim(mymetadata_filtered.df)[2] == 1 | length(unique(mymetadata_filtered.df[,myvar])) == 1){
       print("Only one sample or only one unique group")
-      break
+      next
     }
     if (dim(mymetadata_filtered.df)[1] == 0 | dim(mydata_filtered.m)[2] == 0){
       print("No samples after filtering")
-      break
+      next
     }
     
     # If the column and rownames do not match, entries are missing
     if (!all(rownames(mymetadata_filtered.df) == colnames(mydata_filtered.m))){
       print("Colnames and metadata names don't match!!!")
-      break
+      next
     }
     
     # Run DESeq
@@ -195,12 +200,12 @@ compare_groups_deseq <- function(mydata.m, mymetadata.df, myvariables, assign_ta
 
 compare_groups_deseq_within_group <- function(mydata.m, mymetadata.df, myvariables, within_group_variable, assign_taxonomy = F){
   combined_results.df <- data.frame()
-  reduced_variables <- myvariables[which(!myvariables == within_group_variable)]
+  myvariables <- myvariables[which(!myvariables == within_group_variable)]
   for (myvar_value in unique(metadata.df[,within_group_variable])){
     print(paste0("Processing ", myvar_value))
     temp <- compare_groups_deseq(mydata.m = mydata.m, 
                                  mymetadata.df = subset(mymetadata.df, get(within_group_variable) == myvar_value), 
-                                 myvariables = reduced_variables, 
+                                 myvariables = myvariables, 
                                  assign_taxonomy = assign_taxonomy)
     if (dim(temp)[1] == 0){
       next
@@ -217,7 +222,7 @@ genus_group_comparison.df <- compare_groups_deseq(mydata.m = genus.m, mymetadata
 write.csv(x = otu_group_comparison.df,file ="Result_tables/DESeq_results/OTU_deseq.csv",quote = F, row.names =F)
 write.csv(x = genus_group_comparison.df,file ="Result_tables/DESeq_results/Genus_deseq.csv",quote = F, row.names =F)
 
-
+# ----------------------------------------------------------------------------------------------
 reduced_variables <- discrete_variables[which(!discrete_variables == "Community")]
 otu_group_comparison_within_community.df <- compare_groups_deseq_within_group(mydata.m = otu.m, 
                                                                               mymetadata.df = metadata.df, 
@@ -236,6 +241,64 @@ write.csv(x =genus_group_comparison_within_community.df,file ="Result_tables/DES
 
 
 # ----------------------------------------------------------------------------------------------
+reduced_variables <- discrete_variables[which(!discrete_variables == "Otitis_Status")]
+
+otu_group_comparison_within_otitis_status.df <- compare_groups_deseq_within_group(mydata.m = otu.m, 
+                                                                              mymetadata.df = metadata.df, 
+                                                                              myvariables = reduced_variables, 
+                                                                              within_group_variable = "Otitis_Status", 
+                                                                              assign_taxonomy = T)
+
+genus_group_comparison_within_otitis_status.df <- compare_groups_deseq_within_group(mydata.m = genus.m, 
+                                                                                mymetadata.df = metadata.df, 
+                                                                                myvariables = reduced_variables, 
+                                                                                within_group_variable = "Otitis_Status", 
+                                                                                assign_taxonomy = F)
+
+write.csv(x =otu_group_comparison_within_otitis_status.df,file ="Result_tables/DESeq_results/OTU_deseq_within_Otitis_Status.csv",quote = F, row.names =F)
+write.csv(x =genus_group_comparison_within_otitis_status.df,file ="Result_tables/DESeq_results/Genus_deseq_within_Otitis_Status.csv",quote = F, row.names =F)
+
+# ----------------------------------------------------------------------------------------------
+reduced_variables <- discrete_variables[which(!discrete_variables == "Nose")]
+otu_group_comparison_within_nose.df <- compare_groups_deseq_within_group(mydata.m = otu.m, 
+                                                                              mymetadata.df = metadata.df, 
+                                                                              myvariables = reduced_variables, 
+                                                                              within_group_variable = "Nose", 
+                                                                              assign_taxonomy = T)
+
+genus_group_comparison_within_nose.df <- compare_groups_deseq_within_group(mydata.m = genus.m, 
+                                                                                mymetadata.df = metadata.df, 
+                                                                                myvariables = reduced_variables, 
+                                                                                within_group_variable = "Nose", 
+                                                                                assign_taxonomy = F)
+
+write.csv(x =otu_group_comparison_within_nose.df,file ="Result_tables/DESeq_results/OTU_deseq_within_Nose.csv",quote = F, row.names =F)
+write.csv(x =genus_group_comparison_within_nose.df,file ="Result_tables/DESeq_results/Genus_deseq_within_Nose.csv",quote = F, row.names =F)
+
+# ----------------------------------------------------------------------------------------------
+reduced_variables <- discrete_variables[which(!discrete_variables == "Community__Otitis_Status")]
+otu_group_comparison_within_community_otitis_status.df <- compare_groups_deseq_within_group(mydata.m = otu.m, 
+                                                                              mymetadata.df = metadata.df, 
+                                                                              myvariables = reduced_variables, 
+                                                                              within_group_variable = "Community__Otitis_Status", 
+                                                                              assign_taxonomy = T)
+
+genus_group_comparison_within_community_otitis_status.df <- compare_groups_deseq_within_group(mydata.m = genus.m, 
+                                                                                mymetadata.df = metadata.df, 
+                                                                                myvariables = reduced_variables, 
+                                                                                within_group_variable = "Community__Otitis_Status", 
+                                                                                assign_taxonomy = F)
+
+write.csv(x =otu_group_comparison_within_community_otitis_status.df,file ="Result_tables/DESeq_results/OTU_deseq_within_Community__Otitis_Status.csv",quote = F, row.names =F)
+write.csv(x =genus_group_comparison_within_community_otitis_status.df,file ="Result_tables/DESeq_results/Genus_deseq_within_Community__Otitis_Status.csv",quote = F, row.names =F)
+
+
+# ----------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------
 
+# temp <- read.table(pipe("pbpaste"), header = T, sep = "\t")
+# temp <- df2matrix(temp)
+# temp <- t(t(temp)/colSums(temp))
+# 
+# write.csv(x= m2df(round(temp*100,3),"TAXID"), file ="temp2.csv",quote = F, row.names = F)
