@@ -2,9 +2,6 @@ library(DESeq2)
 # library(BiocParallel)
 # alternative : ALDEx2, ANCOM, edgeR
 
-# TODO
-# Differential abundances for all groups for all variables at genus and feature level - DONE
-
 
 
 ############################################################
@@ -71,13 +68,12 @@ otu.m <- as.matrix(read.table("Result_tables/count_tables/OTU_counts.csv", sep =
 genus.m <- as.matrix(read.table("Result_tables/count_tables/Genus_counts.csv", sep =",", header =T, row.names = 1))
 
 # Filter out features/taxa that do not have at # reads in at least one sample
-head(melt(sort(colSums(otu.m))))
-head(melt(sort(colSums(genus.m))))
+
 dim(otu.m)
 dim(genus.m)
-head(melt(sort(apply(genus.m, 1, max))), 10)
-otu.m <- filter_matrix_rows(otu.m,50)
-genus.m <- filter_matrix_rows(genus.m,50)
+# head(melt(sort(apply(genus.m, 1, max))), 10)
+otu.m <- filter_matrix_rows(otu.m,20)
+genus.m <- filter_matrix_rows(genus.m,20)
 dim(otu.m)
 dim(genus.m)
 head(melt(sort(apply(genus.m, 1, max))),10)

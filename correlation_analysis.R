@@ -31,6 +31,15 @@ genus_relabeller_function <- function(my_labels){
                 }))
 }
 
+combined_otu_labeller <- function(x){
+  # print(as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$taxonomy_species))
+  first_resolved_taxonomy(as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$taxonomy_species))
+}
+
+genus_relabeller_network <- function(x){
+  # print(as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$taxonomy_species))
+  gsub(".*__(.*)","\\1", first_resolved_taxonomy(x))
+}
 
 setwd("/Users/julianzaugg/Desktop/ACE/major_projects/otitis_16S_project/")
 source("code/helper_functions.R")
@@ -67,8 +76,8 @@ genus.m <- df2matrix(genus.df)
 # --------------------------------------------------------------------------------------------------------------------
 # Generate fastspar inputs, only required for group subsets
 
-# prepare_input_variables <- c("Community", "Nose", "Otitis_Status", "Community__Gold_Star")
-# 
+prepare_input_variables <- c("Community", "Nose", "Otitis_Status", "Community__Gold_Star")
+
 # for (variable in prepare_input_variables){
 #   for (group in as.character(unique(metadata.df[,variable]))){
 #     sample_list <- as.character(subset(metadata.df, get(variable) == group)$Index)
@@ -86,7 +95,7 @@ genus.m <- df2matrix(genus.df)
 #     # print(dim(genus_subset_data.df))
 #     names(otu_subset_data.df)[1] <- "#OTU ID"
 #     names(genus_subset_data.df)[1] <- "#OTU ID"
-#     
+# 
 #     write.table(x = otu_subset_data.df, file = paste0("Result_tables/fastspar_inputs/", variable, "/", variable, "___",gsub("/|\\s", "_",group), "___otu_counts_fastspar.tsv"), sep = "\t", quote = F, row.names = F)
 #     write.table(x = genus_subset_data.df, file = paste0("Result_tables/fastspar_inputs/", variable, "/", variable, "___",gsub("/|\\s", "_",group), "___genus_counts_fastspar.tsv"), sep = "\t", quote = F, row.names = F)
 #   }
@@ -94,7 +103,52 @@ genus.m <- df2matrix(genus.df)
 
 # --------------------------------------------------------------------------------------------------------------------
 # --------------------------------------------------------------------------------------------------------------------
+
+otu_cor_files <- list.files("Additional_results/fastspar/")[grepl("___otu___correlation.tsv", list.files("Additional_results/fastspar/"))]
+# lapply(rownames(otu_fastspar_cor.m),combined_otu_labeller)
+source("code/helper_functions.R")
+for (cor_file in otu_cor_files){
+  
+  otu_fastspar_cor.m <- as.matrix(read.table(paste0("Additional_results/fastspar/",cor_file),
+                                             sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+  otu_fastspar_pval.m <- as.matrix(read.table(paste0("Additional_results/fastspar/",gsub("___correlation.tsv", "___pvalues.tsv",cor_file)),
+                                              sep ="\t",header = T,row.names = 1,comment.char = "",check.names = F))
+  file_name_split <- strsplit(cor_file, split = "___")[[1]]
+  variable <- file_name_split[1]
+  group <- file_name_split[2]
+  print(cor_file)
+  print(variable)
+  print(dim(otu_fastspar_cor.m))
+  otu_correlation_network.l <- generate_correlation_network(cor_matrix = otu_fastspar_cor.m,
+                                                            p_matrix = otu_fastspar_pval.m,
+                                                            relabeller_function = combined_otu_labeller,
+                                                            p_value_threshold = 0.01,
+                                                            cor_threshold = 0.5,
+                                                            node_size = 4,
+                                                            node_colour = "grey20",
+                                                            node_fill = "grey20",
+                                                            node_label_segment_colour = "purple",
+                                                            label_colour = "black",
+                                                            label_size = 3,
+                                                            plot_height = 10,
+                                                            plot_width = 10,
+                                                            edge_width_min = .5,
+                                                            edge_width_max = 2.5,
+                                                            edge_alpha = 1,
+                                                            # network_layout = "stress",
+                                                            network_layout = "fr",
+                                                            # network_layout = "kk",
+                                                            # exclude_to_from_df = edges_to_remove.df,
+                                                            plot_title = paste0(variable, ": ", group, "; ASV correlation"),
+                                                            filename= paste0("Result_figures/correlation_analysis/networks/otu/",variable,"___",group,"___feature_correlation_network.pdf"),
+                                                            myseed = 1,
+                                                            edgetype = "link",
+                                                            show_p_label = F,
+                                                            file_type = "pdf")
+}
+
 genus_cor_files <- list.files("Additional_results/fastspar/")[grepl("___genus___correlation.tsv", list.files("Additional_results/fastspar/"))]
+genus_cor_files <- grep("Nose|Otitis", genus_cor_files,value =T)
 for (cor_file in genus_cor_files){
   genus_fastspar_cor.m <- as.matrix(read.table(paste0("Additional_results/fastspar/",cor_file),
                                                sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
@@ -107,30 +161,73 @@ for (cor_file in genus_cor_files){
   genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_fastspar_cor.m,
                                                               p_matrix = genus_fastspar_pval.m,
                                                               relabeller_function = first_resolved_taxonomy,
-                                                              
+                                                              # relabeller_function = genus_relabeller_network,
                                                               p_value_threshold = 0.05,
-                                                              cor_threshold = 0.5,
+                                                              cor_threshold = 0.4,
                                                               node_size = 4,
                                                               node_colour = "grey20",
                                                               node_fill = "grey20",
+                                                              node_label_segment_colour = "purple",
                                                               label_colour = "black",
-                                                              label_size = 3,
+                                                              label_size = 4,
                                                               plot_height = 10,
                                                               plot_width = 10,
                                                               edge_width_min = .5,
                                                               edge_width_max = 2.5,
+                                                              edge_alpha = 1,
+                                                              # network_layout = "stress",
                                                               network_layout = "fr",
+                                                              # network_layout = "kk",
                                                               # exclude_to_from_df = edges_to_remove.df,
-                                                              plot_title = paste0(variable, ": ", group, "; Genus correlation"),
-                                                              filename= paste0("Result_figures/correlation_analysis/networks/",variable,"___",group,"___genus_correlation_network.pdf"),
+                                                              # plot_title = paste0(variable, ": ", group, "; Genus correlation"),
+                                                              filename= paste0("Result_figures/correlation_analysis/networks/genus/",variable,"___",group,"___genus_correlation_network.pdf"),
                                                               myseed = 1,
                                                               edgetype = "link",
                                                               show_p_label = F,
                                                               file_type = "pdf")
 }
 
+genus_fastspar_cor.m <- as.matrix(read.table("Additional_results/fastspar/Community__Gold_Star___Rural__Healthy___genus___covariance.tsv",
+                                             sep ="\t",header = T,row.names = 1,comment.char = "", check.names = F))
+genus_fastspar_pval.m <- as.matrix(read.table("Additional_results/fastspar/Community__Gold_Star___Rural__Healthy___genus___pvalues.tsv",
+                                              sep ="\t",header = T,row.names = 1,comment.char = "",check.names = F))
+genus_correlation_network.l <- generate_correlation_network(cor_matrix = genus_fastspar_cor.m,
+                                                            p_matrix = genus_fastspar_pval.m,
+                                                            relabeller_function = first_resolved_taxonomy,
+                                                            
+                                                            p_value_threshold = 0.05,
+                                                            cor_threshold = 0.5)
+# my_layout <- create_layout(genus_correlation_network.l$network_data, layout = 'igraph', algorithm = 'nicely')
+cols_f <- colorRampPalette(RColorBrewer::brewer.pal(11, 'Spectral'))
+
+ggraph(genus_correlation_network.l$network_data,layout = "stress") +
+  geom_edge_link(aes(colour = Correlation, width = abs(Correlation))) +
+  geom_node_point(aes(fill = name), shape = 21,size = 3)
 
 
+colour_palette_30_distinct <- c("#009348","#f579fe","#4fe16e","#b40085","#4d7e00","#4742b4","#f0c031","#016dd9","#d45200","#7499ff","#ef4d2d","#01c9c8","#f8394b","#88d7a6","#d20063","#c8cc5d","#882986","#fdb95d","#404f8f","#917300","#f3aefc","#5c5800","#ff75c3","#00674a","#ba001c","#979760","#8b354c","#ff875f","#943105","#cf9478")
+colour_palette_206_distinct <- c("#cfefb4","#7d8b00","#a70079","#552155","#632900","#ffb173","#fbdcf2","#015a6a","#43fdf7","#ff443a","#008186","#3b8aff","#8b5fff","#ff9777","#4200a9","#85f6fd","#c96000","#36218a","#d28900","#0137d7","#30325b","#ff836b","#008b4f","#21ff9d","#00794d","#870052","#e9ec4b","#ce006b","#6e0044","#8a6500","#006971","#432e4b","#ca8dff","#f20059","#44ffe2","#00be5c","#a0d2ff","#1914ab","#4d284e","#59d7ff","#ab9aff","#0151d9","#1de740","#e24500","#9fc400","#610769","#0a4600","#1e365b","#018f3f","#b15fff","#009c5e","#005290","#506100","#f49aff","#0187c1","#ffb5f4","#daf100","#70081d","#ff9890","#c1baff","#ffbe5a","#1b3466","#ff2a7f","#ff5d3c","#e47800","#ac6bff","#1f6000","#006627","#4f4000","#dcd6ff","#ffd7c1","#ed2de4","#a50038","#a5a8ff","#0f2f7f","#b11700","#00e06b","#ffabb8","#015780","#82eaff","#1b2a88","#6f1600","#d3ef9c","#746e00","#01d851","#625300","#01d799","#96fd6c","#ff5ca1","#7b0017","#004c2b","#baf678","#f8aaff","#007c1b","#01a88a","#a71ed8","#fb8cff","#840079","#276d00","#556655","#02b0de","#c0efd7","#63193e","#8e9984","#017ac9","#ff925f","#ff63d7","#294100","#28baff","#5b2523","#35ab00","#69132e","#8a3b00","#a67700","#7fff6a","#002f96","#681a0b","#4d3003","#ff7de6","#0190d8","#a69700","#ff6282","#d3f266","#ffc4cf","#ffac3c","#d064ff","#d07aff","#c3005d","#9d0067","#0167c1","#8cfe82","#ffd68f","#8cfcaf","#f50096","#00c2a2","#aa5e00","#02c16d","#4e4bf6","#ffd962","#004793","#93d800","#462a58","#323a03","#4f9eff","#2b3a25","#2defff","#02edd6","#864e00","#ffc59f","#e7e9ab","#014cc4","#437bff","#00afba","#ff7d82","#8a1ed4","#ff48b3","#acf7ab","#005550","#7600a6","#bc0028","#00adab","#02dfbf","#ba004c","#004760","#ebc5ff","#0162d7","#9b3900","#5869ff","#ff6160","#87b6ff","#ff6796","#ff8422","#ff8440","#b500a8","#937fff","#0132bd","#f48e00","#1e8800","#462370","#3e3614","#9ca800","#efe5bf","#aeb6a0","#d9aaff","#d8ef89","#cec800","#ffb8b3","#4a2c42","#01715b","#b8ebff","#ff9ec0","#ff93ec","#ffe0aa","#65b300","#6a8b00","#f6e77c","#ff85c0","#5de522","#a5f6ca","#c70077","#5a4149","#a3b700","#ff63c4","#63fecd","#93f6e7","#01b4a4")
+edge_width_min = .5
+edge_width_max = 2.5
+break_length <- length(seq(-1,1,.2))
+correlation_graph_plot <- ggraph(genus_correlation_network.l$network_data, layout = "stress") +
+  geom_edge_link(aes(colour = Correlation, width = abs(Correlation))) +
+  geom_node_point(aes(fill = name), shape = 21,size = 3) +
+  scale_edge_width_continuous(name="Correlation", range = c(edge_width_min,edge_width_max),
+                              breaks = seq(-1,1,.2)) +
+  scale_edge_colour_gradientn(colours = colorRampPalette(rev(c("#67001F", "#B2182B", "#D6604D",
+                                                               "#F4A582", "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE",
+                                                               "#4393C3", "#2166AC", "#053061")))(11),
+                              limits = c(-1,1), # limit colours to full corrrelation range
+                              breaks = seq(-1,1,.2), # Break colours from -1 to 1 in steps of 0.2
+                              guide = guide_edge_colourbar(barwidth = 0.5, barheight = 10)) +
+  scale_fill_manual(values = colour_palette_206_distinct) +
+  theme_graph(background = "white")
+  edge_widths <- abs(c(rev(rev(seq(-edge_width_max, -edge_width_min, length.out = break_length/2))[-1]),
+                       rev(seq(edge_width_max, edge_width_min, length.out = break_length/2))))
+  correlation_graph_plot <- correlation_graph_plot + guides(edge_color = guide_legend(override.aes = list(edge_width = edge_widths)),
+         edge_width = F)
+  correlation_graph_plot
 
 
 

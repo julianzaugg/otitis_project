@@ -70,7 +70,7 @@ rownames(metadata.df) <- metadata.df$Index
 
 # Convert variables to factors
 discrete_variables <- c("Nose","Tympanic_membrane", "Otitis_Status",
-                        "Season","Community","Gold_Star",
+                        "Season","Community","Gold_Star", "No_peop_res_discrete",
                         "H.influenzae_culture","M.catarrhalis_culture","S.pneumoniae_culture",
                         "Otitis_Status__Gold_Star", "Tympanic_membrane__Gold_Star",
                         "Community__Season","Community__Gold_Star","Community__Otitis_Status",
@@ -84,7 +84,12 @@ discrete_variables <- c("Nose","Tympanic_membrane", "Otitis_Status",
                         # "N_HKU_1","N_ENT","N_hMPV","N_PARA_1","N_PARA_2","N_RSV_A","N_RSV_B","N_HRV","N_FLU_B","N_FLU_A","Virus_any")
 
 metadata.df$Tympanic_membrane[metadata.df$Tympanic_membrane == "Unable to visualise/Not examined"] <- NA
+# Remove AOM, just make values NA
+metadata.df[metadata.df$Otitis_Status == "Acute Otitis Media","Otitis_Status"] <- NA
+
 metadata.df[discrete_variables] <- lapply(metadata.df[discrete_variables], factor)
+
+
 
 # Need to factorise the colour columns as well
 colour_columns <- names(metadata.df)[grepl("colour", names(metadata.df))]
@@ -105,6 +110,7 @@ genus.m <- genus.m[,colnames(genus.m) %in% c("OTU.ID", as.character(metadata.df$
 # Remove samples from metadata that are not in the data
 # metadata.df <- metadata.df[metadata.df$Index %in% colnames(otu.df),]
 # metadata_decontaminated.df <- metadata_decontaminated.df[metadata_decontaminated.df$Index %in% colnames(otu_decontaminated.df),]
+
 
 # Order the metadata.df by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
@@ -146,19 +152,6 @@ genus_relabeller_function <- function(my_labels){
                 }))
 }
 
-first_resolved_taxonomy <- function(x) {
-  # Get the lowest taxonomy level (or 'first') that has been resolved from a taxonomy string
-  ranks.v <- unlist(strsplit(x, split = ';'))
-  for (i in length(ranks.v):1) {
-    split.v <- unlist(strsplit(ranks.v[i], split = '__'))
-    if (!is.na(split.v[2]) & split.v[2] != "") {
-      if (!grepl(split.v[2], pattern = "Unassigned|uncultured")) {
-        return(ranks.v[i])
-      }
-    }
-  }
-  return(ranks.v[1])
-}
 
 combined_otu_labeller <- function(x){
   # print(as.character(otu_taxonomy_map.df[otu_taxonomy_map.df$OTU.ID == x,]$taxonomy_species))
@@ -169,8 +162,8 @@ combined_otu_labeller <- function(x){
 # --------------------
 # Generate PCA plots. If CLR transformed values with euclidean distances, these will be the same as
 # the values calculated from betadisper...maybe not important
-temp <- betadiver(t(otu_clr.m),method = "e")
-# temp <- with(metadata.df, betadisper...maybe(vegdist(t(otu_clr.m),method = "euclidean"),group = Gold_Star))
+# temp <- betadiver(t(otu_clr.m),method = "e")
+temp <- with(metadata.df, betadisper(vegdist(t(otu_clr.m),method = "euclidean"),group = Gold_Star))
 # temp$eig["PCoA1"] / sum(temp$eig)
 # temp$eig["PCoA2"] / sum(temp$eig)
 # plot(temp)
@@ -188,20 +181,66 @@ genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata
 temp <- calculate_PC_abundance_correlations(genus_pca, mydata.df = genus_data.df,
                                             taxa_column = "taxonomy_genus",
                                             variables = discrete_variables)
+# ------------------------------------------------------------------------------------------------
+#           PUBLICATION
 
+#### Within community
+rural_metadata.df <- subset(metadata.df, Community == "Rural")
+remote_metadata.df <- subset(metadata.df, Community == "Remote")
+genus_rural_pca <- rda(t(genus_clr.m[,rownames(rural_metadata.df)]), data = rural_metadata.df)
+genus_remote_pca <- rda(t(genus_clr.m[,rownames(remote_metadata.df)]), data = remote_metadata.df)
 
+source("code/helper_functions.R")
+file_type <- "svg"
 
-generate_pca_plot(pca_object = genus_pca,
-                  my_metadata.df = metadata.df,
-                  # file_type = "pdf",
-                  # filename = paste0("Result_figures/pca_plots/genus/genus_",myvar, "_pca.pdf"),
-                  plot_height = 6,
-                  plot_width = 6,
-                  # plot_title = paste0("Genus PCA: ", myvar),
-                  
+# Genus, Otitis_Status, rural
+generate_pca_plot(pca_object = genus_rural_pca,
+                  my_metadata.df = rural_metadata.df,
+                  plot_height = 7,
+                  plot_width = 7,
                   variable_colours_available = T,
-                  variable_to_plot = "Community",
-                  point_line_thickness = 0.5,
+                  variable_to_plot = "Otitis_Status",
+                  point_line_thickness = 0.7,
+                  use_shapes = T,
+                  plot_spiders = F,
+                  label_sites = F,
+                  # label_spider = T,
+                  plot_hulls = T,
+                  hull_alpha = .7,
+                  axis_limits = c(-6,5,-5,3),
+                  
+                  include_legend = T,
+                  legend_columns = 1,
+                  legend_cex = .8,
+                  legend_x = -6,
+                  legend_y = 3,
+                  legend_title = "Otitis status",
+                  
+                  plot_arrows = T,
+                  num_top_species = 3,
+                  arrow_colour = "grey20",
+                  arrow_scalar = 1.5,
+                  # arrow_label_colour = "midnightblue",
+                  arrow_label_colour = "royalblue4",
+                  arrow_label_font_type = 1,
+                  arrow_label_size = .7,
+                  arrow_thickness = 1,
+                  arrow_alpha = .5,
+                  specie_labeller_function = first_resolved_taxonomy,
+                  hide_grid =F,
+                  file_type = file_type,
+                  filename = paste0("Result_figures/pca_plots/genus_within_community/genus_Otitis_Status__Community_rural.", file_type)
+)
+
+# Genus, Otitis_Status, remote
+generate_pca_plot(pca_object = genus_remote_pca,
+                  my_metadata.df = remote_metadata.df,
+                  plot_height = 7,
+                  plot_width = 7,
+
+                  variable_colours_available = T,
+                  variable_to_plot = "Otitis_Status",
+                  point_line_thickness = 0.7,
                   
                   use_shapes = T,
                   plot_spiders = F,
@@ -209,228 +248,393 @@ generate_pca_plot(pca_object = genus_pca,
                   # label_spider = T,
                   plot_hulls = T,
                   hull_alpha = .7,
-                  axis_limits = c(-3,4.5,-3,4.5),
+                  axis_limits = c(-4.5,6,-4,3),
                   
                   include_legend = T,
                   legend_columns = 1,
                   legend_cex = .8,
-                  legend_x = 0,
-                  legend_y = 4.5,
-                  # legend_title = gsub("_", " ", myvar),
-                  legend_title = myvar,
-                  # legend_fill_colour = "grey",
+                  legend_x = -4.5,
+                  legend_y = 3,
+                  legend_title = "Otitis status",
                   
                   plot_arrows = T,
                   num_top_species = 3,
                   arrow_colour = "grey20",
-                  arrow_scalar = 1,
-                  arrow_label_colour = "midnightblue",
-                  arrow_label_font_type = 3,
+                  arrow_scalar = 1.5,
+                  # arrow_label_colour = "midnightblue",
+                  arrow_label_colour = "royalblue4",
+                  arrow_label_font_type = 1,
                   arrow_label_size = .7,
                   arrow_thickness = 1,
                   arrow_alpha = .5,
                   specie_labeller_function = first_resolved_taxonomy,
-                  hide_grid =F
+                  hide_grid =F,
+                  file_type = file_type,
+                  filename = paste0("Result_figures/pca_plots/genus_within_community/genus_Otitis_Status__Community_remote.", file_type)
 )
 
-source("code/helper_functions.R")
-for (myvar in discrete_variables){
-  print(myvar)
-  generate_pca_plot(pca_object = otu_pca,
-                    my_metadata.df = metadata.df,
-                    file_type = "pdf",
-                    filename = paste0("Result_figures/pca_plots/otu/otu_",myvar, "_pca.pdf"),
-                    plot_height = 6,
-                    plot_width = 6,
-                    plot_title = paste0("ASV PCA: ", myvar),
-                    
-                    variable_colours_available = T,
-                    variable_to_plot = myvar,
-                    point_line_thickness = 0.5,
-                    
-                    use_shapes = T,
-                    plot_spiders = F,
-                    point_alpha = 1,
-                    plot_hulls = T,
-                    hull_alpha = .5,
-                    
-                    label_sites = F,
-                    # label_spider = T,
-                    axis_limits = c(-6,4.5,-6,6.5),
-                    
-                    include_legend = T,
-                    legend_columns = 1,
-                    legend_cex = .6,
-                    legend_x = -6,
-                    legend_y = 6.5,
-                    # legend_title = gsub("_", " ", myvar),
-                    legend_title = myvar,
-                    # legend_fill_colour = "grey",
-                    
-                    plot_arrows = T,
-                    num_top_species = 3,
-                    arrow_colour = "grey20",
-                    arrow_scalar = 1.5,
-                    arrow_label_colour = "midnightblue",
-                    arrow_label_font_type = 3,
-                    arrow_label_size = .5,
-                    arrow_label_alpha = .7,
-                    arrow_thickness = .7,
-                    arrow_alpha = .5,
-                    specie_labeller_function = combined_otu_labeller,
-                    hide_grid =F
-  )
-  
-  
-  generate_pca_plot(pca_object = genus_pca,
-                    my_metadata.df = metadata.df,
-                    file_type = "pdf",
-                    filename = paste0("Result_figures/pca_plots/genus/genus_",myvar, "_pca.pdf"),
-                    plot_height = 6,
-                    plot_width = 6,
-                    plot_title = paste0("Genus PCA: ", myvar),
-                    
-                    variable_colours_available = T,
-                    variable_to_plot = myvar,
-                    point_line_thickness = 0.5,
-                    
-                    use_shapes = T,
-                    plot_spiders = F,
-                    point_alpha = 1,
-                    plot_hulls = T,
-                    hull_alpha = .5,
-                    label_sites = F,
-                    # label_spider = T,
-                    axis_limits = c(-4,4.5,-4,6),
-                    
-                    include_legend = T,
-                    legend_columns = 1,
-                    legend_cex = .6,
-                    legend_x = -4,
-                    legend_y = 6,
-                    # legend_title = gsub("_", " ", myvar),
-                    legend_title = myvar,
-                    # legend_fill_colour = "grey",
-                    
-                    plot_arrows = T,
-                    num_top_species = 3,
-                    arrow_colour = "grey20",
-                    arrow_scalar = 1.5,
-                    arrow_label_colour = "midnightblue",
-                    arrow_label_font_type = 3,
-                    arrow_label_size = .5,
-                    arrow_label_alpha = .7,
-                    arrow_thickness = .7,
-                    arrow_alpha = .5,
-                    specie_labeller_function = first_resolved_taxonomy,
-                    hide_grid =F
-                    )
-}
+# House hold size
+generate_pca_plot(pca_object = genus_pca,
+                  my_metadata.df = metadata.df,
+                  plot_height = 7,
+                  plot_width = 7,
+                  
+                  variable_colours_available = T,
+                  variable_to_plot = "No_peop_res_discrete",
+                  point_line_thickness = 0.7,
+                  
+                  use_shapes = T,
+                  plot_spiders = F,
+                  label_sites = F,
+                  # label_spider = T,
+                  plot_hulls = T,
+                  hull_alpha = .7,
+                  axis_limits = c(-4.5,5,-4.5,3),
+                  
+                  include_legend = T,
+                  legend_columns = 1,
+                  legend_cex = .8,
+                  legend_x = -4.5,
+                  legend_y = 3,
+                  legend_title = "People in household",
+                  
+                  plot_arrows = T,
+                  num_top_species = 3,
+                  arrow_colour = "grey20",
+                  arrow_scalar = 1.5,
+                  arrow_label_colour = "royalblue4",
+                  arrow_label_font_type = 1,
+                  arrow_label_size = .7,
+                  arrow_thickness = 1,
+                  arrow_alpha = .5,
+                  specie_labeller_function = first_resolved_taxonomy,
+                  hide_grid =F,
+                  file_type = file_type,
+                  filename = paste0("Result_figures/pca_plots/genus/genus_No_people_in_household.", file_type)
+)
+
+# Genus, Community
+generate_pca_plot(pca_object = genus_pca,
+                  my_metadata.df = metadata.df,
+                  plot_height = 7,
+                  plot_width = 7,
+                  
+                  variable_colours_available = T,
+                  variable_to_plot = "Community",
+                  point_line_thickness = 0.7,
+                  
+                  use_shapes = T,
+                  plot_spiders = F,
+                  label_sites = F,
+                  # label_spider = T,
+                  plot_hulls = T,
+                  hull_alpha = .7,
+                  axis_limits = c(-4.5,5,-4.5,3),
+                  
+                  include_legend = T,
+                  legend_columns = 1,
+                  legend_cex = .8,
+                  legend_x = -4.5,
+                  legend_y = 3,
+                  legend_title = "Community",
+                  
+                  plot_arrows = T,
+                  num_top_species = 3,
+                  arrow_colour = "grey20",
+                  arrow_scalar = 1.5,
+                  arrow_label_colour = "royalblue4",
+                  arrow_label_font_type = 1,
+                  arrow_label_size = .7,
+                  arrow_thickness = 1,
+                  arrow_alpha = .5,
+                  specie_labeller_function = first_resolved_taxonomy,
+                  hide_grid =F,
+                  file_type = file_type,
+                  filename = paste0("Result_figures/pca_plots/genus/genus_Community.", file_type)
+)
+
+# Genus, Season
+generate_pca_plot(pca_object = genus_pca,
+                  my_metadata.df = metadata.df,
+                  plot_height = 7,
+                  plot_width = 7,
+                  
+                  variable_colours_available = T,
+                  variable_to_plot = "Season",
+                  point_line_thickness = 0.7,
+                  
+                  use_shapes = T,
+                  plot_spiders = F,
+                  label_sites = F,
+                  # label_spider = T,
+                  plot_hulls = T,
+                  hull_alpha = .7,
+                  axis_limits = c(-4.5,5,-4.5,3),
+                  
+                  include_legend = T,
+                  legend_columns = 1,
+                  legend_cex = .8,
+                  legend_x = -4.5,
+                  legend_y = 3,
+                  legend_title = "Season",
+                  
+                  plot_arrows = T,
+                  num_top_species = 3,
+                  arrow_colour = "grey20",
+                  arrow_scalar = 1.5,
+                  arrow_label_colour = "royalblue4",
+                  arrow_label_font_type = 1,
+                  arrow_label_size = .7,
+                  arrow_thickness = 1,
+                  arrow_alpha = .5,
+                  specie_labeller_function = first_resolved_taxonomy,
+                  hide_grid =F,
+                  file_type = file_type,
+                  filename = paste0("Result_figures/pca_plots/genus/genus_Season.", file_type)
+)
+
+# Genus, Otitis_Status
+generate_pca_plot(pca_object = genus_pca,
+                  my_metadata.df = metadata.df,
+                  plot_height = 7,
+                  plot_width = 7,
+                  
+                  variable_colours_available = T,
+                  variable_to_plot = "Otitis_Status",
+                  point_line_thickness = 0.7,
+                  
+                  use_shapes = T,
+                  plot_spiders = F,
+                  label_sites = F,
+                  # label_spider = T,
+                  plot_hulls = T,
+                  hull_alpha = .7,
+                  axis_limits = c(-4.5,5,-4.5,3),
+                  
+                  include_legend = T,
+                  legend_columns = 1,
+                  legend_cex = .8,
+                  legend_x = -4.5,
+                  legend_y = 3,
+                  legend_title = "Otitis Status",
+                  
+                  plot_arrows = T,
+                  num_top_species = 3,
+                  arrow_colour = "grey20",
+                  arrow_scalar = 1.5,
+                  arrow_label_colour = "royalblue4",
+                  arrow_label_font_type = 1,
+                  arrow_label_size = .7,
+                  arrow_thickness = 1,
+                  arrow_alpha = .5,
+                  specie_labeller_function = first_resolved_taxonomy,
+                  hide_grid =F,
+                  file_type = file_type,
+                  filename = paste0("Result_figures/pca_plots/genus/genus_Otitis_Status.", file_type)
+)
+
+
+
+
+# ------------------------------------------------------------------------------------------------
+# source("code/helper_functions.R")
+# for (myvar in discrete_variables){
+#   print(myvar)
+#   generate_pca_plot(pca_object = otu_pca,
+#                     my_metadata.df = metadata.df,
+#                     file_type = "pdf",
+#                     filename = paste0("Result_figures/pca_plots/otu/otu_",myvar, "_pca.pdf"),
+#                     plot_height = 6,
+#                     plot_width = 6,
+#                     plot_title = paste0("ASV PCA: ", myvar),
+#                     
+#                     variable_colours_available = T,
+#                     variable_to_plot = myvar,
+#                     point_line_thickness = 0.7,
+#                     
+#                     use_shapes = T,
+#                     plot_spiders = F,
+#                     point_alpha = 1,
+#                     plot_hulls = T,
+#                     hull_alpha = .5,
+#                     
+#                     label_sites = F,
+#                     # label_spider = T,
+#                     axis_limits = c(-6,4.5,-6,6.5),
+#                     
+#                     include_legend = T,
+#                     legend_columns = 1,
+#                     legend_cex = .6,
+#                     legend_x = -6,
+#                     legend_y = 6.5,
+#                     # legend_title = gsub("_", " ", myvar),
+#                     legend_title = myvar,
+#                     # legend_fill_colour = "grey",
+#                     
+#                     plot_arrows = T,
+#                     num_top_species = 3,
+#                     arrow_colour = "grey20",
+#                     arrow_scalar = 1.5,
+#                     arrow_label_colour = "midnightblue",
+#                     arrow_label_font_type = 1,
+#                     arrow_label_size = .5,
+#                     arrow_label_alpha = .7,
+#                     arrow_thickness = .7,
+#                     arrow_alpha = .5,
+#                     specie_labeller_function = combined_otu_labeller,
+#                     hide_grid =F
+#   )
+#   
+#   
+#   generate_pca_plot(pca_object = genus_pca,
+#                     my_metadata.df = metadata.df,
+#                     file_type = "pdf",
+#                     filename = paste0("Result_figures/pca_plots/genus/genus_",myvar, "_pca.pdf"),
+#                     plot_height = 6,
+#                     plot_width = 6,
+#                     plot_title = paste0("Genus PCA: ", myvar),
+#                     
+#                     variable_colours_available = T,
+#                     variable_to_plot = myvar,
+#                     point_line_thickness = 0.7,
+#                     
+#                     use_shapes = T,
+#                     plot_spiders = F,
+#                     point_alpha = 1,
+#                     plot_hulls = T,
+#                     hull_alpha = .5,
+#                     label_sites = F,
+#                     # label_spider = T,
+#                     axis_limits = c(-4,4.5,-4,6),
+#                     
+#                     include_legend = T,
+#                     legend_columns = 1,
+#                     legend_cex = .6,
+#                     legend_x = -4,
+#                     legend_y = 6,
+#                     # legend_title = gsub("_", " ", myvar),
+#                     legend_title = myvar,
+#                     # legend_fill_colour = "grey",
+#                     
+#                     plot_arrows = T,
+#                     num_top_species = 3,
+#                     arrow_colour = "grey20",
+#                     arrow_scalar = 1.5,
+#                     arrow_label_colour = "midnightblue",
+#                     arrow_label_font_type = 1,
+#                     arrow_label_size = .5,
+#                     arrow_label_alpha = .7,
+#                     arrow_thickness = .7,
+#                     arrow_alpha = .5,
+#                     specie_labeller_function = first_resolved_taxonomy,
+#                     hide_grid =F
+#                     )
+# }
 
 # Perform PCA on only samples within the same community and generate plots
-for (community in unique(metadata.df$Community)){
-  metadata_subset.df <- subset(metadata.df, Community == community)
-  
-  # Generate ordination objects for the community data
-  otu_community_pca <- rda(t(otu_clr.m[,rownames(metadata_subset.df)]), data = metadata_subset.df)
-  genus_community_pca <- rda(t(genus_clr.m[,rownames(metadata_subset.df)]), data = metadata_subset.df)
-  
-  for (myvar in discrete_variables){
-    if (myvar == "Community") {next}
-    # print(myvar)
-    # plot_title = paste0(myvar,", Remote Community ", community),
-    generate_pca_plot(pca_object = otu_community_pca,
-                      my_metadata.df = metadata_subset.df,
-                      file_type = "pdf",
-                      filename = paste0("Result_figures/pca_plots/otu_within_community/otu_",myvar, "_Community_", community,"_pca.pdf"),
-                      plot_height = 6,
-                      plot_width = 6,
-                      plot_title = paste0("ASV PCA: ", myvar, "; Community: ", community),
-                      title_cex = .7,
-                      
-                      variable_colours_available = T,
-                      variable_to_plot = myvar,
-                      
-                      point_line_thickness = 0.5,
-                      
-                      use_shapes = T,
-                      plot_spiders = F,
-                      label_sites = F,
-                      # label_spider = T,
-                      plot_hulls = T,
-                      hull_alpha = .5,
-                      axis_limits = c(-8,7,-6,8),
-                      
-                      include_legend = T,
-                      legend_columns = 1,
-                      legend_cex = .6,
-                      legend_x = -7,
-                      legend_y = 8,
-                      # legend_title = gsub("_", " ", myvar),
-                      legend_title = myvar,
-                      # legend_fill_colour = "grey",
-                      
-                      plot_arrows = T,
-                      num_top_species = 3,
-                      arrow_colour = "grey20",
-                      arrow_scalar = 1.5,
-                      arrow_label_colour = "midnightblue",
-                      arrow_label_alpha = .7,
-                      arrow_label_font_type = 3,
-                      arrow_label_size = .5,
-                      arrow_thickness = .7,
-                      arrow_alpha = .5,
-                      specie_labeller_function = combined_otu_labeller,
-                      hide_grid =F
-    )
-    
-    
-    generate_pca_plot(pca_object = genus_community_pca,
-                      my_metadata.df = metadata_subset.df,
-                      file_type = "pdf",
-                      filename = paste0("Result_figures/pca_plots/genus_within_community/genus_",myvar, "_Community_", community,"_pca.pdf"),
-                      plot_height = 6,
-                      plot_width = 6,
-                      plot_title = paste0("Genus PCA: ", myvar, "; Community: ", community),
-                      title_cex = .7,
-                      
-                      variable_colours_available = T,
-                      variable_to_plot = myvar,
-                      
-                      point_line_thickness = 0.5,
-                      
-                      use_shapes = T,
-                      plot_spiders = F,
-                      label_sites = F,
-                      # label_spider = T,
-                      plot_hulls = T,
-                      hull_alpha = .5,
-                      axis_limits = c(-8,6,-5,6.5),
-                      
-                      include_legend = T,
-                      legend_columns = 1,
-                      legend_cex = .6,
-                      legend_x = -8,
-                      legend_y = 6.5,
-                      # legend_title = gsub("_", " ", myvar),
-                      legend_title = myvar,
-                      # legend_fill_colour = "grey",
-                      
-                      plot_arrows = T,
-                      num_top_species = 3,
-                      arrow_colour = "grey20",
-                      arrow_scalar = 1.5,
-                      arrow_label_colour = "midnightblue",
-                      arrow_label_alpha = .7,
-                      arrow_label_font_type = 3,
-                      arrow_label_size = .5,
-                      arrow_thickness = .7,
-                      arrow_alpha = .5,
-                      specie_labeller_function = first_resolved_taxonomy,
-                      hide_grid =F
-    )
-  }
-}
+# for (community in unique(metadata.df$Community)){
+#   metadata_subset.df <- subset(metadata.df, Community == community)
+#   
+#   # Generate ordination objects for the community data
+#   otu_community_pca <- rda(t(otu_clr.m[,rownames(metadata_subset.df)]), data = metadata_subset.df)
+#   genus_community_pca <- rda(t(genus_clr.m[,rownames(metadata_subset.df)]), data = metadata_subset.df)
+#   
+#   for (myvar in discrete_variables){
+#     if (myvar == "Community") {next}
+#     # print(myvar)
+#     # plot_title = paste0(myvar,", Remote Community ", community),
+#     generate_pca_plot(pca_object = otu_community_pca,
+#                       my_metadata.df = metadata_subset.df,
+#                       file_type = "pdf",
+#                       filename = paste0("Result_figures/pca_plots/otu_within_community/otu_",myvar, "_Community_", community,"_pca.pdf"),
+#                       plot_height = 6,
+#                       plot_width = 6,
+#                       plot_title = paste0("ASV PCA: ", myvar, "; Community: ", community),
+#                       title_cex = .7,
+#                       
+#                       variable_colours_available = T,
+#                       variable_to_plot = myvar,
+#                       
+#                       point_line_thickness = 0.7,
+#                       
+#                       use_shapes = T,
+#                       plot_spiders = F,
+#                       label_sites = F,
+#                       # label_spider = T,
+#                       plot_hulls = T,
+#                       hull_alpha = .5,
+#                       axis_limits = c(-8,7,-6,8),
+#                       
+#                       include_legend = T,
+#                       legend_columns = 1,
+#                       legend_cex = .6,
+#                       legend_x = -7,
+#                       legend_y = 8,
+#                       # legend_title = gsub("_", " ", myvar),
+#                       legend_title = myvar,
+#                       # legend_fill_colour = "grey",
+#                       
+#                       plot_arrows = T,
+#                       num_top_species = 3,
+#                       arrow_colour = "grey20",
+#                       arrow_scalar = 1.5,
+#                       arrow_label_colour = "midnightblue",
+#                       arrow_label_alpha = .7,
+#                       arrow_label_font_type = 1,
+#                       arrow_label_size = .5,
+#                       arrow_thickness = .7,
+#                       arrow_alpha = .5,
+#                       specie_labeller_function = combined_otu_labeller,
+#                       hide_grid =F
+#     )
+#     
+#     
+#     generate_pca_plot(pca_object = genus_community_pca,
+#                       my_metadata.df = metadata_subset.df,
+#                       file_type = "pdf",
+#                       filename = paste0("Result_figures/pca_plots/genus_within_community/genus_",myvar, "_Community_", community,"_pca.pdf"),
+#                       plot_height = 6,
+#                       plot_width = 6,
+#                       plot_title = paste0("Genus PCA: ", myvar, "; Community: ", community),
+#                       title_cex = .7,
+#                       
+#                       variable_colours_available = T,
+#                       variable_to_plot = myvar,
+#                       
+#                       point_line_thickness = 0.7,
+#                       
+#                       use_shapes = T,
+#                       plot_spiders = F,
+#                       label_sites = F,
+#                       # label_spider = T,
+#                       plot_hulls = T,
+#                       hull_alpha = .5,
+#                       axis_limits = c(-8,6,-5,6.5),
+#                       
+#                       include_legend = T,
+#                       legend_columns = 1,
+#                       legend_cex = .6,
+#                       legend_x = -8,
+#                       legend_y = 6.5,
+#                       # legend_title = gsub("_", " ", myvar),
+#                       legend_title = myvar,
+#                       # legend_fill_colour = "grey",
+#                       
+#                       plot_arrows = T,
+#                       num_top_species = 3,
+#                       arrow_colour = "grey20",
+#                       arrow_scalar = 1.5,
+#                       arrow_label_colour = "midnightblue",
+#                       arrow_label_alpha = .7,
+#                       arrow_label_font_type = 1,
+#                       arrow_label_size = .5,
+#                       arrow_thickness = .7,
+#                       arrow_alpha = .5,
+#                       specie_labeller_function = first_resolved_taxonomy,
+#                       hide_grid =F
+#     )
+#   }
+# }
 
 
 
@@ -459,6 +663,7 @@ genus_within_community_permanova_results <- data.frame()
 # discrete_variables <- c("Nose", "Tympanic_membrane","Tympanic_membrane_Gold_Star", "Otitis_Status", "Season", "Community","Gold_Star", 
 #                         "H.influenzae_culture","M.catarrhalis_culture","S.pneumoniae_culture", "N_HRV",
 #                         "Dolosigranulum_pigrum")
+discrete_variables <- c("Nose", "Gold_Star", "Season", "Community", "N_HRV", "Dolosigranulum_pigrum", "Otitis_Status", "No_peop_res_discrete")
 
 for (myvar in discrete_variables){
   metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
