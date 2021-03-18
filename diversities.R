@@ -74,19 +74,14 @@ source("code/helper_functions.R")
 # Load the processed metadata
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
 
+# Remove AOM, just make values NA
+metadata.df[metadata.df$Otitis_Status == "Acute Otitis Media","Otitis_Status"] <- NA
+metadata.df <- metadata.df[!is.na(metadata.df$Otitis_Status),]
+
 # Set the Index to be the row name
 rownames(metadata.df) <- metadata.df$Index
 
-# Define the discrete variables
-discrete_variables <- c("Nose","Tympanic_membrane", "Otitis_Status",
-                        "Season","Community","Gold_Star",
-                        "H.influenzae_culture","M.catarrhalis_culture","S.pneumoniae_culture",
-                        "Otitis_Status__Gold_Star", "Tympanic_membrane__Gold_Star",
-                        "Community__Season","Community__Gold_Star","Community__Otitis_Status",
-                        "H.Influenzae_qPCR", "M.catarrhalis_qPCR", "S.pneumoniae_qPCR",
-                        "Corynebacterium_pseudodiphtheriticum","Dolosigranulum_pigrum","N_HRV")
-                        # "N_Adeno","N_WUKI","N_BOCA","N_COV_OC43","N_COV_NL63",
-                        # "N_HKU_1","N_ENT","N_hMPV","N_PARA_1","N_PARA_2","N_RSV_A","N_RSV_B","N_HRV","N_FLU_B","N_FLU_A","Virus_any")
+discrete_variables <- c("Community", "Nose", "Otitis_Status", "Season", "No_peop_res_discrete")
 
 metadata.df$Tympanic_membrane[metadata.df$Tympanic_membrane == "Unable to visualise/Not examined"] <- NA
 # Combined with Community
@@ -105,9 +100,13 @@ genus.m <-  as.matrix(read.csv("Result_tables/count_tables/Genus_counts.csv", he
 otu.m <- otu.m[,rownames(metadata.df)]
 genus.m <- genus.m[,rownames(metadata.df)]
 
+# otu.m <- otu.m[,match(colnames(otu.m),rownames(metadata.df))]
+# genus.m <- genus.m[,match(colnames(genus.m),rownames(metadata.df))]
+
 # Create the rarefied matrix
-otu_rare.m <- t(rrarefy(t(otu.m[,colSums(otu.m) >= 2000]), 2000))
-genus_rare.m <- t(rrarefy(t(genus.m[,colSums(genus.m) >= 2000]), 2000))
+rarefy_threshold <- 10000
+otu_rare.m <- t(rrarefy(t(otu.m[,colSums(otu.m) >= rarefy_threshold]), rarefy_threshold))
+genus_rare.m <- t(rrarefy(t(genus.m[,colSums(genus.m) >= rarefy_threshold]), rarefy_threshold))
 
 # Create phyloseq object
 otu_rare_phyloseq <- otu_table(otu_rare.m, taxa_are_rows=TRUE)
@@ -115,17 +114,17 @@ genus_rare_phyloseq <- otu_table(genus_rare.m, taxa_are_rows=TRUE)
 
 # Estimate alpha diversities
 otu_rare_alpha.df <- estimate_richness(otu_rare_phyloseq, measures = c("Chao1", "Simpson","Shannon"))
-otu_rare_alpha.df <- otu_rare_alpha.df[rownames(metadata.df),]
+otu_rare_alpha.df <- otu_rare_alpha.df[rownames(otu_rare_alpha.df) %in% rownames(metadata.df),]
 
 genus_rare_alpha.df <- estimate_richness(genus_rare_phyloseq, measures = c("Chao1", "Simpson","Shannon"))
-genus_rare_alpha.df <- genus_rare_alpha.df[rownames(metadata.df),]
+genus_rare_alpha.df <- genus_rare_alpha.df[rownames(genus_rare_alpha.df) %in% rownames(metadata.df),]
 
 # ---------------------------
 # Combine with metadata
-otu_rare_alpha.df <- left_join(metadata.df[c("Index", 
+otu_rare_alpha.df <- right_join(metadata.df[c("Index", 
                                              discrete_variables, 
                                              grep("_colour", names(metadata.df), value = T))],m2df(otu_rare_alpha.df, "Index"), by = "Index")
-genus_rare_alpha.df <- left_join(metadata.df[c("Index",
+genus_rare_alpha.df <- right_join(metadata.df[c("Index",
                                                    discrete_variables, 
                                                    grep("_colour", names(metadata.df), value = T))],m2df(genus_rare_alpha.df, "Index"), by = "Index")
 
@@ -162,6 +161,7 @@ genus_alpha_dunn_significances_multiple.df <- data.frame()
 # genus_alpha_dunn_significances_per_community.df <- data.frame()
 # genus_alpha_dunn_significances_multiple_per_community.df <- data.frame()
 for (variable in discrete_variables){
+  print(variable)
   n_groups <- unique(genus_rare_alpha.df[[variable]])
   if (length(n_groups) < 3){
     print(paste0("Pair: ", variable))
@@ -182,8 +182,9 @@ for (variable in discrete_variables){
                                                                                                         variable))
   }
 }
+
 # Remove entries that are not (near) significant
-threshold <- 0.1
+threshold <- 10.05
 otu_alpha_mann_significances.df <- otu_alpha_mann_significances.df[apply(otu_alpha_mann_significances.df[,c("Shannon_MannW_padj", "Simpson_MannW_padj", "Chao1_MannW_padj")],1,min) <= threshold,]
 genus_alpha_mann_significances.df <- genus_alpha_mann_significances.df[apply(genus_alpha_mann_significances.df[,c("Shannon_MannW_padj", "Simpson_MannW_padj", "Chao1_MannW_padj")],1,min) <= threshold,]
 

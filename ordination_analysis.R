@@ -95,6 +95,11 @@ metadata.df[discrete_variables] <- lapply(metadata.df[discrete_variables], facto
 colour_columns <- names(metadata.df)[grepl("colour", names(metadata.df))]
 metadata.df[colour_columns] <- lapply(metadata.df[colour_columns], factor)
 
+# Set order of Otitis Status
+metadata.df$Otitis_Status <- factor(metadata.df$Otitis_Status , levels = c("Never OM", "HxOM", "Effusion","Perforation"))
+# Set order of Season
+metadata.df$Season <- factor(metadata.df$Season, levels = c("Spring", "Winter", "Autumn"))
+
 # Load the OTU - taxonomy mapping file
 otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", header = T)
 
@@ -173,6 +178,92 @@ temp <- with(metadata.df, betadisper(vegdist(t(otu_clr.m),method = "euclidean"),
 otu_pca <- rda(t(otu_clr.m), data = metadata.df)
 genus_pca <- rda(t(genus_clr.m), data = metadata.df)
 
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
+# ----------------------------------------- TESTING ----------------------------------------------
+# remotes::install_github("gavinsimpson/ggvegan")
+library(tidyverse)
+library(vegan)
+library(ggvegan)
+PCAscores <- scores(genus_pca, display = "sites") %>% 
+  as.data.frame() %>% 
+  rownames_to_column("Index") %>% 
+  full_join(metadata.df, by = "Index")
+
+PCAvect <- scores(genus_pca, display = "species") %>% 
+  as.data.frame()
+PCAvect <- PCAvect[grepl("g__Staph|g__Haemo|g__Orni|g__Strep|g__Coryn|g__Dolosi", rownames(PCAvect)),]
+
+clean_background <- theme(plot.background = element_rect("white"),
+                          panel.background = element_rect("white"),
+                          panel.grid = element_line("white"),
+                          axis.line = element_line("gray25"),
+                          axis.text = element_text(size = 12, color = "gray25"),
+                          axis.title = element_text(color = "gray25"),
+                          legend.text = element_text(size = 12),
+                          legend.key = element_rect("white"))
+plot_PCA <- ggplot() +
+  geom_point(data = PCAscores, aes(x = PC1, y = PC2, color = Otitis_Status)) +
+  # scale_color_manual(values = pal) +
+  geom_vline(xintercept = c(0), color = "grey70", linetype = 2) +
+  geom_hline(yintercept = c(0), color = "grey70", linetype = 2) +
+  geom_segment(data = PCAvect, aes(x = 0, y = 0, xend = PC1, yend = PC2), 
+               arrow = arrow(length = unit(0.2, "cm")), colour = "grey") +
+  geom_text(data = PCAvect, aes(x = PC1, y = PC2, label = rownames(PCAvect)),size = 2) +
+  clean_background +
+  labs(x = "PC1 (23.57%)",
+       y = "PC2 (12.23%)",
+       title = "Principal Components Analysis") 
+plot_PCA
+
+
+PCA_fortify <- fortify(genus_pca)
+PCA_fort_sites <- PCA_fortify %>% 
+  filter(Score == "sites") %>% 
+  full_join(., metadata.df, by = c("Label" = "Index"))
+PCA_fort_species <- PCA_fortify %>% 
+  filter(Score == "species")
+
+PCA_fortify_plot <- ggplot() +
+  geom_point(data = PCA_fort_sites, aes(x = PC1, y = PC2, col = Otitis_Status)) +
+  geom_vline(xintercept = c(0), color = "grey70", linetype = 2) +
+  geom_hline(yintercept = c(0), color = "grey70", linetype = 2) +
+  # scale_color_manual(values = c("coral", "lightgreen", "darkblue")) +
+  geom_segment(data = PCA_fort_species, aes(x = 0, xend = PC1, y = 0, yend = PC2), 
+               arrow = arrow(length = unit(0.2, "cm"))) +
+  geom_text(data = PCA_fort_species, aes(x = PC1, y = PC2, label = Label)) +
+  clean_background +
+  labs(x = "PC1 (23.57%)",
+       y = "PC2 (12.23%)",
+       title = "Principal Components Analysis - using fortify()")
+PCA_fortify_plot
+
+
+# temp <- metadata.df[,c("Otitis_Status", "Nose", "Season","No_peop_res_discrete")]
+# temp <- temp[!rownames(temp) %in% get_samples_missing_data(temp,c("Otitis_Status", "Nose", "Season","No_peop_res_discrete")),]
+
+# genus_NMDS <- metaMDS(t(genus_clr.m[,rownames(temp)]),distance = "euclidean",)
+# stressplot(genus_NMDS)
+
+# fit <- envfit(genus_NMDS, temp[,c("Otitis_Status", "Nose", "Season","No_peop_res_discrete")], perm = 999) 
+# fit$vectors
+# extract p-values for each species
+# fit_pvals <- fit$vectors$pvals %>% 
+#   as.data.frame() %>% 
+#   rownames_to_column("species") %>% 
+#   dplyr::rename("pvals" = ".")
+# 
+# # extract coordinates for species, only keep species with p-val = 0.001
+# fit_spp <- fit %>% 
+#   scores(., display = "vectors") %>% 
+#   as.data.frame() %>% 
+#   rownames_to_column("species") %>% 
+#   full_join(., fit_pvals, by = "species") %>% 
+#   filter(pvals == 0.001)
+
+# ------------------------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------------------------
+
 
 # calculate_PC_taxa_contributions(genus_pca)
 otu_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata.csv",header = T)
@@ -181,6 +272,10 @@ genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata
 temp <- calculate_PC_abundance_correlations(genus_pca, mydata.df = genus_data.df,
                                             taxa_column = "taxonomy_genus",
                                             variables = discrete_variables)
+write.csv(x = temp,
+          file = "Result_tables/ordination_genus_PC_correlations.csv",
+          quote =F,
+          row.names = F)
 # ------------------------------------------------------------------------------------------------
 #           PUBLICATION
 
@@ -207,13 +302,13 @@ generate_pca_plot(pca_object = genus_rural_pca,
                   # label_spider = T,
                   plot_hulls = T,
                   hull_alpha = .7,
-                  axis_limits = c(-6,5,-5,3),
+                  axis_limits = c(-6,3.5,-3,4.5),
                   
                   include_legend = T,
                   legend_columns = 1,
                   legend_cex = .8,
                   legend_x = -6,
-                  legend_y = 3,
+                  legend_y = 4,
                   legend_title = "Otitis status",
                   
                   plot_arrows = T,
@@ -225,7 +320,7 @@ generate_pca_plot(pca_object = genus_rural_pca,
                   arrow_label_font_type = 1,
                   arrow_label_size = .7,
                   arrow_thickness = 1,
-                  arrow_alpha = .5,
+                  arrow_alpha = .7,
                   specie_labeller_function = first_resolved_taxonomy,
                   hide_grid =F,
                   file_type = file_type,
@@ -266,12 +361,55 @@ generate_pca_plot(pca_object = genus_remote_pca,
                   arrow_label_font_type = 1,
                   arrow_label_size = .7,
                   arrow_thickness = 1,
-                  arrow_alpha = .5,
+                  arrow_alpha = .7,
                   specie_labeller_function = first_resolved_taxonomy,
                   hide_grid =F,
                   file_type = file_type,
                   filename = paste0("Result_figures/pca_plots/genus_within_community/genus_Otitis_Status__Community_remote.", file_type)
 )
+
+
+# ARROWS
+generate_pca_plot(pca_object = genus_pca,
+                  my_metadata.df = metadata.df,
+                  plot_height = 7,
+                  plot_width = 7,
+                  
+                  variable_colours_available = T,
+                  variable_to_plot = "No_peop_res_discrete",
+                  point_line_thickness = 0.7,
+                  point_size = 0,
+                  
+                  use_shapes = T,
+                  plot_spiders = F,
+                  label_sites = F,
+                  # label_spider = T,
+                  plot_hulls = F,
+                  hull_alpha = .7,
+                  axis_limits = c(-4.5,5,-4.5,3),
+                  
+                  include_legend = F,
+                  legend_columns = 1,
+                  legend_cex = .8,
+                  legend_x = -4.5,
+                  legend_y = 3,
+                  legend_title = "",
+                  
+                  plot_arrows = T,
+                  num_top_species = 3,
+                  arrow_colour = "grey20",
+                  arrow_scalar = 1.5,
+                  arrow_label_colour = "royalblue4",
+                  arrow_label_font_type = 1,
+                  arrow_label_size = .7,
+                  arrow_thickness = 1,
+                  arrow_alpha = .7,
+                  specie_labeller_function = first_resolved_taxonomy,
+                  hide_grid =T,
+                  file_type = "svg",
+                  filename = paste0("Result_figures/pca_plots/genus/genus_arrows.svg")
+)
+
 
 # House hold size
 generate_pca_plot(pca_object = genus_pca,
@@ -296,9 +434,9 @@ generate_pca_plot(pca_object = genus_pca,
                   legend_cex = .8,
                   legend_x = -4.5,
                   legend_y = 3,
-                  legend_title = "People in household",
+                  legend_title = "Household size",
                   
-                  plot_arrows = T,
+                  plot_arrows = F,
                   num_top_species = 3,
                   arrow_colour = "grey20",
                   arrow_scalar = 1.5,
@@ -306,7 +444,7 @@ generate_pca_plot(pca_object = genus_pca,
                   arrow_label_font_type = 1,
                   arrow_label_size = .7,
                   arrow_thickness = 1,
-                  arrow_alpha = .5,
+                  arrow_alpha = .7,
                   specie_labeller_function = first_resolved_taxonomy,
                   hide_grid =F,
                   file_type = file_type,
@@ -338,7 +476,7 @@ generate_pca_plot(pca_object = genus_pca,
                   legend_y = 3,
                   legend_title = "Community",
                   
-                  plot_arrows = T,
+                  plot_arrows = F,
                   num_top_species = 3,
                   arrow_colour = "grey20",
                   arrow_scalar = 1.5,
@@ -346,7 +484,7 @@ generate_pca_plot(pca_object = genus_pca,
                   arrow_label_font_type = 1,
                   arrow_label_size = .7,
                   arrow_thickness = 1,
-                  arrow_alpha = .5,
+                  arrow_alpha = .7,
                   specie_labeller_function = first_resolved_taxonomy,
                   hide_grid =F,
                   file_type = file_type,
@@ -378,7 +516,7 @@ generate_pca_plot(pca_object = genus_pca,
                   legend_y = 3,
                   legend_title = "Season",
                   
-                  plot_arrows = T,
+                  plot_arrows = F,
                   num_top_species = 3,
                   arrow_colour = "grey20",
                   arrow_scalar = 1.5,
@@ -386,7 +524,7 @@ generate_pca_plot(pca_object = genus_pca,
                   arrow_label_font_type = 1,
                   arrow_label_size = .7,
                   arrow_thickness = 1,
-                  arrow_alpha = .5,
+                  arrow_alpha = .7,
                   specie_labeller_function = first_resolved_taxonomy,
                   hide_grid =F,
                   file_type = file_type,
@@ -418,7 +556,7 @@ generate_pca_plot(pca_object = genus_pca,
                   legend_y = 3,
                   legend_title = "Otitis Status",
                   
-                  plot_arrows = T,
+                  plot_arrows = F,
                   num_top_species = 3,
                   arrow_colour = "grey20",
                   arrow_scalar = 1.5,
@@ -426,7 +564,7 @@ generate_pca_plot(pca_object = genus_pca,
                   arrow_label_font_type = 1,
                   arrow_label_size = .7,
                   arrow_thickness = 1,
-                  arrow_alpha = .5,
+                  arrow_alpha = .7,
                   specie_labeller_function = first_resolved_taxonomy,
                   hide_grid =F,
                   file_type = file_type,
@@ -480,7 +618,7 @@ generate_pca_plot(pca_object = genus_pca,
 #                     arrow_label_size = .5,
 #                     arrow_label_alpha = .7,
 #                     arrow_thickness = .7,
-#                     arrow_alpha = .5,
+#                     arrow_alpha = .7,
 #                     specie_labeller_function = combined_otu_labeller,
 #                     hide_grid =F
 #   )
@@ -525,7 +663,7 @@ generate_pca_plot(pca_object = genus_pca,
 #                     arrow_label_size = .5,
 #                     arrow_label_alpha = .7,
 #                     arrow_thickness = .7,
-#                     arrow_alpha = .5,
+#                     arrow_alpha = .7,
 #                     specie_labeller_function = first_resolved_taxonomy,
 #                     hide_grid =F
 #                     )
@@ -583,7 +721,7 @@ generate_pca_plot(pca_object = genus_pca,
 #                       arrow_label_font_type = 1,
 #                       arrow_label_size = .5,
 #                       arrow_thickness = .7,
-#                       arrow_alpha = .5,
+#                       arrow_alpha = .7,
 #                       specie_labeller_function = combined_otu_labeller,
 #                       hide_grid =F
 #     )
@@ -629,7 +767,7 @@ generate_pca_plot(pca_object = genus_pca,
 #                       arrow_label_font_type = 1,
 #                       arrow_label_size = .5,
 #                       arrow_thickness = .7,
-#                       arrow_alpha = .5,
+#                       arrow_alpha = .7,
 #                       specie_labeller_function = first_resolved_taxonomy,
 #                       hide_grid =F
 #     )
@@ -651,6 +789,7 @@ generate_pca_plot(pca_object = genus_pca,
 # the significance of that effect on beta diversity (described by p-values and R2 values). 
 # The R2 value corresponds to the proportion of variability observed in the dissimilarity.
 
+# TODO pairwise permanova and permdisp
 
 # Genus, clr euclidean
 print("Centred-log ratio transformed counts - Euclidean distance")

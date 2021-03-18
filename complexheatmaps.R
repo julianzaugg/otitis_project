@@ -96,13 +96,6 @@ otu_phylum_rel_decontaminated.m <- as.matrix(read.table(file = "Result_tables/re
 
 # ------------------------------------------------------------------------------------
 
-# Define the discrete variables
-# discrete_variables <- c("Remote_Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season","Nose", 
-#                         "Otitis_status_OM_6mo","Remote_Community_Otitis_status","OM_6mo_Type_OM","Remote_Community_Season")
-discrete_variables <- c("Remote_Community","Gold_Star","OM_6mo","Season","Nose","OM_Classification", "Remote_Community_Season",
-                        "Streptococcus_pneumoniae", "Moraxella_catarrhalis", "Haemophilus_influenzae",
-                        "Remote_Community_OM_Classification")
-
 
 ## FULL HEATMAPS
 

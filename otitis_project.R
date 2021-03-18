@@ -124,7 +124,8 @@ dir.create(file.path("./Result_tables/diversity_analysis/genus"),showWarnings = 
 dir.create(file.path("./Result_tables/fastspar_inputs/Nose"),showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_tables/fastspar_inputs/Community"),showWarnings = FALSE, recursive = T)
 dir.create(file.path("./Result_tables/fastspar_inputs/Otitis_Status"),showWarnings = FALSE, recursive = T)
-dir.create(file.path("./Result_tables/fastspar_inputs/community__Gold_Star"),showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_tables/fastspar_inputs/Community__Gold_Star"),showWarnings = FALSE, recursive = T)
+dir.create(file.path("./Result_tables/fastspar_inputs/Community__Otitis_Status"),showWarnings = FALSE, recursive = T)
 
 
 # dir.create(file.path("./Result_tables/diversity_analysis/variable_summaries"),recursive = T)
@@ -285,6 +286,16 @@ metadata.df[which(metadata.df$S.pneumoniae_1st_IQR == 1),]$S.pneumoniae_qPCR <- 
 metadata.df[which(metadata.df$S.pneumoniae_2nd_to_3rd_IQR == 1),]$S.pneumoniae_qPCR <- "S.pneumoniae_2nd_to_3rd_IQR"
 metadata.df[which(metadata.df$S.pneumoniae_more_than_3rd_IQR == 1),]$S.pneumoniae_qPCR <- "S.pneumoniae_more_than_3rd_IQR"
 
+
+# Set order of Otitis Status
+metadata.df$Otitis_Status <- factor(metadata.df$Otitis_Status , levels = c("Never OM", "HxOM", "Acute Otitis Media", "Effusion", "Perforation"))
+# Set order of Season
+metadata.df$Season <- factor(metadata.df$Season, levels = c("Spring", "Winter", "Autumn"))
+# Set order of Nose
+metadata.df$Nose <- factor(metadata.df$Nose, levels = c("Normal", "Serous", "Purulent"))
+# Set order of No_peop_res_discrete
+metadata.df$No_peop_res_discrete <- factor(metadata.df$No_peop_res_discrete, levels = c("2 to 3", "4 to 6", "7 to 12", "Unknown"))
+
 # Retain copy of metadata prior to filtering samples
 metadata_unfiltered.df <- metadata.df
 # ------------------------------------------------------------------------------------------------------------
@@ -292,10 +303,18 @@ metadata_unfiltered.df <- metadata.df
 # Load and process the OTU table
 project_otu_table.df <- read.csv("data/features_statistics_paired_noqc_250_230.csv")
 
+
+# Remove spaces around ;
 project_otu_table.df$Taxon <- gsub("; ", ";", project_otu_table.df$Taxon)
 
 # Fix name of first column
 names(project_otu_table.df)[1] <- "OTU.ID"
+
+# Sort by hash
+project_otu_table.df <- project_otu_table.df[order(project_otu_table.df$OTU.ID),]
+
+# Assign short form ID
+project_otu_table.df$ASV_ID <- paste0("ASV_", 1:length(project_otu_table.df$OTU.ID))
 
 # Remove J001 from sample names
 names(project_otu_table.df) <- gsub("_J001", "", names(project_otu_table.df))
@@ -308,7 +327,7 @@ bad_negs <- grep("Neg",colnames(project_otu_table.df), value= T)[colSums(project
 project_otu_table.df[,bad_negs] <- NULL
 
 # Get the sample ids from the OTU table
-sample_ids <- names(project_otu_table.df)[!names(project_otu_table.df) %in% c("OTU.ID","Frequency", "Taxon", "Confidence", "RepSeq") ]
+sample_ids <- names(project_otu_table.df)[!names(project_otu_table.df) %in% c("OTU.ID","ASV_ID","Frequency", "Taxon", "Confidence", "RepSeq") ]
 sample_ids_original <- sample_ids
 
 # Get the negative sample IDs
@@ -340,6 +359,7 @@ project_otu_table.df$taxonomy_species <- with(project_otu_table.df, paste(Domain
 project_otu_table_unfiltered.df <- project_otu_table.df
 
 
+
 # Make empty cells NA
 # metadata.df[metadata.df == ""] <- NA
 
@@ -347,6 +367,7 @@ project_otu_table_unfiltered.df <- project_otu_table.df
 # ------------------------------------------------
 # ------------------------------------------------
 # Assign unique colours for each discrete state
+
 # discrete_variables <- c("Community","Otitis_status","Gold_Star","OM_6mo","Type_OM","Season",
 #                         "Nose","Otitis_status_OM_6mo", "Community__Otitis_Status", "OM_6mo_Type_OM","Community__Season")
 
@@ -366,9 +387,32 @@ discrete_variables <- c("Nose","Tympanic_membrane", "Otitis_Status",
 # "S.pneumoniae_ND","S.pneumoniae_1st_IQR","S.pneumoniae_2nd_to_3rd_IQR","S.pneumoniae_more_than_3rd_IQR",
                         # c("N_Adeno","N_WUKI","N_BOCA","N_COV_OC43","N_COV_NL63","N_HKU_1","N_ENT","N_hMPV","N_PARA_1","N_PARA_2","N_RSV_A","N_RSV_B","N_HRV","N_FLU_B","N_FLU_A","Virus_any")
 
+# never - hx- "Acute Otitis Media" -effusion
+otitis_status_palette <- setNames(c("#4395bf","#43bf70", "#ffc400","#ff7b00", "#b31313"),c("Never OM", "HxOM", "Acute Otitis Media", "Effusion", "Perforation"))
+all_variable_colours <- as.character(lapply(as.character(metadata.df[,"Otitis_Status"]), function(x) otitis_status_palette[x]))
+metadata.df[,"Otitis_Status_colour"] <- all_variable_colours
+
+#c49d6c
+# c43e00
+community_colours <- c("Remote" = "#c49d6c", "Rural" = "#8ea100")
+all_community_colours <- as.character(lapply(as.character(metadata.df$Community), function(x) community_colours[x]))
+metadata.df$Community_colour <- all_community_colours
+
+nose_colours <- c("Normal" = "#79aec9", "Serous" = "#ffec45", "Purulent" = "#8cbd24")
+all_nose_colours <- as.character(lapply(as.character(metadata.df$Nose), function(x) nose_colours[x]))
+metadata.df$Nose_colour <- all_nose_colours
+
+season_colours <- c("Spring" = "#549627", "Winter" = "#bae1ff", "Autumn" = "#de8900")
+all_season_colours <- as.character(lapply(as.character(metadata.df$Season), function(x) season_colours[x]))
+metadata.df$Season_colour <- all_season_colours
+
 
 for (myvar in discrete_variables){
-  myvar_values <- factor(as.character(sort(unique(metadata.df[,myvar]))))
+  if (!myvar %in% c("Community", "Season", "Otitis_Status", "Nose", "Season", "No_peop_res_discrete")){
+    myvar_values <- factor(as.character(sort(unique(metadata.df[,myvar]))))  
+  }else{
+    myvar_values <- unique(metadata.df[,myvar])
+  }
   # myvar_colours <- setNames(colour_palette_soft_8[1:length(myvar_values)], myvar_values)
   # myvar_colours <- setNames(colour_palette_15[1:length(myvar_values)], myvar_values)
   if (length(myvar_values) <= 8){
@@ -377,9 +421,13 @@ for (myvar in discrete_variables){
     myvar_colours <- setNames(colour_palette_10[1:length(myvar_values)], myvar_values)  
   }
   
-  all_variable_colours <- as.character(lapply(as.character(metadata.df[,myvar]), function(x) myvar_colours[x]))
-  metadata.df[,paste0(myvar,"_colour")] <- all_variable_colours
+  if (!paste0(myvar,"_colour") %in% colnames(metadata.df)){
+    all_variable_colours <- as.character(lapply(as.character(metadata.df[,myvar]), function(x) myvar_colours[x]))
+    metadata.df[,paste0(myvar,"_colour")] <- all_variable_colours    
+  }
 }
+metadata.df[with(metadata.df, !is.na(No_peop_res_discrete) & No_peop_res_discrete == "Unknown"),]$No_peop_res_discrete_colour <- "grey"
+# _colour <- "grey"
 
 
 # ------------------------------------------------# ------------------------------------------------
@@ -460,6 +508,7 @@ project_otu_table_unfiltered.df$Taxon <- NULL
 
 # Store the OTUs and corresponding taxonomy information in a separate dataframe
 otu_taxonomy_map.df <- project_otu_table.df[c("OTU.ID",
+                                              "ASV_ID",
                                            "Domain", 
                                            "Phylum", 
                                            "Class", 
@@ -480,7 +529,7 @@ rownames(otu_taxonomy_map.df) <- otu_taxonomy_map.df$OTU.ID
 reduced_tax_map <- otu_taxonomy_map.df
 reduced_tax_map$RepSeq <- NULL
 
-# Save this OTU taxonmy map for later use
+# Save this OTU taxonomy map for later use
 write.table(otu_taxonomy_map.df, file = "Result_tables/other/otu_taxonomy_map.csv", sep = ",", quote = F, row.names = F)
 
 # Also save the unfiltered table, to avoid processing the original data table again 
@@ -504,7 +553,7 @@ rownames(otu.m) <- otu.m$OTU.ID
 otu.m$OTU.ID <- NULL
 otu.m <- as.matrix(otu.m)
 
-temp <- read_counts_and_unique_features(otu.m, sample_ids_original)
+temp <- read_counts_and_unique_features(otu.m, sort(c(sample_ids_original, "PNeg1P1")))
 df2matrix(temp$sample_read_counts)
 df2matrix(temp$sample_feature_counts)
 
@@ -513,6 +562,10 @@ otu_unfiltered.m <- otu_unfiltered.df
 rownames(otu_unfiltered.m) <- otu_unfiltered.m$OTU.ID
 otu_unfiltered.m$OTU.ID <- NULL
 otu_unfiltered.m <- as.matrix(otu_unfiltered.m)
+
+temp <- read_counts_and_unique_features(otu_unfiltered.m, sample_ids_original)
+df2matrix(temp$sample_read_counts)
+df2matrix(temp$sample_feature_counts)
 
 # Create relative abundance matrix from counts matrix
 otu_rel.m <- t(t(otu.m)/ colSums(otu.m))
@@ -826,6 +879,10 @@ otu_rel_decontaminated.m[is.nan(otu_rel_decontaminated.m)] <- 0
 otu_rel.m <- otu_rel_decontaminated.m
 otu.m <- otu_decontaminated.m
 
+temp <- read_counts_and_unique_features(otu.m, sort(c(sample_ids_original, "PNeg1P1")))
+df2matrix(temp$sample_read_counts)
+df2matrix(temp$sample_feature_counts)
+
 # (Optional) Remove negative samples as they are no longer needed
 otu_rel.m <- otu_rel.m[,!colnames(otu_rel.m) %in% negative_sample_ids]
 otu.m <- otu.m[,!colnames(otu.m) %in% negative_sample_ids]
@@ -863,7 +920,7 @@ otu_rel.m[is.nan(otu_rel.m)] <- 0
 
 # Also remove low abundance OTUs from the original OTU count matrix
 otu.m  <- otu.m[rownames(otu_rel.m),]
-temp <- read_counts_and_unique_features(otu.m, sample_ids_original)
+temp <- read_counts_and_unique_features(otu.m, sort(c(sample_ids_original, "PNeg1P1")))
 df2matrix(temp$sample_read_counts)
 df2matrix(temp$sample_feature_counts)
 
@@ -887,7 +944,7 @@ dim(otu.m)
 # Reassign the sample ids
 sample_ids <- colnames(otu.m)
 
-temp <- read_counts_and_unique_features(otu.m, sample_ids_original)
+temp <- read_counts_and_unique_features(otu.m, sort(c(sample_ids_original, "PNeg1P1")))
 df2matrix(temp$sample_read_counts)
 df2matrix(temp$sample_feature_counts)
 
@@ -980,7 +1037,7 @@ myplot
 ggsave(plot = myplot, filename = "./Result_figures/exploratory_analysis/sample_read_depth_distribution_2.pdf", width=20, height=6)
 
 # Rarefaction curve
-# rarecurve(t(otu.m[,colSums(otu.m) > 1]),step = 500, label = F,xlim = c(0,30000),sample = 30000)
+# rarecurve(t(otu.m[,colSums(otu.m) > 1]),step = 500, label = F,xlim = c(0,30000),sample = 10000)
 
 # Generate a rarefied OTU count matrix. The rrarefy function just caps samples to a maximum of threshold. Samples with less will still have less.
 set.seed(1234)
@@ -1025,7 +1082,7 @@ write.csv(rare_stats.df,"Result_tables/other/rarefaction_stats.csv",quote = F, r
 
 # (optional) only use rrarefied capped counts
 otu.m <- otu_rare_count.m
-temp <- read_counts_and_unique_features(otu.m, sample_ids_original)
+temp <- read_counts_and_unique_features(otu.m, sort(c(sample_ids_original, "PNeg1P1")))
 df2matrix(temp$sample_read_counts)
 df2matrix(temp$sample_feature_counts)
 
