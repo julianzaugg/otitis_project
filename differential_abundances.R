@@ -1,6 +1,5 @@
 library(DESeq2)
 # library(BiocParallel)
-# alternative : ALDEx2, ANCOM, edgeR
 
 
 
@@ -49,6 +48,10 @@ otu_taxonomy_map.df <- read.csv("Result_tables/other/otu_taxonomy_map.csv", head
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", sep =",", header = T)
 
 # Define the discrete variables
+<<<<<<< HEAD
+discrete_variables <- c("Community", "Nose", "Otitis_Status", "Season", "No_peop_res_discrete")
+
+=======
 # discrete_variables <- c("Nose","Tympanic_membrane", "Otitis_Status",
 #                         "Season","Community","Gold_Star",
 #                         "H.influenzae_culture","M.catarrhalis_culture","S.pneumoniae_culture",
@@ -62,16 +65,21 @@ discrete_variables <- c("Community", "Nose", "Otitis_Status", "Season", "No_peop
 # "H.Influenzae_ND","H.Influenzae_1st_IQR","H.Influenzae_2nd_to_3rd_IQR","H.Influenzae_more_than_3rd_IQR",
 # "M.catarrhalis_ND","M.catarrhalis_1st_IQR","M.catarrhalis_2nd_to_3rd_IQR","M.catarrhalis_more_than_3rd_IQR",
 # "S.pneumoniae_ND","S.pneumoniae_1st_IQR","S.pneumoniae_2nd_to_3rd_IQR","S.pneumoniae_more_than_3rd_IQR",
+>>>>>>> ac8d1af8b0bcc3ccad540a152432b91af0083eb7
 metadata.df$Tympanic_membrane[metadata.df$Tympanic_membrane == "Unable to visualise/Not examined"] <- NA
+metadata.df[metadata.df$Otitis_Status == "Acute Otitis Media","Otitis_Status"] <- NA
 
+<<<<<<< HEAD
+# Load count tables
+=======
 metadata.df[metadata.df$Otitis_Status == "Acute Otitis Media","Otitis_Status"] <- NA
 
 # Load count table at the OTU level. These are the counts for OTUs that were above our abundance thresholds
+>>>>>>> ac8d1af8b0bcc3ccad540a152432b91af0083eb7
 otu.m <- as.matrix(read.table("Result_tables/count_tables/OTU_counts.csv", sep =",", header =T, row.names = 1))
 genus.m <- as.matrix(read.table("Result_tables/count_tables/Genus_counts.csv", sep =",", header =T, row.names = 1))
 
 # Filter out features/taxa that do not have at # reads in at least one sample
-
 dim(otu.m)
 dim(genus.m)
 # head(melt(sort(apply(genus.m, 1, max))), 10)
@@ -303,9 +311,3 @@ write.csv(x =genus_group_comparison_within_community_otitis_status.df,file ="Res
 # ----------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------
 # ----------------------------------------------------------------------------------------------
-
-# temp <- read.table(pipe("pbpaste"), header = T, sep = "\t")
-# temp <- df2matrix(temp)
-# temp <- t(t(temp)/colSums(temp))
-# 
-# write.csv(x= m2df(round(temp*100,3),"TAXID"), file ="temp2.csv",quote = F, row.names = F)

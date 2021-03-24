@@ -91,8 +91,14 @@ top_genus_all_samples <- abundance_summary(genus_rel.df,20)$taxonomy_genus
 
 # Create palette
 palette_20c <- c("#a84b54","#a2b432","#c057c5","#6f64cf","#5aae36","#527c2e","#826729","#6690cf","#7fb875","#d68c62","#a8a352","#e484a0","#d2408e","#d49731","#ca5729","#3a8862","#49c1b5","#ab6daa","#dc3f53","#4bc06d")
+<<<<<<< HEAD
+# genus_palette <- setNames(c(palette_20c[1:length(top_genus_all_samples)], "grey"), c(top_genus_all_samples, "Other"))
+
+# Get counts for top genus and combine with metadata
+=======
 genus_palette <- setNames(c(palette_20c[1:length(top_genus)], "grey"), c(top_genus, "Other"))
 
+>>>>>>> ac8d1af8b0bcc3ccad540a152432b91af0083eb7
 counts.df <- read.csv("Result_tables/count_tables/Genus_counts.csv")
 counts.df <- counts.df[counts.df$taxonomy_genus %in% top_genus_all_samples,]
 counts.df <- collapse_abundance_dataframe(counts.df)
@@ -104,11 +110,14 @@ counts.df <- left_join(counts.df, metadata.df, by = c("Sample" = "Index"))
 # --------------------------------------------------------------------------------------------------------------------------------
 # All samples
 
+<<<<<<< HEAD
+=======
 
 # genus_rel_filtered.df <- collapse_abundance_dataframe(genus_rel.df, top_genus)
 # genus_rel_filtered.df <- genus_rel_collapsed.df[!genus_rel_collapsed.df$Sample %in% metadata.df[is.na(metadata.df$Otitis_Status),]$Index,]
 # unique(genus_rel_filtered.df$taxonomy_genus)
 
+>>>>>>> ac8d1af8b0bcc3ccad540a152432b91af0083eb7
 # Filter abundance dataframe to top genus
 genus_rel_filtered.df <- genus_rel.df[genus_rel.df$taxonomy_genus %in% top_genus_all_samples,]
 
@@ -123,6 +132,8 @@ genus_rel_filtered.df$Label <- as.character(lapply(genus_rel_filtered.df$taxonom
 
 # ------------------------------------------------------------------------------------------------
 # Calculate the significances for taxa for Otitis status variable
+<<<<<<< HEAD
+=======
 # genus_rel_filtered.df %>%
 #   select(Community,Sample, Otitis_Status) %>%
 #   group_by(Community,Otitis_Status) %>%
@@ -130,6 +141,7 @@ genus_rel_filtered.df$Label <- as.character(lapply(genus_rel_filtered.df$taxonom
 #   tally()
 # immunosuppressed_group_count.l <- setNames(immunosuppressed_group_count.df$n,immunosuppressed_group_count.df$Sample_type)
 
+>>>>>>> ac8d1af8b0bcc3ccad540a152432b91af0083eb7
 otitis_status_genus_significances.df <- calculate_taxa_significances_multiple(mydata = genus_rel_filtered.df, 
                                                                               variable_column = "Otitis_Status",
                                                                               value_column = "Relative_abundance",
@@ -162,7 +174,11 @@ write.csv(file = "Result_tables/abundance_analysis_tables/otitis_status_communit
           x = otitis_status_genus_significances_community.df, row.names = F, quote = F)
 # ------------------------------------------------------------------------------------------------
 
+<<<<<<< HEAD
+# Get abundances for just Ornithobacterium
+=======
 # Get abundandances for just Ornithobacterium
+>>>>>>> ac8d1af8b0bcc3ccad540a152432b91af0083eb7
 orni_abundances.df <- genus_rel_filtered.df[grepl("Ornithobacterium", genus_rel_filtered.df$taxonomy_genus),c("Sample",
                                                                                                               "Label",
                                                                                                            "taxonomy_genus",
@@ -179,6 +195,8 @@ colours.l <- setNames(as.character(colours.l[,"Otitis_Status_colour"]),
 
 generate_p_labels(otitis_status_genus_significances_remote.df)
 generate_p_labels(otitis_status_genus_significances_rural.df)
+<<<<<<< HEAD
+=======
 
 myplot <- 
   ggplot(orni_abundances.df, aes(x = Otitis_Status, y = Relative_abundance*100,fill = Otitis_Status, shape = Otitis_Status)) +
@@ -283,7 +301,100 @@ ggsave(filename = "Result_figures/abundance_analysis_plots/ornithobacterium_abun
   #                       # tip_length = sig_tip_length, vjust = sig_vjust
   #                       )
 
+>>>>>>> ac8d1af8b0bcc3ccad540a152432b91af0083eb7
 
+myplot <- 
+  ggplot(orni_abundances.df, aes(x = Otitis_Status, y = Relative_abundance*100,fill = Otitis_Status, shape = Otitis_Status)) +
+  geom_boxplot(position = position_dodge(width =.75), 
+               outlier.shape = NA, width=.5,lwd =.2) +
+  geom_jitter(size = .6,stroke =.1,
+              position = position_jitterdodge(jitter.width = 0.75,
+                                              dodge.width = .75)) +
+  stat_summary(fun = "mean", colour = "grey2", geom = "point",
+               shape = 16,size = .8,
+               position = position_dodge(width = .75),show.legend = F) +
+  xlab("Otitis status") +
+  ylab("Relative abundance %") +
+  ggtitle(expression(paste(italic(Ornithobacterium)," abundance"))) +
+  scale_shape_manual(values = c(25,24,23,22,21),name = "Otitis status") +
+  scale_fill_manual(values = colours.l, name = "Otitis status") +
+  scale_y_continuous(limits = c(0,30), breaks = seq(0,100, by = 5)) +
+  theme(
+    # axis.text.x = element_text(angle = 90, size = 6,hjust = 0, vjust = 0.5),
+    plot.title = element_text(size = 6, hjust = 0.5, face = "bold"),
+    panel.background = element_blank(),
+    panel.border = element_blank(), 
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    strip.background = element_rect(fill = "white", colour = "white", size = 1),
+    axis.line = element_line(colour = "black", size = 0.5),
+    axis.text = element_text(size = 9, colour = "black"),
+    axis.text.x = element_text(size = 6, colour = "black"),#face = "italic"
+    axis.text.y = element_text(size = 6, colour = "black"),#face = "italic"
+    axis.title = element_text(size = 7,face = "bold"),
+    legend.title = element_text(size = 6),
+    legend.text = element_text(size = 5),
+    legend.key.size = unit(.3,"cm"),
+    legend.key = element_blank()
+  )
+ggsave(filename = "Result_figures/abundance_analysis_plots/ornithobacterium_abundance.pdf",
+       units = "cm",
+       width = 8,
+       height = 6,
+       device = "pdf")
+
+ggsave(filename = "Result_figures/abundance_analysis_plots/ornithobacterium_abundance.svg",
+       units = "cm",
+       width = 8,
+       height = 6,
+       device = "svg")
+
+myplot <- 
+  ggplot(orni_abundances.df, aes(x = Otitis_Status, y = Relative_abundance*100,fill = Otitis_Status, shape = Otitis_Status)) +
+  geom_boxplot(position = position_dodge(width =.75), 
+               outlier.shape = NA, width=.5,lwd =.2) +
+  geom_jitter(size = .6,stroke =.1,
+              position = position_jitterdodge(jitter.width = 0.75,
+                                              dodge.width = .75)) +
+  stat_summary(fun = "mean", colour = "grey2", geom = "point",
+               shape = 16,size = .8,
+               position = position_dodge(width = .75),show.legend = F) +
+  facet_wrap(~Community) +
+  xlab("Otitis status") +
+  ylab("Relative abundance %") +
+  ggtitle(expression(paste(italic(Ornithobacterium)," abundance"))) +
+  scale_shape_manual(values = c(25,24,23,22,21),name = "Otitis status") +
+  scale_fill_manual(values = colours.l, name = "Otitis status") +
+  scale_y_continuous(limits = c(0,30), breaks = seq(0,100, by = 5)) +
+  theme(
+    # axis.text.x = element_text(angle = 90, size = 6,hjust = 0, vjust = 0.5),
+    plot.title = element_text(size = 6, hjust = 0.5, face = "bold"),
+    panel.background = element_blank(),
+    panel.border = element_blank(), 
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    strip.background = element_rect(fill = "white", colour = "white", size = 1),
+    axis.line = element_line(colour = "black", size = 0.5),
+    axis.text = element_text(size = 9, colour = "black"),
+    axis.text.x = element_text(size = 6, colour = "black"),#face = "italic"
+    axis.text.y = element_text(size = 6, colour = "black"),#face = "italic"
+    axis.title = element_text(size = 7,face = "bold"),
+    legend.title = element_text(size = 6),
+    legend.text = element_text(size = 5),
+    legend.key.size = unit(.3,"cm"),
+    legend.key = element_blank()
+  )
+ggsave(filename = "Result_figures/abundance_analysis_plots/ornithobacterium_abundance_community.pdf",
+       units = "cm",
+       width = 12,
+       height = 6,
+       device = "pdf")
+
+ggsave(filename = "Result_figures/abundance_analysis_plots/ornithobacterium_abundance_community.svg",
+       units = "cm",
+       width = 12,
+       height = 6,
+       device = "svg")
 
 otitis_top_genus_boxplot <- 
   ggplot(genus_rel_filtered.df, aes(x = Label, 
@@ -325,7 +436,6 @@ ggsave(filename = "Result_figures/abundance_analysis_plots/otitis_top_genus_boxp
        width = 25,
        height = 7,
        units = "cm")
-
 
 
 otitis_top_genus_mean_sd_plot <-  ggplot(genus_rel_filtered.df, aes(x = Label, 

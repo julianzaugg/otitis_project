@@ -76,12 +76,6 @@ discrete_variables <- c("Nose","Tympanic_membrane", "Otitis_Status",
                         "Community__Season","Community__Gold_Star","Community__Otitis_Status",
                         "H.Influenzae_qPCR", "M.catarrhalis_qPCR", "S.pneumoniae_qPCR",
                         "Corynebacterium_pseudodiphtheriticum","Dolosigranulum_pigrum","N_HRV")
-# "H.Influenzae_ND","H.Influenzae_1st_IQR",
-# "H.Influenzae_2nd_to_3rd_IQR","H.Influenzae_more_than_3rd_IQR","M.catarrhalis_ND",
-# "M.catarrhalis_1st_IQR","M.catarrhalis_2nd_to_3rd_IQR","M.catarrhalis_more_than_3rd_IQR",
-# "S.pneumoniae_ND","S.pneumoniae_1st_IQR","S.pneumoniae_2nd_to_3rd_IQR","S.pneumoniae_more_than_3rd_IQR",
-                        # "N_Adeno","N_WUKI","N_BOCA","N_COV_OC43","N_COV_NL63",
-                        # "N_HKU_1","N_ENT","N_hMPV","N_PARA_1","N_PARA_2","N_RSV_A","N_RSV_B","N_HRV","N_FLU_B","N_FLU_A","Virus_any")
 
 metadata.df$Tympanic_membrane[metadata.df$Tympanic_membrane == "Unable to visualise/Not examined"] <- NA
 # Remove AOM, just make values NA
@@ -111,12 +105,6 @@ genus.m <-  as.matrix(read.csv("Result_tables/count_tables/Genus_counts.csv", he
 otu.m <- otu.m[,colnames(otu.m) %in% c("OTU.ID", as.character(metadata.df$Index))]
 genus.m <- genus.m[,colnames(genus.m) %in% c("OTU.ID", as.character(metadata.df$Index))]
 
-
-# Remove samples from metadata that are not in the data
-# metadata.df <- metadata.df[metadata.df$Index %in% colnames(otu.df),]
-# metadata_decontaminated.df <- metadata_decontaminated.df[metadata_decontaminated.df$Index %in% colnames(otu_decontaminated.df),]
-
-
 # Order the metadata.df by the index value
 metadata.df <- metadata.df[order(metadata.df$Index),]
 
@@ -144,7 +132,6 @@ otu_relabeller_function <- function(my_labels){
     paste(phylostring[3], phylostring[6], sep = ";")
   }))
 }
-# otu_relabeller_function(rownames(otu.m))
 
 genus_relabeller_function <- function(my_labels){
   unlist(lapply(my_labels, 
@@ -165,13 +152,7 @@ combined_otu_labeller <- function(x){
 
 
 # --------------------
-# Generate PCA plots. If CLR transformed values with euclidean distances, these will be the same as
-# the values calculated from betadisper...maybe not important
-# temp <- betadiver(t(otu_clr.m),method = "e")
-temp <- with(metadata.df, betadisper(vegdist(t(otu_clr.m),method = "euclidean"),group = Gold_Star))
-# temp$eig["PCoA1"] / sum(temp$eig)
-# temp$eig["PCoA2"] / sum(temp$eig)
-# plot(temp)
+# Generate PCA plots.
 
 ### Generate ordination objects
 # All samples
@@ -182,6 +163,63 @@ genus_pca <- rda(t(genus_clr.m), data = metadata.df)
 # ------------------------------------------------------------------------------------------------
 # ----------------------------------------- TESTING ----------------------------------------------
 # remotes::install_github("gavinsimpson/ggvegan")
+<<<<<<< HEAD
+# library(tidyverse)
+# library(vegan)
+# library(ggvegan)
+# PCAscores <- scores(genus_pca, display = "sites") %>% 
+#   as.data.frame() %>% 
+#   rownames_to_column("Index") %>% 
+#   full_join(metadata.df, by = "Index")
+# 
+# PCAvect <- scores(genus_pca, display = "species") %>% 
+#   as.data.frame()
+# PCAvect <- PCAvect[grepl("g__Staph|g__Haemo|g__Orni|g__Strep|g__Coryn|g__Dolosi", rownames(PCAvect)),]
+# 
+# clean_background <- theme(plot.background = element_rect("white"),
+#                           panel.background = element_rect("white"),
+#                           panel.grid = element_line("white"),
+#                           axis.line = element_line("gray25"),
+#                           axis.text = element_text(size = 12, color = "gray25"),
+#                           axis.title = element_text(color = "gray25"),
+#                           legend.text = element_text(size = 12),
+#                           legend.key = element_rect("white"))
+# plot_PCA <- ggplot() +
+#   geom_point(data = PCAscores, aes(x = PC1, y = PC2, color = Otitis_Status)) +
+#   # scale_color_manual(values = pal) +
+#   geom_vline(xintercept = c(0), color = "grey70", linetype = 2) +
+#   geom_hline(yintercept = c(0), color = "grey70", linetype = 2) +
+#   geom_segment(data = PCAvect, aes(x = 0, y = 0, xend = PC1, yend = PC2), 
+#                arrow = arrow(length = unit(0.2, "cm")), colour = "grey") +
+#   geom_text(data = PCAvect, aes(x = PC1, y = PC2, label = rownames(PCAvect)),size = 2) +
+#   clean_background +
+#   labs(x = "PC1 (23.57%)",
+#        y = "PC2 (12.23%)",
+#        title = "Principal Components Analysis") 
+# plot_PCA
+# 
+# 
+# PCA_fortify <- fortify(genus_pca)
+# PCA_fort_sites <- PCA_fortify %>% 
+#   filter(Score == "sites") %>% 
+#   full_join(., metadata.df, by = c("Label" = "Index"))
+# PCA_fort_species <- PCA_fortify %>% 
+#   filter(Score == "species")
+# 
+# PCA_fortify_plot <- ggplot() +
+#   geom_point(data = PCA_fort_sites, aes(x = PC1, y = PC2, col = Otitis_Status)) +
+#   geom_vline(xintercept = c(0), color = "grey70", linetype = 2) +
+#   geom_hline(yintercept = c(0), color = "grey70", linetype = 2) +
+#   # scale_color_manual(values = c("coral", "lightgreen", "darkblue")) +
+#   geom_segment(data = PCA_fort_species, aes(x = 0, xend = PC1, y = 0, yend = PC2), 
+#                arrow = arrow(length = unit(0.2, "cm"))) +
+#   geom_text(data = PCA_fort_species, aes(x = PC1, y = PC2, label = Label)) +
+#   clean_background +
+#   labs(x = "PC1 (23.57%)",
+#        y = "PC2 (12.23%)",
+#        title = "Principal Components Analysis - using fortify()")
+# PCA_fortify_plot
+=======
 library(tidyverse)
 library(vegan)
 library(ggvegan)
@@ -237,6 +275,7 @@ PCA_fortify_plot <- ggplot() +
        y = "PC2 (12.23%)",
        title = "Principal Components Analysis - using fortify()")
 PCA_fortify_plot
+>>>>>>> ac8d1af8b0bcc3ccad540a152432b91af0083eb7
 
 
 # temp <- metadata.df[,c("Otitis_Status", "Nose", "Season","No_peop_res_discrete")]
@@ -263,9 +302,11 @@ PCA_fortify_plot
 
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
+<<<<<<< HEAD
+=======
 
+>>>>>>> ac8d1af8b0bcc3ccad540a152432b91af0083eb7
 
-# calculate_PC_taxa_contributions(genus_pca)
 otu_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/OTU_counts_abundances_and_metadata.csv",header = T)
 genus_data.df <- read.csv("Result_tables/combined_counts_abundances_and_metadata_tables/Genus_counts_abundances_and_metadata.csv",header = T)
 
@@ -572,9 +613,9 @@ generate_pca_plot(pca_object = genus_pca,
 )
 
 
-
-
 # ------------------------------------------------------------------------------------------------
+<<<<<<< HEAD
+=======
 # source("code/helper_functions.R")
 # for (myvar in discrete_variables){
 #   print(myvar)
@@ -776,10 +817,10 @@ generate_pca_plot(pca_object = genus_pca,
 
 
 
+>>>>>>> ac8d1af8b0bcc3ccad540a152432b91af0083eb7
 # ------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------
-# ------------------------------------------------------------------------------------------------
-# PERMANOVA tests whether distance differ between groups.
+# PERMANOVA
 
 # Permutational Multivariate Analysis of Variance (PERMANOVA) can be used to 
 # determine if the structure of the microbial communities is significantly different between
@@ -789,8 +830,11 @@ generate_pca_plot(pca_object = genus_pca,
 # the significance of that effect on beta diversity (described by p-values and R2 values). 
 # The R2 value corresponds to the proportion of variability observed in the dissimilarity.
 
+<<<<<<< HEAD
+=======
 # TODO pairwise permanova and permdisp
 
+>>>>>>> ac8d1af8b0bcc3ccad540a152432b91af0083eb7
 # Genus, clr euclidean
 print("Centred-log ratio transformed counts - Euclidean distance")
 otu_permanova_results <- data.frame()
@@ -799,9 +843,6 @@ genus_permanova_results <- data.frame()
 otu_within_community_permanova_results <- data.frame()
 genus_within_community_permanova_results <- data.frame()
 
-# discrete_variables <- c("Nose", "Tympanic_membrane","Tympanic_membrane_Gold_Star", "Otitis_Status", "Season", "Community","Gold_Star", 
-#                         "H.influenzae_culture","M.catarrhalis_culture","S.pneumoniae_culture", "N_HRV",
-#                         "Dolosigranulum_pigrum")
 discrete_variables <- c("Nose", "Gold_Star", "Season", "Community", "N_HRV", "Dolosigranulum_pigrum", "Otitis_Status", "No_peop_res_discrete")
 
 for (myvar in discrete_variables){
@@ -859,31 +900,12 @@ otu_beta_diversity_dist.m <- as.matrix(vegdist(t(otu_clr.m), method = "euclidean
 genus_beta_diversity_dist.m <- as.matrix(vegdist(t(genus_clr.m), method = "euclidean",upper = F))
 write.csv(otu_beta_diversity_dist.m, file = "Result_tables/stats_various/otu_betadiversities.csv",row.names = T, quote = F)
 write.csv(genus_beta_diversity_dist.m, file = "Result_tables/stats_various/genus_betadiversities.csv",row.names = T, quote = F)
-# diag(genus_beta_diversity_dist.m) <- NA
-# genus_beta_diversity_dist.m[upper.tri(genus_beta_diversity_dist.m)] <- NA
-# pheatmap::pheatmap(genus_beta_diversity_dist.m,cluster_rows = F,na_col = "white", cluster_cols =F,border_color = NA)
-# pheatmap::pheatmap(otu_beta_diversity_dist.m)
-
-
-# temp <- with(metadata.df, betadisper(vegdist(t(otu_beta_diversity_dist.m), method = "euclidean"), group = Otitis_Status))
-# plot(temp, main = "Ordination Centroids and Dispersion Labeled: Aitchison Distance", sub = "", label.cex = .5)
-# boxplot(temp, main = "", xlab = "")
-# vegan::permutest(temp, permutations = 999, parallel = 2)
-# 
-# temp <- run_permdisp_custom(metadata.df, 
-#                     my_data = genus_clr.m,
-#                     my_group = "Remote_Community",
-#                     my_method = "euclidean",
-#                     permutations = 999, label = NULL)
 
 otu_permdisp_results <- data.frame()
 genus_permdisp_results <- data.frame()
 
 otu_within_community_permdisp_results <- data.frame()
 genus_within_community_permdisp_results <- data.frame()
-
-
-# source("code/helper_functions.R")
 
 for (myvar in discrete_variables){
   metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
@@ -941,127 +963,6 @@ write.csv(genus_permdisp_results, file = "Result_tables/stats_various/genus_PERM
 
 write.csv(otu_within_community_permdisp_results, file = "Result_tables/stats_various/otu_within_community_PERMDISP.csv", row.names = F, quote = F)
 write.csv(genus_within_community_permdisp_results, file = "Result_tables/stats_various/genus_within_community_PERMDISP.csv", row.names = F, quote = F)
-
-
-# ---------------------------------------------
-# Takes awhile to calculate, uncomment to run
-# ANOSIM tests whether distances between groups are greater than within groups.
-# "Nonparametric procedure for testing the hypothesis of no difference between two or more groups of entities
-# based on permutation test of among- and within-group similarities"
-# R = 1 when all pairs of samples within groups are more similar than to any pair of samples from different groups
-# R = 0 expected value under the null model that among-and within- group dissimilarities are the same on average.
-
-# "If you have very different group sizes, you may consider analysis of similarities (ANOSIM) instead of PERMANOVA. 
-# This test does not assume equal group variances."
-
-otu_anosim_results <- data.frame()
-genus_anosim_results <- data.frame()
-otu_decontaminated_anosim_results <- data.frame()
-genus_decontaminated_anosim_results <- data.frame()
-
-otu_within_community_anosim_results <- data.frame()
-genus_within_community_anosim_results <- data.frame()
-otu_within_community_decontaminated_anosim_results <- data.frame()
-genus_within_community_decontaminated_anosim_results <- data.frame()
-
-for (myvar in discrete_variables){
-  metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
-  metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
-  
-  otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
-  genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
-  otu_clr_decontaminated_subset.m <- otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
-  genus_clr_decontaminated_subset.m <- genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
-  
-  otu_anosim_results <- rbind(otu_anosim_results, run_anosim_custom(my_metadata = metadata_subset.df, 
-                                                                    my_data = otu_clr_subset.m,
-                                                                    my_group = myvar,
-                                                                    my_method = "euclidean",
-                                                                    permutations = 9999,
-                                                                    label = "CLR"))
-  
-  genus_anosim_results <- rbind(genus_anosim_results, run_anosim_custom(my_metadata = metadata_subset.df, 
-                                                                        my_data = genus_clr_subset.m,
-                                                                        my_group = myvar,
-                                                                        my_method = "euclidean",
-                                                                        permutations = 9999,
-                                                                        label = "CLR"))
-  
-  
-  otu_decontaminated_anosim_results <- rbind(otu_decontaminated_anosim_results, run_anosim_custom(my_metadata = metadata_decontaminated_subset.df, 
-                                                                                                  my_data = otu_clr_decontaminated_subset.m,
-                                                                                                  my_group = myvar,
-                                                                                                  my_method = "euclidean",
-                                                                                                  permutations = 9999,
-                                                                                                  label = "CLR"))
-  
-  genus_decontaminated_anosim_results <- rbind(genus_decontaminated_anosim_results, run_anosim_custom(my_metadata = metadata_decontaminated_subset.df, 
-                                                                                                      my_data = genus_clr_decontaminated_subset.m,
-                                                                                                      my_group = myvar,
-                                                                                                      my_method = "euclidean",
-                                                                                                      permutations = 9999,
-                                                                                                      label = "CLR"))
-  
-  if (myvar == "Remote_Community") {next}
-  for (community in unique(metadata.df$Remote_Community)){
-    metadata_subset.df <- metadata.df[!is.na(metadata.df[,myvar]),]
-    metadata_subset.df <- subset(metadata_subset.df, Remote_Community == community)
-    metadata_decontaminated_subset.df <- metadata_decontaminated.df[!is.na(metadata_decontaminated.df[,myvar]),]
-    metadata_decontaminated_subset.df <- subset(metadata_decontaminated_subset.df, Remote_Community = community)
-    
-    otu_clr_subset.m <- otu_clr.m[,rownames(metadata_subset.df)]
-    genus_clr_subset.m <- genus_clr.m[,rownames(metadata_subset.df)]
-    otu_clr_decontaminated_subset.m <- otu_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
-    genus_clr_decontaminated_subset.m <- genus_clr_decontaminated.m[,rownames(metadata_decontaminated_subset.df)]
-    
-    temp <- run_anosim_custom(my_metadata = metadata_subset.df, 
-                              my_data = otu_clr_subset.m,
-                              my_group = myvar,
-                              my_method = "euclidean",
-                              permutations = 9999,
-                              label = "CLR")
-    temp$Remote_Community <- community
-    otu_within_community_anosim_results <- rbind(otu_within_community_anosim_results, temp)
-    
-    temp <- run_anosim_custom(my_metadata = metadata_subset.df, 
-                              my_data = genus_clr_subset.m,
-                              my_group = myvar,
-                              my_method = "euclidean",
-                              permutations = 9999,
-                              label = "CLR")
-    temp$Remote_Community <- community
-    genus_within_community_anosim_results <- rbind(genus_within_community_anosim_results, temp)
-    
-    temp <- run_anosim_custom(my_metadata = metadata_decontaminated_subset.df, 
-                              my_data = otu_clr_decontaminated_subset.m,
-                              my_group = myvar,
-                              my_method = "euclidean",
-                              permutations = 9999,
-                              label = "CLR")
-    temp$Remote_Community <- community
-    otu_within_community_decontaminated_anosim_results <- rbind(otu_within_community_decontaminated_anosim_results, temp)
-    
-    temp <- run_anosim_custom(my_metadata = metadata_decontaminated_subset.df, 
-                              my_data = genus_clr_decontaminated_subset.m,
-                              my_group = myvar,
-                              my_method = "euclidean",
-                              permutations = 9999,
-                              label = "CLR")
-    temp$Remote_Community <- community
-    genus_within_community_decontaminated_anosim_results <- rbind(genus_within_community_decontaminated_anosim_results, temp)
-  }
-}
-
-
-write.csv(otu_anosim_results, file = "Result_tables/stats_various/otu_ANOSIM.csv", row.names = F, quote = F)
-write.csv(genus_anosim_results, file = "Result_tables/stats_various/genus_ANOSIM.csv", row.names = F, quote = F)
-write.csv(otu_decontaminated_anosim_results, file = "Result_tables/stats_various/otu_decontaminated_ANOSIM.csv", row.names = F, quote = F)
-write.csv(genus_decontaminated_anosim_results, file = "Result_tables/stats_various/genus_decontaminated_ANOSIM.csv", row.names = F, quote = F)
-
-write.csv(otu_within_community_anosim_results, file = "Result_tables/stats_various/otu_within_community_ANOSIM.csv", row.names = F, quote = F)
-write.csv(genus_within_community_anosim_results, file = "Result_tables/stats_various/genus_within_community_ANOSIM.csv", row.names = F, quote = F)
-write.csv(otu_decontaminated_anosim_results, file = "Result_tables/stats_various/otu_within_community_decontaminated_ANOSIM.csv", row.names = F, quote = F)
-write.csv(genus_decontaminated_anosim_results, file = "Result_tables/stats_various/genus_within_community_decontaminated_ANOSIM.csv", row.names = F, quote = F)
 
 
 

@@ -1853,14 +1853,15 @@ generate_correlation_network <- function(cor_matrix, p_matrix = NULL, p_value_th
   }
   
   # Generate graph object and remove looped edges and isolated nodes
-  graph.df <- as_tbl_graph(graph.df) %>%
+  graph.df <- 
+    tidygraph::as_tbl_graph(graph.df) %>%
     # Remove loops
-    activate(edges) %>%
+    tidygraph::activate(edges) %>%
     filter(!edge_is_loop()) %>%
     # filter(!edge_is_mutual()) %>%
     # filter(!edge_is_multiple()) %>%
     # Remove isolated nodes
-    activate(nodes) %>%
+    tidygraph::activate(nodes) %>%
     filter(!node_is_isolated())
   
   # Build plot

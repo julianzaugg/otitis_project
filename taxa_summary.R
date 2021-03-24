@@ -7,6 +7,13 @@ source("code/helper_functions.R")
 
 
 metadata.df <- read.csv("Result_tables/other/processed_metadata.csv", header = T)
+<<<<<<< HEAD
+
+genus_rel.df <- read.csv("Result_tables/relative_abundance_tables/Genus_relative_abundances.csv", header = T)
+
+
+genus_rel.df <- melt(genus_rel.df, variable.name = "Sample", value.name = "Relative_abundance")
+=======
 # metadata.df <- read.table("data/metadata.tsv", header = T, sep = "\t",row.names = F)
 # metadata.df$Otitis_Status
 # metadata.df$Index <- metadata.df$Sequence_file_ID_clean
@@ -22,6 +29,7 @@ max(temp)
 # abundance_summary(genus_rel.df)
 genus_rel.df <- melt(genus_rel.df, variable.name = "Sample", value.name = "Relative_abundance")
 
+>>>>>>> ac8d1af8b0bcc3ccad540a152432b91af0083eb7
 genus_rel.df <- left_join(genus_rel.df, metadata.df, by = c("Sample" = "Index"))
 
 
@@ -56,6 +64,9 @@ for (variable in discrete_variables){
 
 write.csv(x = out, file = "Result_tables/abundance_analysis_tables/genus_variable_summary.csv", quote = F, row.names = F)
 
+<<<<<<< HEAD
+=======
 genus_rel.df
 
+>>>>>>> ac8d1af8b0bcc3ccad540a152432b91af0083eb7
 
